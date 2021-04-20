@@ -155,12 +155,11 @@ def create_ts_refine_sub_file(SSM_dir_path:str, TS_dir_path:str, ncpus:int=1, mp
     ts_lot = path.join(base_dir_path, 'orca_refine_ts')
     with open(ts_lot) as f:
         config = [line.strip() for line in f]
+    path2orca = os.popen('which orca').read().rstrip()
     shell = '#!/usr/bin/bash'
-    pbs_setting = '#PBS -l select=1:ncpus={}:mpiprocs={}:ompthreads={}\n#PBS -q workq\n#PBS -j oe\nstart=$(date +\'%s\')\nsource ~/.bashrc\n'.format(
-        ncpus, mpiprocs, ompthreads)
-    scratch = 'export MKL_NUM_THREADS={}\nexport OMP_NUM_THREADS={}\nexport OMP_STACKSIZE={}G\nexport QCSCRATCH=/tmp/$PBS_JOBID\nmkdir -p $QCSCRATCH\ncp $PBS_O_WORKDIR/ts_refine.in $QCSCRATCH/\ncd $QCSCRATCH\n'.format(
-        ncpus, ompthreads, mem)
-    command = '$orcadir/orca $QCSCRATCH/ts_refine.in >> $PBS_O_WORKDIR/ts_refine.out'
+    pbs_setting = '#PBS -l select=1:ncpus={}:mpiprocs={}:ompthreads={}\n#PBS -q workq\n#PBS -j oe\nstart=$(date +\'%s\')\nsource ~/.bashrc\nmodule load orca\n'.format(ncpus, mpiprocs, ompthreads)
+    scratch = 'export MKL_NUM_THREADS={}\nexport OMP_NUM_THREADS={}\nexport OMP_STACKSIZE={}G\nexport QCSCRATCH=/tmp/$PBS_JOBID\nmkdir -p $QCSCRATCH\ncp $PBS_O_WORKDIR/ts_refine.in $QCSCRATCH/\ncd $QCSCRATCH\n'.format(ncpus, ompthreads, mem)
+    command = '{} $QCSCRATCH/ts_refine.in >> $PBS_O_WORKDIR/ts_refine.out'.format(path2orca)
     copy_the_refine_xyz = 'cp $QCSCRATCH/ts_refine.xyz $PBS_O_WORKDIR'
     clean_scratch = """rm -r $QCSCRATCH\necho "It took $(($(date +'%s') - $start)) seconds" """
 
@@ -267,11 +266,11 @@ def create_orca_ts_sub_file(SSM_dir_path:str, TS_dir_path:str, ncpus:int=4, mpip
     ts_lot = path.join(base_dir_path, 'orca_freq_ts_freq.lot')
     with open(ts_lot) as f:
         config = [line.strip() for line in f]
+    path2orca = os.popen('which orca').read().rstrip()
     shell = '#!/usr/bin/bash'
-    pbs_setting = '#PBS -l select=1:ncpus={}:mpiprocs={}:ompthreads={}\n#PBS -q workq\n#PBS -j oe\nstart=$(date +\'%s\')\nsource ~/.bashrc\n'.format(
-        ncpus, mpiprocs, ompthreads)
+    pbs_setting = '#PBS -l select=1:ncpus={}:mpiprocs={}:ompthreads={}\n#PBS -q workq\n#PBS -j oe\nstart=$(date +\'%s\')\nsource ~/.bashrc\nmodule load orca\n'.format(ncpus, mpiprocs, ompthreads)
     scratch = 'export QCSCRATCH=/tmp/$PBS_JOBID\nmkdir -p $QCSCRATCH\ncp $PBS_O_WORKDIR/ts_geo.in $QCSCRATCH/\ncd $QCSCRATCH\n'
-    command = '$orcadir/orca $QCSCRATCH/ts_geo.in >> $PBS_O_WORKDIR/ts_geo.out'
+    command = '{} $QCSCRATCH/ts_geo.in >> $PBS_O_WORKDIR/ts_geo.out'.format(path2orca)
     copy_the_refine_xyz = 'cp $QCSCRATCH/ts_geo.xyz $PBS_O_WORKDIR'
     clean_scratch = """rm -r $QCSCRATCH\necho "It took $(($(date +'%s') - $start)) seconds" """
 
@@ -334,16 +333,14 @@ def create_irc_sub_file(TS_dir_path:str, IRC_dir_path:str, ncpus:int=8, mpiprocs
     irc_input_file = path.join(IRC_dir_path, 'pysisyphus_irc.yaml')
     subfile = path.join(IRC_dir_path, 'irc.job')
     new_ts_geo_path = path.join(IRC_dir_path, 'ts_geo.xyz')
-    base_dir_path = path.join(path.dirname(path.dirname(
-        path.dirname(path.dirname(IRC_dir_path)))), 'config')
+    base_dir_path = path.join(path.dirname(path.dirname(path.dirname(path.dirname(IRC_dir_path)))), 'config')
     irc_lot = path.join(base_dir_path, 'pysisyphus_irc.yaml')
     copyfile(irc_lot, irc_input_file)
     copyfile(ts_geo_path, new_ts_geo_path)
     shell = '#!/usr/bin/bash'
-    pbs_setting = '#PBS -l select=1:ncpus={}:mpiprocs={}:ompthreads={}\n#PBS -q workq\n#PBS -j oe\nstart=$(date +\'%s\')\n'.format(
-        ncpus, mpiprocs, ompthreads)
+    pbs_setting = '#PBS -l select=1:ncpus={}:mpiprocs={}:ompthreads={}\n#PBS -q workq\n#PBS -j oe\nstart=$(date +\'%s\')\n'.format(ncpus, mpiprocs, ompthreads)
     target_path = 'cd {}'.format(IRC_dir_path)
-    nes = 'source ~/.bashrc\nconda activate ard\nexport TMPDIR=/tmp/$PBS_JOBID\nmkdir -p $TMPDIR\n'
+    nes = 'source ~/.bashrc\nmodule load orca\nconda activate ard\nexport TMPDIR=/tmp/$PBS_JOBID\nmkdir -p $TMPDIR\n'
     command = 'pysis pysisyphus_irc.yaml'
     deactivate = 'conda deactivate\nrm -r $TMPDIR'
     clean_scratch = """echo "It took $(($(date +'%s') - $start)) seconds" """
@@ -459,13 +456,14 @@ def create_orca_irc_opt_sub_file(irc_path:str, forward:str, backward:str, ncpus:
     subfile_2 = path.join(irc_path, 'irc_backward_opt.job')
     with open(irc_opt_lot) as f:
         config = [line.strip() for line in f]
+    path2orca = os.popen('which orca').read().rstrip()
     shell = '#!/usr/bin/bash'
-    pbs_setting = '#PBS -l select=1:ncpus={}:mpiprocs={}:ompthreads={}\n#PBS -q workq\n#PBS -j oe\nstart=$(date +\'%s\')\nsource ~/.bashrc\n'.format(ncpus, mpiprocs, ompthreads)
+    pbs_setting = '#PBS -l select=1:ncpus={}:mpiprocs={}:ompthreads={}\n#PBS -q workq\n#PBS -j oe\nstart=$(date +\'%s\')\nsource ~/.bashrc\nmodule load orca\n'.format(ncpus, mpiprocs, ompthreads)
     scratch_1 = 'export QCSCRATCH=/tmp/$PBS_JOBID\nmkdir -p $QCSCRATCH\ncp $PBS_O_WORKDIR/irc_forward.in $QCSCRATCH/\ncd $QCSCRATCH\n'
-    command_1 = '$orcadir/orca $QCSCRATCH/irc_forward.in >> $PBS_O_WORKDIR/irc_forward.out'
+    command_1 = '{} $QCSCRATCH/irc_forward.in >> $PBS_O_WORKDIR/irc_forward.out'.format(path2orca)
     copy_the_refine_xyz_1 = 'cp $QCSCRATCH/irc_forward.xyz $PBS_O_WORKDIR'
     scratch_2 = 'export QCSCRATCH=/tmp/$PBS_JOBID\nmkdir -p $QCSCRATCH\ncp $PBS_O_WORKDIR/irc_backward.in $QCSCRATCH/\ncd $QCSCRATCH\n'
-    command_2 = '$orcadir/orca $QCSCRATCH/irc_backward.in >> $PBS_O_WORKDIR/irc_backward.out'
+    command_2 = '{} $QCSCRATCH/irc_backward.in >> $PBS_O_WORKDIR/irc_backward.out'.format(path2orca)
     copy_the_refine_xyz_2 = 'cp $QCSCRATCH/irc_backward.xyz $PBS_O_WORKDIR'
     clean_scratch = """rm -r $QCSCRATCH\necho "It took $(($(date +'%s') - $start)) seconds" """
 
