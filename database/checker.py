@@ -1000,17 +1000,20 @@ def insert_qmmm(qm_collection:object, reactions_collection:object, statistics_co
 
     if int(not_finished_number) == 0 and int(ard_had_add_number) - 1 == int(ard_should_add_number):
         reactions = list(reactions_collection.aggregate([{
-            '$group': {
-                '_id': "$reaction",
-                'barrier': {'$min': "$barrier"}
-            }},{
-                '$match': {'qmmm':
-                    {'$in':
-                    ['Already insert']}}}
-        ]))
+                    '$group': {
+                        '_id': "$reaction",
+                        'barrier': {'$min': "$barrier"}
+                    }}
+                ]))
 
         for i in reactions:
             dir_path = list(reactions_collection.find({'reaction': i['_id'], 'barrier': i['barrier']}))[0]
+            try:
+                qmmm = dir_path['qmmm']
+                if qmmm == 'Already insert':
+                    continue
+            except:
+                pass
             ard_qm_target = list(qm_collection.find({'path': dir_path['path']}))[0]
             # Prevent reactant equal to product but with different active site (maybe proton at the different oxygen)
             same = False
@@ -1030,10 +1033,7 @@ def insert_qmmm(qm_collection:object, reactions_collection:object, statistics_co
                 same = True
 
             if not same:
-                dir_path = list(reactions_collection.find({'reaction': i['_id'], 'barrier': i['barrier']}))[0]
-                ard_qm_target = list(qm_collection.find({'path': dir_path['path']}))[0]
-                update_field_for_qm_target = {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun"}
-                qm_collection.update_one(ard_qm_target, {"$set": update_field_for_qm_target}, True)
+                qm_collection.update_one(ard_qm_target, {"$set": {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun"}}, True)
                 reactions_collection.update_one(dir_path, {"$set": {'qmmm': 'Already insert'}}, True)
 
 """
