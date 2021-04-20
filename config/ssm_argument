@@ -1,0 +1,4 @@
+-DQMAG_MAX 0.8
+-coordinate_type  TRIC
+-ADD_NODE_TOL 0.005
+-linesearch backtrack

@@ -1,0 +1,61 @@
+orca安裝:
+http://sobereva.com/451
+
+xtb安裝:
+// xtb-python is for pygsm
+https://github.com/grimme-lab/xtb-python
+// xtb is for ard delta H filter
+http://sobereva.com/421
+
+pygsm安裝:
+// 目前測試到 16a17b9657f66168c7f689f6a31a8d9c913385cf  這個branch
+// 如果要用orca記得在pygsm/level_of_theory/orca.py,runscr ='/tmp/'+pbsID+'/'+orcasc改成runscr ='/tmp/'+pbsID+'/'+orcascr
+// 第三步直接在conda環境中 python setup install就可以了 不需要--prefix
+https://github.com/ZimmermanGroup/pyGSM
+
+pysisphus安裝:
+//注意他的numpy版本 如果不能裝改用pip
+https://pysisyphus.readthedocs.io/en/dev/installation.html
+
+----
+
+參考我的.bashrc
+// MKL_DEBUG_CPU_TYPE is for orca 我們的cluster用的是AMD CPU，orca會call intel mkl還有avx指令集
+// 如果不改效率會變差，指定5就是讓我們的CPU被intel mkl認為是intel的cpu
+export MKL_DEBUG_CPU_TYPE=5
+export PATH=/home/jianyi/ORCA/openmpi/bin:$PATH
+export LD_LIBRARY_PATH=/home/jianyi/ORCA/openmpi/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/jianyi/ORCA/orca_4_2_1_linux_x86-64_openmpi314:/home/jianyi/xtb/xtb-bleed/lib
+export orcadir=/home/jianyi/ORCA/orca_4_2_1_linux_x86-64_openmpi314
+export XTBPATH=/home/jianyi/xtb/xtb-bleed/shard/xtb
+export PATH=$PATH:/home/jianyi/ORCA/orca_4_2_1_linux_x86-64_openmpi314:/home/jianyi/xtb/xtb-bleed/bin
+export PATH=$orcadir:$PATH
+
+---
+注意事項:
+1.
+在目前的orca 4.2.1中 optimize ts with xtb時候似乎沒有檢查scf convergence
+所以說有可能會fail請注意
+另外就是當你使用不同的核心數有可能會導致scf不收斂 進而影響結果
+不過xtb算很快所以說都用1也無妨
+另外我這邊說xtb是指orca call xtb而不是單純xtb
+2.
+orca在4.2.1使用的是mpi而不是openmp
+所以在我們cluster多核心運作時應該是使用
+#PBS -l select=1:ncpus=8:mpiprocs=8:ompthreads=1
+沒記錯未來(5.0)好像會改openmp所以到時候用
+#PBS -l select=1:ncpus=8:mpiprocs=1:ompthreads=8
+不過我和shihcheng測試ompthreads好像會使運算速度變慢
+3.
+orca計算時會使用ri, rijcosx, rijk等方法來加速運算 <-- 具體請自行查閱orca document
+這些approximation方法有時後會導致很小的imaginary frequency產生，而我目前的過濾器有嚴格限制
+irc opt 之後成功的product必須沒有imaginary frequency
+解決方法: rijcosx等方法在運算時使用較高的格點 EX: grid3
+目前上面的example參數都是我測試過得
+另外如果用明尼蘇達method(M06-2x, etc...), grid6以上才會比較準但是會非常耗時請注意
+至於選用method與basis set請參閱
+http://bbs.keinsci.com/thread-536-1-1.html
+http://sobereva.com/336
+4.
+有關於transition state等相關概念，除了參考zimmerman paper也可以看看
+http://sobereva.com/44

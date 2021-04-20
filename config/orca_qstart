@@ -1,0 +1,5 @@
+! XTB2 ENGRAD TIGHTSCF miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
+
+%scf
+maxiter 350
+end

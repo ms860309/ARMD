@@ -1,0 +1,14 @@
+$rem
+JOBTYPE                   FORCE
+METHOD                    B3LYP
+DFT_D                     D3_BJ
+BASIS                     def2-SVP
+SCF_ALGORITHM diis
+SCF_MAX_CYCLES 150
+SCF_CONVERGENCE 8
+WAVEFUNCTION_ANALYSIS FALSE
+SYMMETRY   FALSE
+SYM_IGNORE                TRUE
+$end
+
+$molecule

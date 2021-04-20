@@ -1,0 +1,20 @@
+irc:
+ type: eulerpc              # Similar to EulerPC from Gaussian
+ max_cycles: 50
+ displ_length: 0.2
+ corr_func: scipy
+endopt:
+ fragments: False            # Detect fragments at the end of the IRC and optimize them separately.
+ thresh: gau
+ geom: 
+  freeze_atoms: [23,24,25,26,27,28,29,30,31,32,33,34]
+calc:
+ type: orca
+ keywords: PBE0 D3BJ def2-SVP rijcosx def2/J TightSCF Grid4 GridX4 NoFinalGrid miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
+ pal: 8
+ charge: 0
+ mult: 1
+geom:
+ type: cart
+ isotopes: [[23, 1000000000000000.0], [24, 1000000000000000.0], [25, 1000000000000000.0], [26, 1000000000000000.0], [27, 1000000000000000.0], [28, 1000000000000000.0], [29, 1000000000000000.0], [30, 1000000000000000.0], [31, 1000000000000000.0], [32, 1000000000000000.0], [33, 1000000000000000.0], [34, 1000000000000000.0]]
+ fn: ts_geo.xyz

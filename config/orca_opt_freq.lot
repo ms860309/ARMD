@@ -1,0 +1,32 @@
+! PBE0 D3BJ def2-SVP rijcosx def2/J TIGHTSCF TightOpt Freq Grid4 GridX4 NoFinalGrid noautostart miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
+
+%geom
+Recalc_Hess 150
+maxiter 298
+MaxStep 0.10  # 0.10 a.u.
+Constraints  # The atom you want to constraint, index from 0.
+	{C 23 C}
+	{C 24 C}
+	{C 25 C}
+	{C 26 C}
+	{C 27 C}
+	{C 28 C}
+	{C 29 C}
+	{C 30 C}
+	{C 31 C}
+	{C 32 C}
+	{C 33 C}
+	{C 34 C}
+	end
+end
+
+%maxcore 3000 # memory per core
+
+%scf
+maxiter 300  # SCF interations.
+ConvForced 1 # Make sure the scf is converge during calculation.
+end
+
+%method
+Z_MaxIter 50 # The CPSCF interations while calculate actual hessian
+end
