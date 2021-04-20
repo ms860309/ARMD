@@ -49,19 +49,29 @@ def extract_data(barrier_threshold=200.0):
 
     reactant_smi, product_smi, barrier, generations = [], [], [], []
     for target in reactions:
-        # for i in reactions:
-        #target = list(reaction_collection.find({'reaction':i['_id'], 'barrier':i['barrier']}))[0]
-        if target['barrier'] > 60:
-            continue
-        reactant_smi.append(target['reactant_smiles'])
-        product_smi.append(target['product_smiles'])
+        reactant_smiles = target['reactant_smiles'].split('.')
+        product_smiles = target['product_smiles'].split('.')
+        if len(reactant_smiles) > 1:
+            reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
+            reactant_part_smiles = '.'.join(reactant_part_smiles)
+        else:
+            reactant_part_smiles = set(reactant_smiles)[0]
+
+        if len(product_smiles) > 1:
+            product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
+            product_part_smiles = '.'.join(product_part_smiles)
+        else:
+            product_part_smiles = set(product_smiles)[0]
+
+
+        reactant_smi.append(reactant_part_smiles)
+        product_smi.append(product_part_smiles)
         # print(target['barrier'])
         barrier.append(round(target['barrier'], 2))
         generations.append(target['generations'])
 
         test_target = list(qm_collection.find({'path': target['path']}))[0]
-        dH = (test_target['product_xtb_hf'] -
-              test_target['reactant_xtb_hf']) * 627.5095
+        # dH = (test_target['product_xtb_hf'] - test_target['reactant_xtb_hf']) * 627.5095
     zipped = zip(reactant_smi, product_smi, generations, barrier)
 
     return zipped
@@ -74,51 +84,54 @@ def draw():
     labels = {}
     for i, j, l, k in list(zipped):
         if l == 1:
-            if G.has_edge(i, j) and k < _dict[(i, j)]:
-                _dict[(i, j)] = k
+            if G.has_edge(i, j) :
+                continue
+                # _dict[(i, j)] = k
             if not G.has_edge(i, j):
                 G.add_edge(i, j, color='r')
-                _dict[(i, j)] = k
+                # _dict[(i, j)] = k
         elif l == 2:
-            if G.has_edge(i, j) and k < _dict[(i, j)]:
-                _dict[(i, j)] = k
+            if G.has_edge(i, j) :
+                continue
+                # _dict[(i, j)] = k
             if not G.has_edge(i, j):
                 G.add_edge(i, j, color='g')
-                _dict[(i, j)] = k
+                # _dict[(i, j)] = k
         elif l == 3:
-            if G.has_edge(i, j) and k < _dict[(i, j)]:
-                _dict[(i, j)] = k
+            if G.has_edge(i, j) :
+                continue
+                # _dict[(i, j)] = k
             if not G.has_edge(i, j):
                 G.add_edge(i, j, color='b')
-                _dict[(i, j)] = k
+                # _dict[(i, j)] = k
         elif l == 4:
-            if G.has_edge(i, j) and k < _dict[(i, j)]:
-                _dict[(i, j)] = k
+            if G.has_edge(i, j) :
+                continue
+                # _dict[(i, j)] = k
             if not G.has_edge(i, j):
                 G.add_edge(i, j, color='y')
-                _dict[(i, j)] = k
+                # _dict[(i, j)] = k
         elif l == 5:
-            if G.has_edge(i, j) and k < _dict[(i, j)]:
-                _dict[(i, j)] = k
+            if G.has_edge(i, j) :
+                continue
+                # _dict[(i, j)] = k
             if not G.has_edge(i, j):
                 G.add_edge(i, j, color='c')
-                _dict[(i, j)] = k
+                # _dict[(i, j)] = k
         elif l == 6:
-            if G.has_edge(i, j) and k < _dict[(i, j)]:
-                _dict[(i, j)] = k
+            if G.has_edge(i, j) :
+                continue
+                # _dict[(i, j)] = k
             if not G.has_edge(i, j):
                 G.add_edge(i, j, color='m')
-                _dict[(i, j)] = k
+                # _dict[(i, j)] = k
         else:
-            if G.has_edge(i, j) and k < _dict[(i, j)]:
-                _dict[(i, j)] = k
+            if G.has_edge(i, j) :
+                continue
+                # _dict[(i, j)] = k
             if not G.has_edge(i, j):
                 G.add_edge(i, j, color='k')
-                _dict[(i, j)] = k
-
-    for node in G.nodes():
-        if 'C=CC=O' in node:
-            labels[node] = node
+                # _dict[(i, j)] = k
 
     plt.figure(figsize=(8, 8))
     
@@ -131,13 +144,13 @@ def draw():
     pos = nx.kamada_kawai_layout(G)
     nx.draw(G, pos,
             edge_color=colors,
-            with_labels=False,
+            with_labels=True,
             node_color='lightgreen',
             font_size=8)
     
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=_dict, font_size=8)
-    nx.draw_networkx_labels(G,pos,labels,font_size=10,font_color='r')
-    root_to_leaf_paths(G)
+    nx.draw_networkx_edge_labels(G, pos, font_size=8)
+    # nx.draw_networkx_labels(G,pos,labels,font_size=10,font_color='r')
+    #root_to_leaf_paths(G)
 
     plt.savefig("simple_path_2.png")  # save as png
     plt.show()

@@ -1,77 +1,135 @@
-from energydiagram import ED
+from openbabel import pybel
+import networkx as nx
 import matplotlib.pyplot as plt
+import os
+import os.path as path
+import sys
+sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'database'))
+from connect import db
+import itertools
 
-diagram = ED()
-diagram.add_level(0,'hydroxyacetone')
-# 1
-diagram.add_level(20.56,'',color='r')
-diagram.add_level(23.77,'','l',color='g')
-diagram.add_level(12.4,'',color='r')
-diagram.add_level(25.16,'','l',color='g')
-# 2
-diagram.add_level(25.20, '',color='r')
-diagram.add_level(31.89, '','l',color='r')
-# diagram.add_level(63.81, '','l')
-diagram.add_level(28.27, '','l',color='g')
-# diagram.add_level(64.36, '','l')
-diagram.add_level(3.03, '2-hydroxypropanal',color='r')
-diagram.add_level(4.26, '2-hydroxypropanal','l',color='r')
-# diagram.add_level(9.07, '3-hydroxypropanal','l')
-diagram.add_level(15.11, 'prop-2-ene-1,2-diol','l',color='g')
-# diagram.add_level(7.98, '3-hydroxypropanal','l')
-#3
-diagram.add_level(62.42, '',color='r')
-diagram.add_level(59.81, '','l',color='r')
-# diagram.add_level(40.62, '','l')
-# diagram.add_level(32.85, '','l')
-# diagram.add_level(62.72, '','l')
-# diagram.add_level(41.05, '','l')
-# diagram.add_level(58.76, '','l')
-diagram.add_level(65.12, '','l',color='g')
-diagram.add_level(19.78, 'acrolein+water',color='r')
-diagram.add_level(20.06, 'acrolein+water','l',color='r')
-# diagram.add_level(20.76, '','l')
-# diagram.add_level(30.90, '','l')
-# diagram.add_level(31.70, 'oxetan-2-one+hydrogen','l')
-# diagram.add_level(12.31, 'prop-1-ene-1,3-diol','l')
-# diagram.add_level(35.95, '','l')
-diagram.add_level(39.08, '','l',color='g')
-#4
-diagram.add_level(71.90, '',color='g')
-diagram.add_level(56.49, '','l',color='g')
-diagram.add_level(65.12, '','l',color='g')
-diagram.add_level(10.26, 'prop-1-ene-1,2-diol',color='g')
-diagram.add_level(8.37, 'prop-1-ene-1,2-diol','l',color='g')
-diagram.add_level(15.11, 'prop-2-ene-1,2-diol','l',color='g')
-#link
-diagram.add_link(0,1,color='r')
-diagram.add_link(0,2,color='g')
-diagram.add_link(1,3,color='r')
-diagram.add_link(2,4,color='g')
+def extract_data(barrier_threshold=200.0):
 
-diagram.add_link(3,6,color='r')
-diagram.add_link(3,5,color='r')
+    reaction_collection = db['reactions']
+    qm_collection = db['qm_calculate_center']
+    reactions = list(reaction_collection.find({}))
 
-diagram.add_link(7,10,color='g')
-diagram.add_link(5,8,color='r')
-diagram.add_link(6,9,color='r')
+    # Remove the reactant equal to product but with the different active site.
+    # e.g. The Proton is at the different oxygen
+    reactions_copy = reactions[:]
+    for reaction in reactions_copy:
+        same = False
+        reactant_smiles = reaction['reactant_smiles'].split('.')
+        product_smiles = reaction['product_smiles'].split('.')
+        if len(reactant_smiles) > 1:
+            reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
+        else:
+            reactant_part_smiles = set(reactant_smiles)
 
-diagram.add_link(10,13,color='g')
+        if len(product_smiles) > 1:
+            product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
+        else:
+            product_part_smiles = set(product_smiles)
 
-diagram.add_link(9,12,color='r')
-diagram.add_link(8,11,color='r')
+        if reactant_part_smiles == product_part_smiles:
+            same = True
 
-diagram.add_link(13,16,color='g')
+        if same:
+            reactions.remove(reaction)
 
-diagram.add_link(16,17,color='g')
-diagram.add_link(12,15,color='r')
-diagram.add_link(11,14,color='r')
+    reactant_smi, product_smi, barrier, generations = [], [], [], []
+    for target in reactions:
+        reactant_smiles = target['reactant_smiles'].split('.')
+        product_smiles = target['product_smiles'].split('.')
+        if len(reactant_smiles) > 1:
+            reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs])
+            reactant_part_smiles = '.'.join(reactant_part_smiles)
+        else:
+            reactant_part_smiles = set(reactant_smiles)[0]
 
-diagram.add_link(17,20,color='g')
-diagram.add_link(4,7,color='g')
-diagram.add_link(0,18,color='g')
-diagram.add_link(18,21,color='g')
-diagram.add_link(16,19,color='g')
-diagram.add_link(19,22,color='g')
-diagram.plot(show_IDs=False)
-plt.show()
+        if len(product_smiles) > 1:
+            product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps])
+            product_part_smiles = '.'.join(product_part_smiles)
+        else:
+            product_part_smiles = set(product_smiles)[0]
+
+        reactant_smi.append(reactant_part_smiles)
+        product_smi.append(product_part_smiles)
+        # print(target['barrier'])
+        barrier.append(round(target['barrier'], 2))
+        generations.append(target['generations'])
+
+        test_target = list(qm_collection.find({'path': target['path']}))[0]
+        # dH = (test_target['product_xtb_hf'] - test_target['reactant_xtb_hf']) * 627.5095
+    zipped = zip(reactant_smi, product_smi, generations, barrier)
+
+    return zipped
+
+def draw():
+    G = nx.DiGraph()  # create object
+
+    zipped = extract_data()
+    _dict = {}
+    labels = {}
+    for i, j, l, k in list(zipped):
+        if l == 1:
+            if G.has_edge(i, j) :
+                continue
+            G.add_edge(i, j, color='r')
+            # _dict[(i, j)] = k
+        elif l == 2:
+            if G.has_edge(i, j) :
+                continue
+            G.add_edge(i, j, color='g')
+            # _dict[(i, j)] = k
+        elif l == 3:
+            if G.has_edge(i, j) :
+                continue
+            G.add_edge(i, j, color='b')
+            # _dict[(i, j)] = k
+        elif l == 4:
+            if G.has_edge(i, j) :
+                continue
+            G.add_edge(i, j, color='y')
+            # _dict[(i, j)] = k
+        elif l == 5:
+            if G.has_edge(i, j) :
+                continue
+            G.add_edge(i, j, color='c')
+            # _dict[(i, j)] = k
+        elif l == 6:
+            if G.has_edge(i, j) :
+                continue
+            G.add_edge(i, j, color='m')
+            # _dict[(i, j)] = k
+        else:
+            if G.has_edge(i, j) :
+                continue
+            G.add_edge(i, j, color='k')
+            # _dict[(i, j)] = k
+
+    plt.figure(figsize=(8, 8))
+    
+    colors = nx.get_edge_attributes(G, 'color').values()
+    weights = nx.get_edge_attributes(G, 'weight').values()
+
+    #pos = nx.circular_layout(G)
+    #pos = nx.shell_layout(G)
+    pos = nx.spring_layout(G)
+    # pos = nx.kamada_kawai_layout(G)
+    nx.draw(G, pos,
+            edge_color=colors,
+            with_labels=True,
+            node_color='white',
+            font_size=8)
+    
+    #nx.draw_networkx_edge_labels(G, pos, font_size=8)
+    nx.draw_networkx_labels(G,pos,labels,font_size=10,font_color='r')
+    #root_to_leaf_paths(G)
+
+    plt.savefig("simple_path_2.png")  # save as png
+    plt.show()
+
+
+
+draw()
