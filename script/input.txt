@@ -2,7 +2,7 @@ nbreak                         3                    # Maximum number of bonds to
 nform                          3                    # Maximum number of bonds to be formed
 forcefield                     uff                  # The force field method
 constraintff_alg               ConjugateGradients      # The force field algorithm  can use 'SteepestDescent' or 'ConjugateGradients'
-dH_cutoff                      40                   # Heat of reaction cutoff in kcal/mol
+dH_cutoff                      30                   # Heat of reaction cutoff in kcal/mol
 dH_cutoff_method               xtb                # rmg group additivity method or mopac and xtb could be choose
 mopac_method                   PM7             # The mopac calculation level of theory (PM6, PM7, etc..)    BTW, If you choose xtb, do not delete this line, the key is hard code :D
 manual_bonds                   0                    # Manually specify bonds function (bonds file is 1-based)

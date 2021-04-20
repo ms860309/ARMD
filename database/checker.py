@@ -1767,7 +1767,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
         fixed_atom_path = path.join(ard_path, 'script/fixed_atom.txt')
     
     # If the ssm perform by orca with xtb GFN2-xtb, then refine the TS is a good choice.  Get a better initial guess
-    check_ssm_jobs(qm_collection, refine=refine, thershold = 100.0)  # TS guess energy filter
+    check_ssm_jobs(qm_collection, refine=refine, thershold = 80.0)  # TS guess energy filter
     check_ts_refine_jobs(qm_collection, threshold = -50.0)  # Imaginary freq should smaller than threshold
     check_ts_jobs(qm_collection, threshold = -50.0) # Imaginary freq should smaller than threshold
     check_irc_jobs(qm_collection)
