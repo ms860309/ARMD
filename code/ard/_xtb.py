@@ -25,12 +25,13 @@ class XTBError(Exception):
 
 class XTB(object):
 
-    def __init__(self, reactant_mol, product_mol, forcefield, constraintff_alg, form_bonds, logger, count, num, constraint=None, fixed_atom=None, cluster_bond = None):
+    def __init__(self, reactant_mol, product_mol, forcefield, constraintff_alg, form_bonds, break_bonds, logger, count, num, constraint=None, fixed_atom=None, cluster_bond = None):
         self.reactant_mol = reactant_mol
         self.product_mol = product_mol
         self.forcefield = forcefield
         self.constraintff_alg = constraintff_alg
         self.form_bonds = form_bonds
+        self.break_bonds = break_bonds
         self.logger = logger
         self.count = count
         self.num = num
@@ -51,7 +52,6 @@ class XTB(object):
         reac_geo, prod_geo = self.genInput(self.reactant_mol, self.product_mol)
 
         if reac_geo == False and prod_geo == False:
-            self.logger.info('xTB fail')
             return False, False
         else:
             if path.exists(tmpdir):
@@ -67,6 +67,7 @@ class XTB(object):
                 self.runXTB(tmpdir, 'reactant.xyz')
                 reactant_energy = self.getE(tmpdir, 'reactant.xyz')
             except:
+                self.logger.info('xTB reactant fail')
                 return False, False
 
             with open(product_path, 'w') as f:
@@ -75,6 +76,7 @@ class XTB(object):
                 self.runXTB(tmpdir, 'product.xyz')
                 product_energy = self.getE(tmpdir, 'product.xyz')
             except:
+                self.logger.info('xTB product fail')
                 return False, False
 
             self.finalize(start_time, 'XTB')
@@ -119,17 +121,17 @@ class XTB(object):
         dist = self.check_bond_length(reactant_mol, self.form_bonds)
 
         if dist >= threshold:
-            self.logger.info('Here is the {} product.'.format(self.num))
-            self.logger.info('Form bonds: {}\nDistance: {}'.format(self.form_bonds, dist))
+            self.logger.info('\nHere is the {} product.'.format(self.num))
+            self.logger.info('Form bonds: {}\nBreak bonds: {}\nForm bond distance: {}'.format(self.form_bonds, self.break_bonds, dist))
             self.logger.info('Form bond distance is greater than threshold.')
-            self.logger.info('Now finished {}/{}'.format(self.num, self.count))
             self.finalize(start_time, 'arrange')
+            self.logger.info('Finished {}/{}'.format(self.num, self.count))
             return False, False
         else:
             self.logger.info('\nHere is the {} product.'.format(self.num))
             self.logger.info('Structure:\n{}'.format(str(reactant_mol.toNode())))
             self.logger.info('Structure:\n{}\n'.format(str(product_mol.toNode())))
-            self.logger.info('Form bonds: {}\nDistance: {}'.format(self.form_bonds, dist))
+            self.logger.info('Form bonds: {}\nBreak bonds: {}\nForm bond distance: {}'.format(self.form_bonds, self.break_bonds, dist))
 
             product_geometry = product_mol.toNode()
             reactant_geometry = reactant_mol.toNode()

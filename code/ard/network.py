@@ -212,7 +212,7 @@ class Network(object):
     def filter_dh_mopac(self, reac_obj, cluster_bond, prod_mol, form_bonds, break_bonds, total_prod_num, refH=None):
         self.count += 1
         mopac_object = Mopac(reac_obj, prod_mol, self.mopac_method, self.forcefield, self.constraintff_alg,
-                             form_bonds, self.logger, total_prod_num, self.count, self.constraint, self.fixed_atom, cluster_bond)
+                             form_bonds, break_bonds, self.logger, total_prod_num, self.count, self.constraint, self.fixed_atom, cluster_bond)
         H298_reac, H298_prod = mopac_object.mopac_get_H298(self.reactant_path)
 
         if H298_prod == False or H298_reac == False:
@@ -220,26 +220,19 @@ class Network(object):
         self.logger.info(
             'Product energy calculate by mopac is {} kcal/mol and reactant is {} kcal/mol'.format(H298_prod, H298_reac))
         if refH:
-            self.logger.info('In the {} generations, reactant hf use {} instead.'.format(
-                self.generations, refH))
+            self.logger.info('In the {} generations, reactant hf use {} instead.'.format(self.generations, refH))
             dH = H298_prod - refH
         else:
             dH = H298_prod - H298_reac
 
         if dH < self.dh_cutoff:
-            self.logger.info(
-                'Delta H is {}, smaller than threshold'.format(dH))
-            self.logger.info(
-                'Finished {}/{}'.format(self.count, total_prod_num))
+            self.logger.info('Delta H is {}, smaller than threshold'.format(dH))
 
-            reactant_output = os.path.join(
-                self.reactant_path, 'tmp/reactant.out')
-            product_output = os.path.join(
-                self.reactant_path, 'tmp/product.out')
+            reactant_output = os.path.join(self.reactant_path, 'tmp/reactant.out')
+            product_output = os.path.join(self.reactant_path, 'tmp/product.out')
 
             qm_collection = db['qm_calculate_center']
-            dir_path = self.mopac_output(
-                reactant_output, product_output, form_bonds, break_bonds, prod_mol)
+            dir_path = self.mopac_output(reactant_output, product_output, form_bonds, break_bonds, prod_mol)
             reactant_inchi_key = reac_obj.write('inchiKey').strip()
             product_inchi_key = prod_mol.write('inchiKey').strip()
             self.logger.info('\nReactant inchi key: {}\nProduct inchi key: {}\nReactant smiles: {}\nProduct smiles: {}\nDirectory path: {}\n'.format(
@@ -260,13 +253,13 @@ class Network(object):
             self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
             return 1
         else:
-            self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
             self.logger.info('Delta H is {}, greater than threshold'.format(dH))
+            self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
             return 0
 
     def filter_dh_xtb(self, reac_obj, cluster_bond, prod_mol, form_bonds, break_bonds, total_prod_num, refH=None):
         self.count += 1
-        xtb_object = XTB(reac_obj, prod_mol, self.forcefield, self.constraintff_alg, form_bonds,
+        xtb_object = XTB(reac_obj, prod_mol, self.forcefield, self.constraintff_alg, form_bonds, break_bonds,
                          self.logger, total_prod_num, self.count, self.constraint, self.fixed_atom, cluster_bond)
         H298_reac, H298_prod = xtb_object.xtb_get_H298(self.reactant_path)
 
@@ -280,19 +273,12 @@ class Network(object):
             dH = (H298_prod - H298_reac) * 627.5095
 
         if dH < self.dh_cutoff:
-            self.logger.info(
-                'Delta H is {}, smaller than threshold'.format(dH))
-            self.logger.info(
-                'Finished {}/{}'.format(self.count, total_prod_num))
-
-            reactant_output = os.path.join(
-                self.reactant_path, 'tmp/reactant.xyz')
-            product_output = os.path.join(
-                self.reactant_path, 'tmp/product.xyz')
+            self.logger.info('Delta H is {}, smaller than threshold'.format(dH))
+            reactant_output = os.path.join(self.reactant_path, 'tmp/reactant.xyz')
+            product_output = os.path.join(self.reactant_path, 'tmp/product.xyz')
 
             qm_collection = db['qm_calculate_center']
-            dir_path = self.xtb_output(
-                reactant_output, product_output, form_bonds, break_bonds, prod_mol)
+            dir_path = self.xtb_output(reactant_output, product_output, form_bonds, break_bonds, prod_mol)
             reactant_inchi_key = reac_obj.write('inchiKey').strip()
             product_inchi_key = prod_mol.write('inchiKey').strip()
             self.logger.info('\nReactant inchi key: {}\nProduct inchi key: {}\nReactant smiles: {}\nProduct smiles: {}\nDirectory path: {}\n'.format(
@@ -314,8 +300,8 @@ class Network(object):
             self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
             return 1
         else:
-            self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
             self.logger.info('Delta H is {}, greater than threshold'.format(dH))
+            self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
             return 0
 
     def get_mopac_H298(self, mol_object, charge=0, multiplicity='SINGLET'):
