@@ -103,7 +103,7 @@ class Network(object):
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_mopac(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
-                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols)):
+                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, refH=None):
                         prod_mols_filtered.append(prod_mol)
                     # Recovery
                     mol_object_copy = mol_object.copy()
@@ -112,7 +112,7 @@ class Network(object):
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_mopac(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
-                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), H298_reac):
+                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, refH=H298_reac):
                         prod_mols_filtered.append(prod_mol)
                     # Recovery
                     mol_object_copy = mol_object.copy()
@@ -138,7 +138,7 @@ class Network(object):
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_xtb(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
-                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols)):
+                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, refH=None):
                         prod_mols_filtered.append(prod_mol)
                     mol_object.setCoordsFromMol(mol_object_copy)
             else:
@@ -146,7 +146,7 @@ class Network(object):
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_xtb(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
-                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), H298_reac):
+                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, refH=H298_reac):
                         prod_mols_filtered.append(prod_mol)
                     mol_object.setCoordsFromMol(mol_object_copy)
         else:
@@ -209,7 +209,7 @@ class Network(object):
             return 1
         return 0
 
-    def filter_dh_mopac(self, reac_obj, cluster_bond, prod_mol, form_bonds, break_bonds, total_prod_num, refH=None):
+    def filter_dh_mopac(self, reac_obj, cluster_bond, prod_mol, form_bonds, break_bonds, total_prod_num, qm_collection, refH=None):
         self.count += 1
         mopac_object = Mopac(reac_obj, prod_mol, self.mopac_method, self.forcefield, self.constraintff_alg,
                              form_bonds, break_bonds, self.logger, total_prod_num, self.count, self.constraint, self.fixed_atom, cluster_bond)
@@ -231,7 +231,6 @@ class Network(object):
             reactant_output = os.path.join(self.reactant_path, 'tmp/reactant.out')
             product_output = os.path.join(self.reactant_path, 'tmp/product.out')
 
-            qm_collection = db['qm_calculate_center']
             dir_path = self.mopac_output(reactant_output, product_output, form_bonds, break_bonds, prod_mol)
             reactant_inchi_key = reac_obj.write('inchiKey').strip()
             product_inchi_key = prod_mol.write('inchiKey').strip()
@@ -257,7 +256,7 @@ class Network(object):
             self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
             return 0
 
-    def filter_dh_xtb(self, reac_obj, cluster_bond, prod_mol, form_bonds, break_bonds, total_prod_num, refH=None):
+    def filter_dh_xtb(self, reac_obj, cluster_bond, prod_mol, form_bonds, break_bonds, total_prod_num, qm_collection, refH=None):
         self.count += 1
         xtb_object = XTB(reac_obj, prod_mol, self.forcefield, self.constraintff_alg, form_bonds, break_bonds,
                          self.logger, total_prod_num, self.count, self.constraint, self.fixed_atom, cluster_bond)
@@ -277,7 +276,6 @@ class Network(object):
             reactant_output = os.path.join(self.reactant_path, 'tmp/reactant.xyz')
             product_output = os.path.join(self.reactant_path, 'tmp/product.xyz')
 
-            qm_collection = db['qm_calculate_center']
             dir_path = self.xtb_output(reactant_output, product_output, form_bonds, break_bonds, prod_mol)
             reactant_inchi_key = reac_obj.write('inchiKey').strip()
             product_inchi_key = prod_mol.write('inchiKey').strip()
@@ -362,9 +360,6 @@ class Network(object):
         return result
 
     def gen_geometry(self, reactant_mol, product_mol, reactant_mol_copy, add_bonds, break_bonds, **kwargs):
-        # Database
-        qm_collection = db['qm_calculate_center']
-
         # Initial optimization
         Hatom = gen3D.readstring('smi', '[H]')
         ff = pybel.ob.OBForceField.FindForceField(self.forcefield)
@@ -398,8 +393,7 @@ class Network(object):
         if not os.path.exists(subdir):
             os.mkdir(subdir)
         b_dirname = product_mol.write('inchiKey').strip()
-        targets = list(qm_collection.find({'product_inchi_key': b_dirname}))
-        dirname = self.dir_check(subdir, b_dirname, len(targets) + 1)
+        dirname = self.dir_check(subdir, b_dirname)
 
         output_dir = util.makeOutputSubdirectory(subdir, dirname)
         kwargs['output_dir'] = output_dir
@@ -412,15 +406,11 @@ class Network(object):
         return output_dir
 
     def mopac_output(self, reactant_output, product_output, add_bonds, break_bonds, prod_mol, **kwargs):
-        # Database
-        qm_collection = db['qm_calculate_center']
-
         subdir = os.path.join(os.path.dirname(self.ard_path), 'reactions')
         if not os.path.exists(subdir):
             os.mkdir(subdir)
         b_dirname = prod_mol.write('inchiKey').strip()
-        targets = list(qm_collection.find({'product_inchi_key': b_dirname}))
-        dirname = self.dir_check(subdir, b_dirname, len(targets) + 1)
+        dirname = self.dir_check(subdir, b_dirname)
 
         output_dir = util.makeOutputSubdirectory(subdir, dirname)
         kwargs['output_dir'] = output_dir
@@ -429,31 +419,24 @@ class Network(object):
         psymbol, pgeometry = self.get_mopac_opt_geometry(product_output)
 
         #self.makeInputFile(reactant, product, **kwargs)
-        self.makeCalFile(reactant_output, 'reactant.xyz',
-                         symbol=rsymbol, geometry=rgeometry, **kwargs)
-        self.makeCalFile(product_output, 'product.xyz',
-                         symbol=psymbol, geometry=pgeometry, **kwargs)
+        self.makeCalFile(reactant_output, 'reactant.xyz', symbol=rsymbol, geometry=rgeometry, **kwargs)
+        self.makeCalFile(product_output, 'product.xyz', symbol=psymbol, geometry=pgeometry, **kwargs)
         self.makeisomerFile(add_bonds, break_bonds, **kwargs)
         return output_dir
 
     def xtb_output(self, reactant_output, product_output, add_bonds, break_bonds, prod_mol, **kwargs):
-        # Database
-        qm_collection = db['qm_calculate_center']
-
         subdir = os.path.join(os.path.dirname(self.ard_path), 'reactions')
         if not os.path.exists(subdir):
             os.mkdir(subdir)
+        
         b_dirname = prod_mol.write('inchiKey').strip()
-        targets = list(qm_collection.find({'product_inchi_key': b_dirname}))
-        dirname = self.dir_check(subdir, b_dirname, len(targets) + 1)
+        dirname = self.dir_check(subdir, b_dirname)
 
         output_dir = util.makeOutputSubdirectory(subdir, dirname)
         kwargs['output_dir'] = output_dir
 
-        shutil.copyfile(reactant_output, os.path.join(
-            output_dir, 'reactant.xyz'))
-        shutil.copyfile(product_output, os.path.join(
-            output_dir, 'product.xyz'))
+        shutil.copyfile(reactant_output, os.path.join(output_dir, 'reactant.xyz'))
+        shutil.copyfile(product_output, os.path.join(output_dir, 'product.xyz'))
         self.makeisomerFile(add_bonds, break_bonds, **kwargs)
         return output_dir
 
@@ -479,18 +462,17 @@ class Network(object):
         return gen3D.Molecule(mol.OBMol)
 
     @staticmethod
-    def dir_check(subdir, b_dirname, num):
+    def dir_check(subdir, b_dirname, num = 1):
         """
         When parallely run job, the dir is constructed but data is not on database yet
         """
-        check = False
-        number = num
-        while check == False:
-            new_name = '{}_{}'.format(b_dirname, number)
+        check = True
+        while check:
+            new_name = '{}_{}'.format(b_dirname, num)
             if os.path.exists(os.path.join(subdir, new_name)):
-                number += 1
+                num += 1
             else:
-                check = True
+                check = False
         return new_name
 
     @staticmethod
