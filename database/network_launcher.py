@@ -27,23 +27,20 @@ def select_ard_target():
 def launch_ard_jobs(ncpus=8, mpiprocs=1, ompthreads=8):
 
     qm_collection = db['qm_calculate_center']
-    pool_collection = db['pool']
+    config_collection = db['config']
     status_collection = db['status']
 
-    if pool_collection.estimated_document_count() == 0:
+    if config_collection.estimated_document_count() == 0:
         print(highlight_text('Starting ARD network exploring'))
-        script_path = path.join(path.dirname(
-            path.dirname(path.abspath(__file__))), 'script')
+        script_path = path.join(path.dirname(path.dirname(path.abspath(__file__))), 'script')
         if os.path.exists(script_path):
             os.chdir(script_path)
         subfile = create_ard_sub_file(
             script_path, script_path, 1, 'reactant.xyz', ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
-        # first reactant need to add to pool
-        initial_reactant = next(pybel.readfile(
-            'xyz', path.join(script_path, 'reactant.xyz')))
+        # first reactant need to add to config
+        initial_reactant = next(pybel.readfile('xyz', path.join(script_path, 'reactant.xyz')))
         initial_reactant_inchi_key = initial_reactant.write('inchiKey').strip()
-        pool_collection.insert_one(
-            {'reactant_inchi_key': initial_reactant_inchi_key, 'generations': 1})
+        config_collection.insert_one({'reactant_inchi_key': initial_reactant_inchi_key, 'generations': 1})
         cmd = 'qsub {}'.format(subfile)
         process = subprocess.Popen([cmd],
                                    stdout=subprocess.PIPE,
@@ -54,12 +51,10 @@ def launch_ard_jobs(ncpus=8, mpiprocs=1, ompthreads=8):
         # update status job_launched
         print('ARD had launched')
         print('jobid is {}'.format(job_id))
-        status_collection.insert_one(
-            {'status': 'ARD had launched', 'jobid': job_id})
+        status_collection.insert_one({'status': 'ARD had launched', 'jobid': job_id})
     else:
         targets = select_ard_target()
-        use_irc_query = {'reactant_smiles': 'initial reactant'}
-        use_irc = list(qm_collection.find(use_irc_query))[0]['use_irc']
+        use_irc = list(config_collection.find({'generations':1}))[0]['use_irc']
         count = 0
         for target in targets:
             if use_irc == '0':
@@ -77,10 +72,8 @@ def launch_ard_jobs(ncpus=8, mpiprocs=1, ompthreads=8):
             else:
                 dir_path, gen_num = target['path'], target['generations']
                 next_reactant = path.join(dir_path, 'irc_reactant.xyz')
-                script_path = path.join(path.dirname(
-                    path.dirname(dir_path)), 'script')
-                subfile = create_ard_sub_file(
-                    dir_path, script_path, gen_num + 1, next_reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
+                script_path = path.join(path.dirname(path.dirname(dir_path)), 'script')
+                subfile = create_ard_sub_file(dir_path, script_path, gen_num + 1, next_reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
 
             os.chdir(dir_path)
 
@@ -92,10 +85,11 @@ def launch_ard_jobs(ncpus=8, mpiprocs=1, ompthreads=8):
             # get job id from stdout, e.g., "106849.h81"
             job_id = stdout.decode().replace("\n", "")
             # update status job_launched
-            update_ard_status(target, job_id)
+            update_ard_status(qm_collection, target, job_id)
             count += 1
         print(highlight_text('ARD'))
         print('\nARD launced {} jobs\n'.format(count))
+
 def create_ard_sub_file(dir_path, script_path, gen_num, next_reactant, ncpus=4, mpiprocs=1, ompthreads=4, mem=1):
     subfile = path.join(dir_path, 'ard.job')
     product_xyz_path = path.join(dir_path, next_reactant)
@@ -105,28 +99,21 @@ def create_ard_sub_file(dir_path, script_path, gen_num, next_reactant, ncpus=4, 
     constraint = path.join(script_path, 'constraint.txt')
     fixed_atom = path.join(script_path, 'fixed_atom.txt')
     shell = '#!/usr/bin/bash'
-    pbs_setting = '#PBS -l select=1:ncpus={}:mpiprocs={}:ompthreads={}\n#PBS -q workq\n#PBS -j oe'.format(
-        ncpus, mpiprocs, ompthreads)
+    pbs_setting = '#PBS -l select=1:ncpus={}:mpiprocs={}:ompthreads={}\n#PBS -q workq\n#PBS -j oe'.format(ncpus, mpiprocs, ompthreads)
     target_path = 'cd {}'.format(script_path)
-    nes1 = 'source ~/.bashrc\nexport MKL_NUM_THREADS={}\nexport OMP_NUM_THREADS={}\nexport OMP_STACKSIZE={}G\n'.format(
-        ncpus, ompthreads, mem)
+    nes1 = 'source ~/.bashrc\nexport MKL_NUM_THREADS={}\nexport OMP_NUM_THREADS={}\nexport OMP_STACKSIZE={}G\n'.format(ncpus, ompthreads, mem)
     nes2 = 'conda activate ard'
-    command = 'python {} {} {} -bonds {} -constraint {} -fixed_atom {} -generations {}'.format(
-        ard_path, input_path, product_xyz_path, bonds_path, constraint, fixed_atom, gen_num)
+    command = 'python {} {} {} -bonds {} -constraint {} -fixed_atom {} -generations {}'.format(ard_path, input_path, product_xyz_path, bonds_path, constraint, fixed_atom, gen_num)
     deactivate = 'conda deactivate'
 
     with open(subfile, 'w') as f:
-        f.write('{}\n{}\n{}\n{}\n{}\n{}\n{}'.format(
-            shell, pbs_setting, target_path, nes1, nes2, command, deactivate))
+        f.write('{}\n{}\n{}\n{}\n{}\n{}\n{}'.format(shell, pbs_setting, target_path, nes1, nes2, command, deactivate))
 
     return subfile
 
-
-def update_ard_status(target, job_id):
-    qm_collection = db['qm_calculate_center']
+def update_ard_status(qm_collection, target, job_id):
     update_field = {"ard_status": "job_launched", "ard_jobid": job_id}
     qm_collection.update_one(target, {"$set": update_field}, True)
-
 
 def check_ard_job_status(job_id):
     """

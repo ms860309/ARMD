@@ -60,9 +60,9 @@ class Network(object):
         """
         # Database
         qm_collection = db['qm_calculate_center']
-        pool_collection = db['pool']
+        config_collection = db['config']
         statistics_collection = db['statistics']
-        targets = list(pool_collection.find({'generations': 1}))
+        targets = list(config_collection.find({'generations': 1}))
 
         # Reactant information
         reactant_inchi_key = mol_object.write('inchiKey').strip()  # inchikey
@@ -83,23 +83,9 @@ class Network(object):
         if self.method.lower() == 'mopac':
             self.logger.info('Now use {} to filter the delta H of reactions....\n'.format(self.method))
             if self.generations == 1:
-                # Add low level opt of the initial reactant
-                reactant_path = os.path.join(self.ard_path, 'reactant.xyz')
-                subdir = os.path.join(os.path.join(os.path.dirname(self.ard_path), 'reactions'), 'initial_reactant')
-                new_reactant_path = os.path.join(subdir, 'reactant.xyz')
                 os.mkdir(os.path.join(os.path.dirname(self.ard_path), 'reactions'))
-                os.mkdir(subdir)
-                shutil.copyfile(reactant_path, new_reactant_path)
-
-                qm_collection.insert_one({
-                    'reactant_smiles': 'initial reactant',
-                    'reactant_inchi_key': reactant_inchi_key,
-                    'path': subdir,
-                    'use_irc': self.use_irc})
                 H298_reac = self.get_mopac_H298(mol_object)
-
-                update_field = {'reactant_energy': H298_reac}
-                pool_collection.update_one(targets[0], {"$set": update_field}, True)
+                config_collection.update_one(targets[0], {"$set": {'reactant_energy': H298_reac, 'use_irc': self.use_irc}}, True)
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_mopac(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
@@ -119,22 +105,9 @@ class Network(object):
         elif self.method.lower() == 'xtb':
             self.logger.info('Now use {} to filter the delta H of reactions....\n'.format(self.method))
             if self.generations == 1:
-                # Add low level opt of the initial reactant
-                reactant_path = os.path.join(self.ard_path, 'reactant.xyz')
-                subdir = os.path.join(os.path.join(os.path.dirname(self.ard_path), 'reactions'), 'initial_reactant')
-                new_reactant_path = os.path.join(subdir, 'reactant.xyz')
                 os.mkdir(os.path.join(os.path.dirname(self.ard_path), 'reactions'))
-                os.mkdir(subdir)
-                shutil.copyfile(reactant_path, new_reactant_path)
-
-                qm_collection.insert_one({
-                    'reactant_smiles': 'initial reactant',
-                    'reactant_inchi_key': reactant_inchi_key,
-                    'path': subdir,
-                    'use_irc': self.use_irc})
                 H298_reac = self.get_xtb_H298(mol_object)
-
-                pool_collection.update_one(targets[0], {"$set": {'reactant_energy': H298_reac}}, True)
+                config_collection.update_one(targets[0], {"$set": {'reactant_energy': H298_reac, 'use_irc': self.use_irc}}, True)
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_xtb(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
@@ -161,8 +134,7 @@ class Network(object):
             if self.generations == 1:
                 H298_reac = self.reac_mol.getH298(thermo_db)
                 update_field = {'reactant_energy': H298_reac}
-                pool_collection.update_one(
-                    targets[0], {"$set": update_field}, True)
+                config_collection.update_one(targets[0], {"$set": update_field}, True)
             else:
                 H298_reac = targets[0]['reactant_energy']
             prod_mols_filtered = [mol for mol in prod_mols if self.filter_dh_rmg(H298_reac, mol, thermo_db)]

@@ -788,9 +788,8 @@ def insert_reaction(qm_collection:object, reactions_collection:object):
 ARD check unrun
 """
 
-def insert_ard(qm_collection:object, reactions_collection:object, statistics_collection:object, barrier_threshold:float=60.0):
-    use_irc_query = {'reactant_smiles': 'initial reactant'}
-    use_irc = list(qm_collection.find(use_irc_query))[0]['use_irc']
+def insert_ard(qm_collection:object, reactions_collection:object, statistics_collection:object, config_collection:object, barrier_threshold:float=60.0):
+    use_irc = list(config_collection.find({'generations':1}))[0]['use_irc']
     ard_query = {"ard_status":
                  {"$in":
                   ["job_unrun", "job_launched", "job_running", "job_queueing"]
@@ -852,13 +851,13 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
                                                 [energy_query, ssm_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ts_refine_query, ard_query]
                                                 })))
 
-    ard_had_add_number = qm_collection.count_documents({})  # Should -1 because the initial reactant
+    ard_had_add_number = qm_collection.count_documents({})
     ard_should_add_number = 0
     should_adds = list(statistics_collection.find({}))
     for i in should_adds:
         ard_should_add_number += i['add how many products']
 
-    if int(not_finished_number) == 0 and int(ard_had_add_number) - 1 == int(ard_should_add_number):
+    if int(not_finished_number) == 0 and int(ard_had_add_number) == int(ard_should_add_number):
         acceptable_condition = ['forward equal to reactant',
                                 'backward equal to reactant']
 
@@ -928,9 +927,8 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
 QMMM
 """
 
-def insert_qmmm(qm_collection:object, reactions_collection:object, statistics_collection:object):
-    use_irc_query = {'reactant_smiles': 'initial reactant'}
-    use_irc = list(qm_collection.find(use_irc_query))[0]['use_irc']
+def insert_qmmm(qm_collection:object, reactions_collection:object, statistics_collection:object, config_collection:object):
+    use_irc = list(config_collection.find({'generations':1}))[0]['use_irc']
     ard_query = {"ard_status":
                  {"$in":
                   ["job_unrun", "job_launched", "job_running", "job_queueing"]
@@ -992,13 +990,13 @@ def insert_qmmm(qm_collection:object, reactions_collection:object, statistics_co
                                                 [energy_query, ssm_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ts_refine_query, ard_query]
                                                 })))
 
-    ard_had_add_number = qm_collection.count_documents({})  # Should -1 because the initial reactant
+    ard_had_add_number = qm_collection.count_documents({})
     ard_should_add_number = 0
     should_adds = list(statistics_collection.find({}))
     for i in should_adds:
         ard_should_add_number += i['add how many products']
 
-    if int(not_finished_number) == 0 and int(ard_had_add_number) - 1 == int(ard_should_add_number):
+    if int(not_finished_number) == 0 and int(ard_had_add_number) == int(ard_should_add_number):
         reactions = list(reactions_collection.aggregate([{
                     '$group': {
                         '_id': "$reaction",
@@ -1758,7 +1756,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     qm_collection = db['qm_calculate_center']
     reactions_collection = db['reactions']
     statistics_collection = db['statistics']
-
+    config_collection = db['config']
     if cluster_bond_path:
         # use the checker.py path as the reference
         checker_path = os.path.realpath(sys.argv[0])
@@ -1776,8 +1774,8 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path)
     check_barrier(qm_collection)
     insert_reaction(qm_collection, reactions_collection)
-    insert_ard(qm_collection, reactions_collection, statistics_collection, barrier_threshold=60.0)
-    insert_qmmm(qm_collection, reactions_collection, statistics_collection)
+    insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=60.0)
+    insert_qmmm(qm_collection, reactions_collection, statistics_collection, config_collection)
 
     check_qmmm_opt_jobs(qm_collection)
     check_qmmm_freq_opt_jobs(qm_collection)
