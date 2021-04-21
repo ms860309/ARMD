@@ -69,10 +69,11 @@ class Network(object):
 
         # Generate all possible products
         gen = Generate(mol_object, self.reactant_graph,
-                       self.bond_dissociation_cutoff, use_inchi_key, self.constraint, self.fixed_atom, self.SnBEA)
+                       self.bond_dissociation_cutoff, use_inchi_key, self.fixed_atom, self.SnBEA)
         self.logger.info('Generating all possible products...')
         gen.generateProducts(nbreak=int(nbreak), nform=int(nform))
         prod_mols = gen.prod_mols
+
         prod_mols_filtered = []
         self.logger.info('{} possible products are generated\n'.format(len(prod_mols)))
         add_bonds = gen.add_bonds

@@ -111,8 +111,7 @@ class ARD(object):
         Finalize the job.
         """
         self.logger.info('\nARD terminated on ' + time.asctime())
-        self.logger.info('Total ARD run time: {:.1f} s'.format(
-            time.time() - start_time))
+        self.logger.info('Total ARD run time: {:.1f} s'.format(time.time() - start_time))
 
 ###############################################################################
 

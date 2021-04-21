@@ -80,10 +80,10 @@ class Node(object):
             raise
         # self.atoms can be generated from atomic numbers or from atom labels
         self.atoms = [int(atom) for atom in atoms]
-
+        elements = [ELEMENT_TABLE.from_atomic_number(atom) for atom in self.atoms]
+        self.atom_symbols = [element.symbol for element in elements]
         self.multiplicity = int(multiplicity)
-        elements = [ELEMENT_TABLE.from_atomic_number(
-            atom) for atom in self.atoms]
+        
         self.masses = [element.mass_amu for element in elements]
         self.energy = None
         self.gradient = None
@@ -92,12 +92,10 @@ class Node(object):
         """
         Return a human readable string representation of the object.
         """
-        return_string = ''
-        for anum, atom in enumerate(self.coords):
-            element = ELEMENT_TABLE.from_atomic_number(self.atoms[anum])
-            return_string += '{0}  {1[0]: 17.11f}{1[1]: 17.11f}{1[2]: 17.11f}\n'.format(
-                element.symbol, atom)
-        return return_string[:-1]
+        coords = "\n".join(
+                ["{} {:10.08f} {:10.08f} {:10.08f}".format(a, *c) for a, c in zip(self.atom_symbols, self.coords)])
+
+        return f"{coords}"
 
     def __repr__(self):
         """
@@ -132,17 +130,14 @@ class Node(object):
         """
         Return a string of the node in the XYZ file format.
         """
-        return str(len(self.atoms)) + '\n\n' + str(self)
+        return f"{len(self.atoms)}\n\n{self}"
 
     def getListOfAtoms(self):
         """
         Make and return a list of `Atom` objects corresponding to the atoms in
         the node.
         """
-        atoms = []
-        for idx, (anum, coord) in enumerate(zip(self.atoms, self.coords)):
-            atom = Atom(anum, coord, idx)
-            atoms.append(atom)
+        atoms = [Atom(anum, coord, idx) for idx, (anum, coord) in enumerate(zip(self.atoms, self.coords))]
         return atoms
 
     def getBonds(self):
@@ -199,16 +194,13 @@ class Node(object):
         """
         Convert node to a :class:`rmgpy.molecule.Molecule` object.
         """
-        mol = self.toMolecule()
-        return mol.toRMGMolecule()
+        return self.toMolecule().toRMGMolecule()
 
     def toSMILES(self):
         """
         Return a SMILES representation of the node.
         """
-        mol = self.toPybelMol()
-        smiles = mol.write('can').strip()
-        return smiles
+        return self.toPybelMol().write('can').strip()
 
     def toBEMat(self):
         """
@@ -386,7 +378,7 @@ class Node(object):
             return -1
         assert np.size(self.coords) == np.size(other.coords)
         diff = self.coords.flatten() - other.coords.flatten()
-        return diff.dot(diff) ** 0.5
+        return np.linalg.norm(diff)
 
     def getTangent(self, other):
         """

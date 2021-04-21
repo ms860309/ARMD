@@ -61,24 +61,16 @@ class Generate(object):
           (beginAtomIdx, endAtomIdx, bondOrder)
     """
 
-    def __init__(self, reac_mol, reactant_graph, bond_dissociation_cutoff, use_inchi_key, constraint=None, fixed_atom=None, SnBEA = None):
+    def __init__(self, reac_mol, reactant_graph, bond_dissociation_cutoff, use_inchi_key, fixed_atom=None, SnBEA = None):
         self.reac_mol = reac_mol
         self.reactant_inchikey = [reac_mol.write('inchiKey').strip()]
         self.reac_mol_graph = reactant_graph
         self.bond_dissociation_cutoff = float(bond_dissociation_cutoff)
         self.atoms = None
         self.prod_mols, self.add_bonds, self.break_bonds = [], [], []
-
         self.use_inchi_key = use_inchi_key
-        if constraint == None:
-            self.constraint = []
-        else:
-            self.constraint = constraint
+        self.fixed_atom = fixed_atom
 
-        if fixed_atom == None:
-            self.fixed_atom = []
-        else:
-            self.fixed_atom = fixed_atom
         self.initialize()
         self.reactant_coords = [np.array([atom.coords for atom in self.reac_mol]).reshape(len(self.atoms), 3)]
         self.SnBEA = SnBEA
@@ -93,7 +85,7 @@ class Generate(object):
                             for bond in pybel.ob.OBMolBondIter(self.reac_mol.OBMol)]
         self.reactant_bonds = tuple(sorted(reactant_bonds))
 
-        if not self.fixed_atom == []:
+        if self.fixed_atom:
             self.active_site_oxygen = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] == 8]
             self.active_site_metal = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] in [42, 50, 74]]
             self.reactant_oxygen = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atom and reactant_atoms == 8]
@@ -141,7 +133,7 @@ class Generate(object):
                           for atom1_idx in range(natoms - 1)
                           for atom2_idx in range(atom1_idx + 1, natoms)]
         bond_can_break = []
-        if not self.fixed_atom == []:
+        if self.fixed_atom:
             bond_can_form = [bonds for bonds in bonds_form_all if bonds[0] not in self.fixed_atom and bonds[1] not in self.fixed_atom]
             # index start from 0
             # HR (reactant hydrogen, -OH) <---> OA (active site oxygen)
@@ -323,19 +315,31 @@ class Generate(object):
             return False
         else:
             for idx, i in enumerate(self.atoms):
-                if idx not in self.fixed_atom:
+                # For catalyst (SnBEA)
+                if self.fixed_atom:
+                    if idx not in self.fixed_atom:
+                        if i == 6 and bond_type[idx] != 4:
+                            return False
+                        elif i == 8 and bond_type[idx] < 2:
+                            return False
+                        elif i == 8 and bond_type[idx] > 2:
+                            if (idx, self.active_site_metal[0], 1) not in bonds and (self.active_site_metal[0], idx, 1) not in bonds:
+                                return False
+                        elif i == 14 and bond_type[idx] != 4:
+                            return False
+                    else:
+                        # While the bronsted acid already have proton on the active site, then aborted.
+                        if i == 8 and bond_type[idx] > 3:
+                            return False
+                # Normal case (organic reaction)
+                else:
                     if i == 6 and bond_type[idx] != 4:
                         return False
-                    elif i == 8 and bond_type[idx] < 2:
+                    elif i == 8 and bond_type[idx] != 2:
                         return False
-                    elif i == 8 and bond_type[idx] > 2:
-                        if (idx, self.active_site_metal[0], 1) not in bonds and (self.active_site_metal[0], idx, 1) not in bonds:
-                            return False
                     elif i == 14 and bond_type[idx] != 4:
                         return False
-                else:
-                    # While the bronsted acid already have proton on the active site, then aborted.
-                    if i == 8 and bond_type[idx] > 3:
+                    elif i == 1 and bond_type[idx] != 1:
                         return False
             return True
 
@@ -361,10 +365,7 @@ class Generate(object):
             return False
         else:
             # Filter the bond dissociation energy
-            num = 0
-            for bb in bbond_list:
-                num += bb[2]
-
+            num = sum([bb[2] for bb in bbond_list])
             for break_bond in bbond_list:
                 first_atom = reactant_graph.atoms[break_bond[0]].label
                 second_atom = reactant_graph.atoms[break_bond[1]].label
@@ -377,23 +378,17 @@ class Generate(object):
                     # consider if break double bond (2-->1 not break 2) then the bond dissociation use double bond energy - single bond energy
                     if num >= 3 and bond_type >= 2:
                         try:
-                            energy += props.bond_dissociation_energy[first_atom,
-                                                                     second_atom, bond_type]
-                            energy -= props.bond_dissociation_energy[first_atom,
-                                                                     second_atom, bond_type - 1]
+                            energy += props.bond_dissociation_energy[first_atom, second_atom, bond_type]
+                            energy -= props.bond_dissociation_energy[first_atom, second_atom, bond_type - 1]
                         except:
-                            energy += props.bond_dissociation_energy[second_atom,
-                                                                     first_atom, bond_type]
-                            energy -= props.bond_dissociation_energy[second_atom,
-                                                                     first_atom, bond_type - 1]
+                            energy += props.bond_dissociation_energy[second_atom, first_atom, bond_type]
+                            energy -= props.bond_dissociation_energy[second_atom, first_atom, bond_type - 1]
                     else:
                         try:
-                            energy += props.bond_dissociation_energy[first_atom,
-                                                                     second_atom, bond_type]
+                            energy += props.bond_dissociation_energy[first_atom, second_atom, bond_type]
                         except:
-                            energy += props.bond_dissociation_energy[second_atom,
-                                                                     first_atom, bond_type]
-            if energy/_constants.CAL2J >= self.bond_dissociation_cutoff:
+                            energy += props.bond_dissociation_energy[second_atom, first_atom, bond_type]
+            if energy / _constants.CAL2J > self.bond_dissociation_cutoff:
                 return False
             else:
                 return True
@@ -418,8 +413,9 @@ class Generate(object):
             bonds_broken = []
 
         if nbreak == 0 and nform == 0:
-            if all(bonds_broken[num][0] not in self.fixed_atom or bonds_broken[num][1] not in self.fixed_atom for num in range(len(bonds_broken))):
-                products.add((tuple(sorted(bonds))))
+            products.add((tuple(sorted(bonds))))
+            # if all(bonds_broken[num][0] not in self.fixed_atom or bonds_broken[num][1] not in self.fixed_atom for num in range(len(bonds_broken))):
+            #     products.add((tuple(sorted(bonds))))
 
         if nbreak > 0:
             # Break bond
@@ -514,8 +510,7 @@ class Generate(object):
                 except ValueError:  # Add new bond if it does not exist yet
                     return bonds + (new_bond,)
                 else:  # Raise exception if trying to exceed triple bond
-                    raise StructureError(
-                        'Bond type cannot be higher than triple bond for bond {}'.format(bonds[idx]))
+                    raise StructureError('Bond type cannot be higher than triple bond for bond {}'.format(bonds[idx]))
             else:  # Return bonds with double bond increased to triple bond
                 return bonds[:idx] + (bonds[idx][:2] + (3,),) + bonds[(idx + 1):]
         else:  # Return bonds with single bond increased to double bond
@@ -544,11 +539,9 @@ class Generate(object):
         element0 = ELEMENT_TABLE.from_atomic_number(self.atoms[bond[0]])
         element1 = ELEMENT_TABLE.from_atomic_number(self.atoms[bond[1]])
         if valences_temp[bond[0]] > element0.max_bonds:
-            raise StructureError(
-                'Maximum valence on atom {} exceeded'.format(bond[0]))
+            raise StructureError('Maximum valence on atom {} exceeded'.format(bond[0]))
         if valences_temp[bond[1]] > element1.max_bonds:
-            raise StructureError(
-                'Maximum valence on atom {} exceeded'.format(bond[1]))
+            raise StructureError('Maximum valence on atom {} exceeded'.format(bond[1]))
 
         # Return valid valences
         return valences_temp

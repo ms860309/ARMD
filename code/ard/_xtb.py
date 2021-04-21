@@ -149,8 +149,8 @@ class XTB(object):
         Use reactant coordinate to check if the add bonds's bond length is too long.
         Return a 'list of distance'.
         """
-        coords = [atom.coords for atom in product]
         atoms = tuple(atom.atomicnum for atom in product)
+        coords = [atom.coords for atom in product]
         coords = [np.array(coords).reshape(len(atoms), 3)]
 
         dist = []

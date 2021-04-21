@@ -4,7 +4,6 @@ from openbabel import openbabel as ob
 from openbabel import pybel as pb
 import gen3D
 
-
 class FILTER(object):
     def __init__(self, reactant_file, cluster_bond_file = None, bond_file = None, fixed_atom = None):
         self.reactant_file = reactant_file
@@ -67,15 +66,9 @@ class FILTER(object):
 
     def reactant_bonds(self):
         # extract reactant bonds
-        reactant_bonds = []
-        for bond in pb.ob.OBMolBondIter(self.mol.OBMol):
-            sorted_bond = sorted(
-                (bond.GetBeginAtomIdx() - 1, bond.GetEndAtomIdx() - 1))
-            bond_order = bond.GetBondOrder()
-            bonds = tuple(sorted_bond) + (bond_order,)
-            reactant_bonds.append(bonds)
-        reactant_bonds = tuple(sorted(reactant_bonds))
-        self.reactant_bonds = reactant_bonds
+        reactant_bonds = [tuple(sorted((bond.GetBeginAtomIdx() - 1, bond.GetEndAtomIdx() - 1)) + [bond.GetBondOrder()])
+                            for bond in pb.ob.OBMolBondIter(self.reac_mol.OBMol)]
+        self.reactant_bonds = tuple(sorted(reactant_bonds))
         # check the bond order and save in a dict
         bond_type = {}
         for i in range(len(self.atoms)):
@@ -104,27 +97,14 @@ class FILTER(object):
             return True, 'bond type check is pass.'
     
     def check_unreasonable_connection(self):
-        reactant_carbon = []
-        reactant_oxygen = []
-        active_site_oxygen = []
-        active_site_silicon = []
-        active_site_metal = []  # For now only tin, tungsten and Molybdenum
-        hcap = []
-        for active_site_atom in self.fixed_atom:
-            if self.atoms[active_site_atom] == 8:
-                active_site_oxygen.append(active_site_atom)
-            elif self.atoms[active_site_atom] in [42, 50, 74]:
-                active_site_metal.append(active_site_atom)
-            elif self.atoms[active_site_atom] == 14:
-                active_site_silicon.append(active_site_atom)
-            elif self.atoms[active_site_atom] == 1:
-                hcap.append(active_site_atom)
-        for idx, reactant_atoms in enumerate(self.atoms):
-            if idx not in self.fixed_atom:
-                if reactant_atoms == 8:
-                    reactant_oxygen.append(idx)
-                elif reactant_atoms == 6:
-                    reactant_carbon.append(idx)
+        # Use generator is more efficient
+        reactant_carbon = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atom and reactant_atoms == 6]
+        reactant_oxygen = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atom and reactant_atoms == 8]
+        active_site_oxygen = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] == 8]
+        active_site_silicon = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] == 14]
+        active_site_metal = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] in [42, 50, 74]]
+        hcap = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] == 1]
+
         for bond in self.reactant_bonds:
             if (bond[0] in reactant_oxygen and bond[1] in active_site_silicon) or (bond[1] in reactant_oxygen and bond[0] in active_site_silicon):
                 return False, 'reactant oxygen have connection with active site silicon.'

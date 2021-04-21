@@ -166,6 +166,7 @@ def gen_geometry(reactant_mol, product_mol, constraint, fixed_atom):
 
     reactant_mol.gen3D(constraint, forcefield='uff',
                     method='ConjugateGradients', make3D=False)
+
     product_mol.gen3D(constraint, forcefield='uff',
                     method='ConjugateGradients', make3D=False)
 

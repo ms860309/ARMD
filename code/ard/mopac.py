@@ -60,8 +60,7 @@ class Mopac(object):
                 shutil.rmtree(tmpdir)
             os.mkdir(tmpdir)
             with open(reactant_path, 'w') as f:
-                f.write("NOSYM CHARGE={} {} {}\n\n".format(
-                    charge, multiplicity, self.mopac_method))
+                f.write("NOSYM CHARGE={} {} {}\n\n".format(charge, multiplicity, self.mopac_method))
                 f.write("\n{}".format(reac_geo))
             start_time = time.time()
             runMopac(tmpdir, 'reactant.mop')

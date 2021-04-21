@@ -780,12 +780,10 @@ class Arrange3D(object):
 
             #center = [node.getCentroid() for node in self.nodes_1]
             #center = [node.getCenterOfMass() for node in self.nodes_1]
-            self.fdist_1 = [np.linalg.norm(a-b)
-                            for a, b in zip(fd1, fd1[1:] + fd1[:-1])]
+            self.fdist_1 = [np.linalg.norm(a-b) for a, b in zip(fd1, fd1[1:] + fd1[:-1])]
         elif len(self.nodes_2) > 1:
             fd2 = [node.getCentroid() for node in self.nodes_1]
-            self.fdist_2 = [np.linalg.norm(a-b)
-                            for a, b in zip(fd2, fd2[1:] + fd2[:-1])]
+            self.fdist_2 = [np.linalg.norm(a-b) for a, b in zip(fd2, fd2[1:] + fd2[:-1])]
 
     def arrangeIn3D(self):
         """
