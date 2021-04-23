@@ -858,6 +858,8 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
         ard_should_add_number += i['add how many products']
 
     if int(not_finished_number) == 0 and int(ard_had_add_number) == int(ard_should_add_number):
+        insert_qmmm(qm_collection, reactions_collection)
+
         acceptable_condition = ['forward equal to reactant',
                                 'backward equal to reactant']
 
@@ -927,112 +929,42 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
 QMMM
 """
 
-def insert_qmmm(qm_collection:object, reactions_collection:object, statistics_collection:object, config_collection:object):
-    use_irc = list(config_collection.find({'generations':1}))[0]['use_irc']
-    ard_query = {"ard_status":
-                 {"$in":
-                  ["job_unrun", "job_launched", "job_running", "job_queueing"]
-                  }
-                 }
-    energy_query = {"energy_status":
-                    {"$in":
-                        ["job_unrun", "job_launched", "job_running", "job_queueing"]
-                     }
-                    }
-    ssm_query = {"ssm_status":
-                 {"$in":
-                  ["job_unrun", "job_launched", "job_running", "job_queueing"]
-                  }
-                 }
-    ts_refine_query = {"ts_refine_status":
-                       {"$in":
-                        ["job_unrun", "job_launched", "job_running", "job_queueing"]
-                        }
-                       }
-    ts_query = {"ts_status":
-                {"$in":
-                 ["job_unrun", "job_launched", "job_running", "job_queueing"]
-                 }
-                }
-    irc_query = {"irc_status":
-                 {"$in":
-                  ["job_unrun", "job_launched", "job_running", "job_queueing"]
-                  }
-                 }
-    irc_opt_query = {'$or':
-                     [
-                         {"irc_forward_opt_status":
-                          {"$in":
-                           ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
-                         {'irc_forward_opt_status':
-                             {'$in':
-                              ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
-                         {'irc_opt_status':
-                             {'$in':
-                              ["job_unrun"]}}
-                     ]
-                     }
-    irc_equal_query = {"irc_equal":
-                       {"$in":
-                        ["waiting for checking"]
-                        }
-                       }
-    insert_reaction_query = {"insert_reaction":
-                             {"$in":
-                              ['need insert']}}
+def insert_qmmm(qm_collection:object, reactions_collection:object):
 
-    if use_irc == '0':
-        not_finished_number = len(list(qm_collection.find({'$or':
-                                                [energy_query, ssm_query, ts_query, insert_reaction_query, ts_refine_query, ard_query]
-                                                })))
-    else:
-        not_finished_number = len(list(qm_collection.find({'$or':
-                                                [energy_query, ssm_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ts_refine_query, ard_query]
-                                                })))
+    reactions = list(reactions_collection.aggregate([{
+                '$group': {
+                    '_id': "$reaction",
+                    'barrier': {'$min': "$barrier"}
+                }}
+            ]))
 
-    ard_had_add_number = qm_collection.count_documents({})
-    ard_should_add_number = 0
-    should_adds = list(statistics_collection.find({}))
-    for i in should_adds:
-        ard_should_add_number += i['add how many products']
+    for i in reactions:
+        dir_path = list(reactions_collection.find({'reaction': i['_id'], 'barrier': i['barrier']}))[0]
+        try:
+            qmmm = dir_path['qmmm']
+            if qmmm == 'Already insert':
+                continue
+        except:
+            pass
+        ard_qm_target = list(qm_collection.find({'path': dir_path['path']}))[0]
+        # Prevent reactant equal to product but with different active site (maybe proton at the different oxygen)
+        reactant_smiles = ard_qm_target['reactant_smiles'].split('.')
+        product_smiles = ard_qm_target['product_smiles'].split('.')
+        if len(reactant_smiles) > 1:
+            reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
+        else:
+            reactant_part_smiles = set(reactant_smiles)
 
-    if int(not_finished_number) == 0 and int(ard_had_add_number) == int(ard_should_add_number):
-        reactions = list(reactions_collection.aggregate([{
-                    '$group': {
-                        '_id': "$reaction",
-                        'barrier': {'$min': "$barrier"}
-                    }}
-                ]))
+        if len(product_smiles) > 1:
+            product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
+        else:
+            product_part_smiles = set(product_smiles)
 
-        for i in reactions:
-            dir_path = list(reactions_collection.find({'reaction': i['_id'], 'barrier': i['barrier']}))[0]
-            try:
-                qmmm = dir_path['qmmm']
-                if qmmm == 'Already insert':
-                    continue
-            except:
-                pass
-            ard_qm_target = list(qm_collection.find({'path': dir_path['path']}))[0]
-            # Prevent reactant equal to product but with different active site (maybe proton at the different oxygen)
-            same = False
-            reactant_smiles = ard_qm_target['reactant_smiles'].split('.')
-            product_smiles = ard_qm_target['product_smiles'].split('.')
-            if len(reactant_smiles) > 1:
-                reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
-            else:
-                reactant_part_smiles = set(reactant_smiles)
+        if reactant_part_smiles == product_part_smiles:
+            continue
 
-            if len(product_smiles) > 1:
-                product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
-            else:
-                product_part_smiles = set(product_smiles)
-
-            if reactant_part_smiles == product_part_smiles:
-                same = True
-
-            if not same:
-                qm_collection.update_one(ard_qm_target, {"$set": {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun"}}, True)
-                reactions_collection.update_one(dir_path, {"$set": {'qmmm': 'Already insert'}}, True)
+        qm_collection.update_one(ard_qm_target, {"$set": {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun"}}, True)
+        reactions_collection.update_one(dir_path, {"$set": {'qmmm': 'Already insert'}}, True)
 
 """
 Check barrier which do not have reactant energy
@@ -1775,7 +1707,6 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_barrier(qm_collection)
     insert_reaction(qm_collection, reactions_collection)
     insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=60.0)
-    insert_qmmm(qm_collection, reactions_collection, statistics_collection, config_collection)
 
     check_qmmm_opt_jobs(qm_collection)
     check_qmmm_freq_opt_jobs(qm_collection)
