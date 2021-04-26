@@ -13,26 +13,8 @@ def extract_data(barrier_threshold=200.0):
     reaction_collection = db['reactions']
     qm_collection = db['qm_calculate_center']
 
-    """
-    reactions = list(reaction_collection.aggregate([{
-                                            '$match':{
-                                                'irc_opt_status':'job_success',
-                                                'irc_equal':{'$in':acceptable_condition},
-                                                'barrier':{'$lte':barrier_threshold, '$gte':-100.0},
-                                                'delta_H':{'$lt':200, '$gte':-100.0}   # Filter the energy fail
-                                            }},{
-                                            '$group':{
-                                                    '_id': "$reaction",
-                                                    'barrier': {'$min': "$barrier"}
-                                                    }}
-                                            ]))
-    """
     reactions = list(reaction_collection.find({}))
-    """
-    for reaction in reactions:
-        if 'C=CC=O' in reaction['product_smiles']:
-            print(reaction['product_inchi_key'])
-    """
+
     # Remove the reactant equal to product but with the different active site.
     # e.g. The Proton is at the different oxygen
     reactions_copy = reactions[:]
@@ -55,17 +37,17 @@ def extract_data(barrier_threshold=200.0):
             reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
             reactant_part_smiles = '.'.join(reactant_part_smiles)
         else:
-            reactant_part_smiles = set(reactant_smiles)[0]
+            reactant_part_smiles = list(set(reactant_smiles))[0]
 
         if len(product_smiles) > 1:
             product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
             product_part_smiles = '.'.join(product_part_smiles)
         else:
-            product_part_smiles = set(product_smiles)[0]
+            product_part_smiles = list(set(product_smiles))[0]
 
 
-        reactant_smi.append(reactant_part_smiles)
-        product_smi.append(product_part_smiles)
+        reactant_smi.append(target['reactant_smiles'])
+        product_smi.append(target['product_smiles'])
         # print(target['barrier'])
         barrier.append(round(target['barrier'], 2))
         generations.append(target['generations'])
@@ -86,73 +68,61 @@ def draw():
         if l == 1:
             if G.has_edge(i, j) :
                 continue
-                # _dict[(i, j)] = k
-            if not G.has_edge(i, j):
-                G.add_edge(i, j, color='r')
-                # _dict[(i, j)] = k
+            G.add_edge(i, j, color='r')
+            _dict[(i, j)] = k
         elif l == 2:
             if G.has_edge(i, j) :
                 continue
-                # _dict[(i, j)] = k
-            if not G.has_edge(i, j):
-                G.add_edge(i, j, color='g')
-                # _dict[(i, j)] = k
+            G.add_edge(i, j, color='g')
+            _dict[(i, j)] = k
         elif l == 3:
             if G.has_edge(i, j) :
                 continue
-                # _dict[(i, j)] = k
-            if not G.has_edge(i, j):
-                G.add_edge(i, j, color='b')
-                # _dict[(i, j)] = k
+            G.add_edge(i, j, color='b')
+            _dict[(i, j)] = k
         elif l == 4:
             if G.has_edge(i, j) :
                 continue
-                # _dict[(i, j)] = k
-            if not G.has_edge(i, j):
-                G.add_edge(i, j, color='y')
-                # _dict[(i, j)] = k
+            G.add_edge(i, j, color='y')
+            _dict[(i, j)] = k
         elif l == 5:
             if G.has_edge(i, j) :
                 continue
-                # _dict[(i, j)] = k
-            if not G.has_edge(i, j):
-                G.add_edge(i, j, color='c')
-                # _dict[(i, j)] = k
+            G.add_edge(i, j, color='c')
+            _dict[(i, j)] = k
         elif l == 6:
             if G.has_edge(i, j) :
                 continue
-                # _dict[(i, j)] = k
-            if not G.has_edge(i, j):
-                G.add_edge(i, j, color='m')
-                # _dict[(i, j)] = k
+            G.add_edge(i, j, color='m')
+            _dict[(i, j)] = k
         else:
             if G.has_edge(i, j) :
                 continue
-                # _dict[(i, j)] = k
-            if not G.has_edge(i, j):
-                G.add_edge(i, j, color='k')
-                # _dict[(i, j)] = k
+            G.add_edge(i, j, color='k')
+            _dict[(i, j)] = k
 
-    plt.figure(figsize=(8, 8))
+    plt.figure(figsize=(15, 15))
     
     colors = nx.get_edge_attributes(G, 'color').values()
     weights = nx.get_edge_attributes(G, 'weight').values()
 
     #pos = nx.circular_layout(G)
     #pos = nx.shell_layout(G)
-    #pos = nx.spring_layout(G)
-    pos = nx.kamada_kawai_layout(G)
+    pos = nx.spring_layout(G)
+    # pos = nx.kamada_kawai_layout(G)
+
     nx.draw(G, pos,
             edge_color=colors,
             with_labels=True,
-            node_color='lightgreen',
-            font_size=8)
-    
-    nx.draw_networkx_edge_labels(G, pos, font_size=8)
-    # nx.draw_networkx_labels(G,pos,labels,font_size=10,font_color='r')
-    #root_to_leaf_paths(G)
+            node_color='none',
+            font_size=5, 
+            connectionstyle='arc3, rad = 0.15')
 
-    plt.savefig("simple_path_2.png")  # save as png
+    #nx.draw_networkx_edge_labels(G, pos, font_size=8)
+    nx.draw_networkx_labels(G,pos,labels,font_size=10,font_color='r')
+    root_to_leaf_paths(G)
+    
+    plt.savefig("simple_path_2.png", dpi=320) # save as png
     plt.show()
 
 def root_to_leaf_paths(G):
@@ -171,12 +141,12 @@ def root_to_leaf_paths(G):
                 energy_profile = [0]
                 for i in range(len(path)):
                     try:
-                        reactant_inchi_key = path[i]
-                        product_inchi_key = path[i+1]
+                        reactant_smiles = path[i]
+                        product_smiles = path[i+1]
                         reactions = list(reaction_collection.aggregate([{
                                                                 '$match':{
-                                                                    'reactant_smiles':reactant_inchi_key,
-                                                                    'product_smiles':product_inchi_key
+                                                                    'reactant_smiles':reactant_smiles,
+                                                                    'product_smiles':product_smiles
                                                                 }},{
                                                                 '$group':{
                                                                         '_id': "$reaction",
@@ -205,7 +175,6 @@ def print_energy_profile_inf(paths, energy_profiles):
         if max(energy_profile) < min_barrier_energy:
             min_barrier_energy = max(energy_profile)
             min_idx = idx
-
     
     significant_step = list(filter(
         lambda step: all([step in path for path in paths]), paths[list(map(len, paths)).index((min(map(len, paths))))]
