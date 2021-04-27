@@ -740,7 +740,7 @@ def create_qmmm_freq_opt(qmmm_dir:str, target_geometry:str, ncpus:int=16, mpipro
     qmmm_freq_opt_config = path.join(base_dir_path, 'qmmm_freq_opt.lot')
     qmmm_freq_opt_input = path.join(qmmm_dir, 'qmmm_freq_opt.in')
     qmmm_freq_opt_output = path.join(qmmm_dir, 'qmmm_freq_opt.out')
-    subfile = path.join(qmmm_dir, 'qmmm_freq_ts.job')
+    subfile = path.join(qmmm_dir, 'qmmm_freq_opt.job')
 
     with open(target_geometry, 'r') as f1:
         lines = f1.read().splitlines()
