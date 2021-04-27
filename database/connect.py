@@ -159,39 +159,4 @@ for i in b:
     except:
         pass
 """
-qm_collection = db['qm_calculate_center']
-reactions_collection = db['reactions']
-reactions = list(reactions_collection.aggregate([{
-            '$group': {
-                '_id': "$reaction",
-                'barrier': {'$min': "$barrier"}
-            }}
-        ]))
 
-for i in reactions:
-    dir_path = list(reactions_collection.find({'reaction': i['_id'], 'barrier': i['barrier']}))[0]
-    try:
-        qmmm = dir_path['qmmm']
-        if qmmm == 'Already insert':
-            continue
-    except:
-        pass
-    ard_qm_target = list(qm_collection.find({'path': dir_path['path']}))[0]
-    # Prevent reactant equal to product but with different active site (maybe proton at the different oxygen)
-    reactant_smiles = ard_qm_target['reactant_smiles'].split('.')
-    product_smiles = ard_qm_target['product_smiles'].split('.')
-    if len(reactant_smiles) > 1:
-        reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
-    else:
-        reactant_part_smiles = set(reactant_smiles)
-
-    if len(product_smiles) > 1:
-        product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
-    else:
-        product_part_smiles = set(product_smiles)
-
-    if reactant_part_smiles == product_part_smiles:
-        continue
-
-    qm_collection.update_one(ard_qm_target, {"$set": {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun"}}, True)
-    reactions_collection.update_one(dir_path, {"$set": {'qmmm': 'Already insert'}}, True)

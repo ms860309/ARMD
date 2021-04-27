@@ -561,7 +561,7 @@ def print_information(generations):
                        [
                            {"qmmm_freq_opt_reactant_status":
                             {"$in":
-                             ["job_running", "job_queueing", "job_launched"]}
+                             ["job_running", "job_queueing", "job_launched", "restart"]}
                             },
                            {'generations': generations}
                        ]
@@ -570,7 +570,7 @@ def print_information(generations):
                        [
                            {"qmmm_freq_opt_product_status":
                             {"$in":
-                             ["job_running", "job_queueing", "job_launched"]}
+                             ["job_running", "job_queueing", "job_launched", '"restart"']}
                             },
                            {'generations': generations}
                        ]
@@ -791,7 +791,7 @@ def print_information(generations):
     print('{} nodes are running or queueing IRC'.format(len(irc_targets_1)))
     print('{} nodes are running or queueing in IRC OPT job'.format(len(irc_opt_targets_1) + len(irc_opt_targets_4)))
     print('{} nodes are running or queueing in QMMM OPT job'.format(len(qmmm_opt_targets_1) + len(qmmm_opt_targets_4)))
-    print('{} nodes are running or queueing in QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_1) + len(qmmm_freq_opt_targets_4)))
+    print('{} nodes are running, queueing or restart in QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_1) + len(qmmm_freq_opt_targets_4)))
     print('{} nodes are running or queueing QMMM TS'.format(len(qmmm_freq_ts_targets_1)))
     print('{} nodes are running or queueing QMMM FREQ'.format(len(qmmm_freq_targets_1) + len(qmmm_freq_targets_4)))
     print('{} nodes are running or queueing QMMM TS FREQ'.format(len(qmmm_ts_freq_targets_1)))

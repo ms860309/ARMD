@@ -697,6 +697,44 @@ def launch_qmmm_freq_opt_jobs(qm_collection:object, num:int=10, ncpus:int=16, mp
     print(highlight_text('QMMM FREQ OPT'))
     print('\nQMMM freq opt launced {} jobs (forward + backward)\n'.format(count * 2))
 
+def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, num:int=10, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16):
+    targets = select_targets(qm_collection, job_name='qmmm_freq_opt_reactant')
+    count = 0
+    for target in targets[:num]:
+        if target['qmmm_freq_opt_reactant_status'] == 'restart':
+            qmmm_reactant_dir = path.join(target['path'], 'QMMM_REACTANT/')
+            reactant = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz')
+            subfile_1 = create_qmmm_freq_opt(qmmm_reactant_dir, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
+            cmd_1 = 'qsub {}'.format(subfile_1)
+            process = subprocess.Popen([cmd_1],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, shell=True)
+            stdout, stderr = process.communicate()
+            # get job id from stdout, e.g., "106849.h81"
+            job_id_1 = stdout.decode().replace("\n", "")
+            update_status(qm_collection, target, job_name='qmmm_freq_opt_reactant', job_id=job_id_1)
+            count += 1
+
+    targets = select_targets(qm_collection, job_name='qmmm_freq_opt_product')
+
+    for target in targets[:num]:
+        if target['qmmm_freq_opt_product_status'] == 'restart':
+            qmmm_product_dir = path.join(target['path'], 'QMMM_PRODUCT/')
+            product = path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz')
+            subfile_2 = create_qmmm_freq_opt(qmmm_product_dir, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
+            cmd_2 = 'qsub {}'.format(subfile_2)
+            process = subprocess.Popen([cmd_1],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, shell=True)
+            stdout, stderr = process.communicate()
+            # get job id from stdout, e.g., "106849.h81"
+            job_id_2 = stdout.decode().replace("\n", "")
+            update_status(qm_collection, target, job_name='qmmm_freq_opt_product', job_id=job_id_2)
+            count += 1
+
+    print(highlight_text('QMMM FREQ OPT RESTART'))
+    print('\nQMMM freq opt restart launced {} jobs\n'.format(count))
+
 def create_qmmm_freq_opt(qmmm_dir:str, target_geometry:str, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16) -> str:
     base_dir_path = path.join(path.dirname(path.dirname(path.dirname(path.dirname(qmmm_dir)))), 'config')
     qmmm_freq_opt_config = path.join(base_dir_path, 'qmmm_freq_opt.lot')
@@ -1192,6 +1230,7 @@ def launch_jobs(num=30, level_of_theory='ORCA', ncpus=4, mpiprocs=1, ompthreads=
 
     # launch_qmmm_opt_jobs(qm_collection, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
     # launch_qmmm_freq_opt_jobs(qm_collection, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
+    # launch_qmmm_freq_opt_restart_jobs(qm_collection, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
     # launch_qmmm_freq_ts_jobs(qm_collection, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
     # launch_qmmm_freq_jobs(qm_collection, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
     # launch_qmmm_ts_freq_jobs(qm_collection, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
