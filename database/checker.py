@@ -1110,7 +1110,7 @@ def check_qmmm_opt_jobs(qm_collection:object):
     finished_targets = select_qmmm_opt_finished_target(qm_collection)
     for target in finished_targets:
         update_field = {
-            'qmmm_opt_status': 'job_success'
+            'qmmm_opt_status': 'job_success', 'qmmm_freq_opt_status':'job_unrun'
             }
         qm_collection.update_one(target, {"$unset": {'qmmm_opt_reactant_status': '', 'qmmm_opt_product_status': '',
                                                      'qmmm_opt_reactant_jobid': '', 'qmmm_opt_product_jobid': ''}, "$set": update_field}, True)
