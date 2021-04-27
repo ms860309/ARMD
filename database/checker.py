@@ -963,7 +963,7 @@ def insert_qmmm(qm_collection:object, reactions_collection:object):
         if reactant_part_smiles == product_part_smiles:
             continue
 
-        qm_collection.update_one(ard_qm_target, {"$set": {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun"}}, True)
+        qm_collection.update_one(ard_qm_target, {"$set": {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun", 'qmmm_freq_opt_reactant_restart_times':0, 'qmmm_freq_opt_product_restart_times':0, 'qmmm_freq_ts_restart_times':0}}, True)
         reactions_collection.update_one(dir_path, {"$set": {'qmmm': 'Already insert'}}, True)
 
 """
@@ -1138,7 +1138,7 @@ def select_qmmm_freq_opt_finished_target(qm_collection:object) -> list:
     targets = list(qm_collection.find(query))
     return targets
 
-def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant') -> str:
+def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:bool=False) -> str:
     qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT/')
     qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT/')
     if direction == 'reactant':
@@ -1150,14 +1150,21 @@ def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant') -> str:
         if direction == 'reactant':
             reactant = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz')
             q.create_qmmm_geomtry(file_path = reactant)
+            if restart:
+                return 'job_success'
+            else:
+                return 'restart'
         else:
             product = path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz')
             q.create_qmmm_geomtry(file_path = product)
-        return 'job_success'
+            if restart:
+                return 'job_success'
+            else:
+                return 'restart'
     except:
         return 'job_fail'
 
-def check_qmmm_freq_opt_jobs(qm_collection:object):
+def check_qmmm_freq_opt_jobs(qm_collection:object, restart_times:int = 2):
     """
     This method checks job with following steps:
     1. select jobs to check
@@ -1173,7 +1180,11 @@ def check_qmmm_freq_opt_jobs(qm_collection:object):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status = check_qmmm_freq_opt_content(target['path'], direction='reactant')
+            times = target['qmmm_freq_opt_reactant_restart_times']
+            if times >= restart_times:
+                new_status = check_qmmm_freq_opt_content(target['path'], direction='reactant', restart=True)
+            else:
+                new_status = check_qmmm_freq_opt_content(target['path'], direction='reactant')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1189,7 +1200,7 @@ def check_qmmm_freq_opt_jobs(qm_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_freq_opt_reactant_status': new_status
+                    'qmmm_freq_opt_reactant_status': new_status, 'qmmm_freq_opt_reactant_restart_times':times + 1
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
@@ -1200,7 +1211,11 @@ def check_qmmm_freq_opt_jobs(qm_collection:object):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status = check_qmmm_freq_opt_content(target['path'], direction='product')
+            times = target['qmmm_freq_opt_product_restart_times']
+            if times >= restart_times:
+                new_status = check_qmmm_freq_opt_content(target['path'], direction='product', restart=True)
+            else:
+                new_status = check_qmmm_freq_opt_content(target['path'], direction='reactant')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1216,7 +1231,7 @@ def check_qmmm_freq_opt_jobs(qm_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_freq_opt_product_status': new_status
+                    'qmmm_freq_opt_product_status': new_status, 'qmmm_freq_opt_product_restart_times':times + 1
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
@@ -1384,21 +1399,18 @@ QMMM FREQ TS
 def check_qmmm_freq_ts_content(dir_path:str, restart:bool=False) -> str:
     qmmm_ts_dir = path.join(dir_path, 'QMMM_TS/')
     output_path = path.join(qmmm_ts_dir, 'qmmm_freq_ts.out')
-    restart_output_path = path.join(qmmm_ts_dir, 'qmmm_freq_ts_restart.out')
     ts = path.join(qmmm_ts_dir, 'qmmm_ts.xyz')
     try:
+        q = QChem(outputfile=output_path)
+        q.create_qmmm_geomtry(file_path = ts)
         if restart:
-            q = QChem(outputfile=restart_output_path)
-            q.create_qmmm_geomtry(file_path = ts)
             return 'job_success'
         else:
-            q = QChem(outputfile=output_path)
-            q.create_qmmm_geomtry(file_path = ts)
             return 'restart'
     except:
         return 'job_fail'
 
-def check_qmmm_freq_ts_jobs(qm_collection:object):
+def check_qmmm_freq_ts_jobs(qm_collection:object, restart_times:int = 2):
     """
     This method checks job with following steps:
     1. select jobs to check
@@ -1414,7 +1426,8 @@ def check_qmmm_freq_ts_jobs(qm_collection:object):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            if target['qmmm_freq_ts_status'] == 'restart':
+            times = target['qmmm_freq_ts_restart_times']
+            if times >= restart_times:
                 new_status = check_qmmm_freq_ts_content(target['path'], restart=True)
             else:
                 new_status = check_qmmm_freq_ts_content(target['path'])
@@ -1433,7 +1446,7 @@ def check_qmmm_freq_ts_jobs(qm_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_freq_ts_status': new_status
+                    'qmmm_freq_ts_status': new_status, 'qmmm_freq_ts_restart_times': times + 1
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
@@ -1709,8 +1722,8 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=60.0)
 
     check_qmmm_opt_jobs(qm_collection)
-    check_qmmm_freq_opt_jobs(qm_collection)
-    check_qmmm_freq_ts_jobs(qm_collection)
+    check_qmmm_freq_opt_jobs(qm_collection, restart_times = 2)
+    check_qmmm_freq_ts_jobs(qm_collection, restart_times = 2)
     check_qmmm_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_ts_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_refine_jobs(qm_collection, reactions_collection)

@@ -789,7 +789,7 @@ def launch_qmmm_freq_ts_jobs(qm_collection:object, num:int=10, ncpus:int=16, mpi
         qmmm_ts_dir = path.join(target['path'], 'QMMM_TS/')
         IRC_dir_path = path.join(target['path'], 'IRC/')
         if target['qmmm_freq_ts_status'] == 'restart':
-            ts = path.join(IRC_dir_path, 'qmmm_ts.xyz')
+            ts = path.join(qmmm_ts_dir, 'qmmm_ts.xyz')
         else:
             ts = path.join(IRC_dir_path, 'ts_geo.xyz')
 
