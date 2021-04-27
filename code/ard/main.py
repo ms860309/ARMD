@@ -64,46 +64,29 @@ class ARD(object):
         self.nform = kwargs['nform']
         self.dh_cutoff = float(kwargs['dh_cutoff'])
         self.bond_dissociation_cutoff = float(kwargs['bond_dissociation_cutoff'])
-        if kwargs['use_inchi_key'] == '1':
-            self.use_inchi_key = True
-        else:
-            self.use_inchi_key = False
         log_level = logging.INFO
         self.logger = util.initializeLog(log_level, os.path.join(os.path.dirname(kwargs['reactant_path']), 'ARD.log'), logname='main')
         self.initialize()
 
     def initialize(self):
-        self.logger.info(
-            '######################################################################')
-        self.logger.info(
-            '#################### AUTOMATIC REACTION DISCOVERY ####################')
-        self.logger.info(
-            '######################################################################')
-        self.logger.info('Reactant Geometry: \n{}'.format(
-            str(self.reactant.toNode())))
-        self.logger.info(
-            'Maximum number of bonds to be broken: ' + str(self.nbreak))
-        self.logger.info(
-            'Maximum number of bonds to be formed: ' + str(self.nform))
-        self.logger.info(
-            'Heat of reaction cutoff: {} kcal/mol'.format(self.dh_cutoff))
-        self.logger.info(
-            'Bond dissociation energy cutoff: {} kcal/mol'.format(self.bond_dissociation_cutoff))
-        self.logger.info(
-            'Force field for 3D structure generation: {}'.format(self.forcefield))
-        self.logger.info(
-            'Force field algorithm: {}'.format(self.constraintff_alg))
-        self.logger.info(
-            '######################################################################\n')
+        self.logger.info('######################################################################')
+        self.logger.info('#################### AUTOMATIC REACTION DISCOVERY ####################')
+        self.logger.info('######################################################################')
+        self.logger.info('Reactant Geometry: \n{}'.format(str(self.reactant.toNode())))
+        self.logger.info('Maximum number of bonds to be broken: ' + str(self.nbreak))
+        self.logger.info('Maximum number of bonds to be formed: ' + str(self.nform))
+        self.logger.info('Heat of reaction cutoff: {} kcal/mol'.format(self.dh_cutoff))
+        self.logger.info('Bond dissociation energy cutoff: {} kcal/mol'.format(self.bond_dissociation_cutoff))
+        self.logger.info('Force field for 3D structure generation: {}'.format(self.forcefield))
+        self.logger.info('Force field algorithm: {}'.format(self.constraintff_alg))
+        self.logger.info('######################################################################\n')
 
     def executeXYZ(self, **kwargs):
         self.logger.info('ARD initiated on {} \n'.format(time.asctime()))
         start_time = time.time()
 
-        network = Network(self.reactant, self.reactant_graph, cluster_bond = kwargs['manual_cluster_bond'],
-                          logger=self.logger, **kwargs)
-        network.genNetwork(self.reactant, self.use_inchi_key,
-                           nbreak=kwargs['nbreak'], nform=kwargs['nform'])
+        network = Network(logger=self.logger, **kwargs)
+        network.genNetwork(self.reactant, **kwargs)
         self.finalize(start_time)
 
     def finalize(self, start_time):

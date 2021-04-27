@@ -61,19 +61,24 @@ class Generate(object):
           (beginAtomIdx, endAtomIdx, bondOrder)
     """
 
-    def __init__(self, reac_mol, reactant_graph, bond_dissociation_cutoff, use_inchi_key, fixed_atom=None, catalyst = None):
+    def __init__(self, reac_mol, fixed_atom=None, **kwargs):
         self.reac_mol = reac_mol
         self.reactant_inchikey = [reac_mol.write('inchiKey').strip()]
-        self.reac_mol_graph = reactant_graph
-        self.bond_dissociation_cutoff = float(bond_dissociation_cutoff)
+        self.reac_mol_graph = kwargs['graph']
+        self.bond_dissociation_cutoff = float(kwargs['bond_dissociation_cutoff'])
+        self.nform = kwargs['nform']
+        self.nbreak = kwargs['nbreak']
         self.atoms = None
         self.prod_mols, self.add_bonds, self.break_bonds = [], [], []
-        self.use_inchi_key = use_inchi_key
+        if kwargs['use_inchi_key'] == '1':
+            self.use_inchi_key = True
+        else:
+            self.use_inchi_key = False
         self.fixed_atom = fixed_atom
 
         self.initialize()
         self.reactant_coords = [np.array([atom.coords for atom in self.reac_mol]).reshape(len(self.atoms), 3)]
-        self.catalyst = catalyst
+        self.catalyst = kwargs['catalyst']
 
     def initialize(self):
         """
@@ -308,13 +313,13 @@ class Generate(object):
 
         return bond_can_form, bond_can_break
 
-    def generateProducts(self, nbreak=2, nform=2):
+    def generateProducts(self):
         """
         Generate all possible products from the reactant under the constraints
         of breaking a maximum of `nbreak` and forming a maximum of `nform`
         bonds.
         """
-        if nbreak > 3 or nform > 3:
+        if self.nbreak > 3 or self.nform > 3:
             raise Exception('Breaking/forming bonds is limited to a maximum of 3')
 
         # Extract valences as a mutable sequence
@@ -336,7 +341,7 @@ class Generate(object):
         bf_combinations = ((0, 1), (1, 0), (1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3))
 
         for bf in bf_combinations:
-            if bf[0] <= nbreak and bf[1] <= nform:
+            if bf[0] <= self.nbreak and bf[1] <= self.nform:
                 self._generateProductsHelper(
                     bf[0],
                     bf[1],

@@ -33,17 +33,13 @@ info = psutil.virtual_memory()
 
 
 class Network(object):
-
-    def __init__(self, reac_mol, reactant_graph, cluster_bond, logger, **kwargs):
-        self.reac_mol = reac_mol
-        self.reactant_graph = reactant_graph
-        self.cluster_bond = cluster_bond
+    def __init__(self, logger, **kwargs):
         self.logger = logger
+        self.cluster_bond = kwargs['manual_cluster_bond']
         self.forcefield = kwargs['forcefield']
         self.constraintff_alg = kwargs['constraintff_alg']
         self.mopac_method = kwargs['mopac_method']
         self.dh_cutoff = float(kwargs['dh_cutoff'])
-        self.bond_dissociation_cutoff = kwargs['bond_dissociation_cutoff']
         self.ard_path = kwargs['ard_path']
         self.generations = kwargs['generations']
         self.method = kwargs["dh_cutoff_method"]
@@ -52,9 +48,8 @@ class Network(object):
         self.fixed_atom = kwargs['fixed_atom']
         self.use_irc = kwargs['use_irc']
         self.reactant_path = os.path.dirname(kwargs['reactant_path'])
-        self.SnBEA = kwargs['snbea']
 
-    def genNetwork(self, mol_object, use_inchi_key, nbreak, nform):
+    def genNetwork(self, mol_object, **kwargs):
         """
         Execute the automatic reaction discovery procedure.
         """
@@ -68,10 +63,9 @@ class Network(object):
         reactant_inchi_key = mol_object.write('inchiKey').strip()  # inchikey
 
         # Generate all possible products
-        gen = Generate(mol_object, self.reactant_graph,
-                       self.bond_dissociation_cutoff, use_inchi_key, self.fixed_atom, self.SnBEA)
+        gen = Generate(mol_object, **kwargs)
         self.logger.info('Generating all possible products...')
-        gen.generateProducts(nbreak=int(nbreak), nform=int(nform))
+        gen.generateProducts()
         prod_mols = gen.prod_mols
 
         prod_mols_filtered = []
@@ -123,8 +117,7 @@ class Network(object):
                         prod_mols_filtered.append(prod_mol)
                     mol_object.setCoordsFromMol(mol_object_copy)
         else:
-            self.logger.info(
-                'Now use {} to filter the delta H of reactions....\n'.format(self.method))
+            self.logger.info('Now use {} to filter the delta H of reactions....\n'.format(self.method))
             # Load thermo database and choose which libraries to search
             thermo_db = ThermoDatabase()
             thermo_db.load(os.path.join(
@@ -132,7 +125,7 @@ class Network(object):
             thermo_db.libraryOrder = ['primaryThermoLibrary', 'NISTThermoLibrary', 'thermo_DFT_CCSDTF12_BAC',
                                       'CBS_QB3_1dHR', 'DFT_QCI_thermo', 'BurkeH2O2', 'GRI-Mech3.0-N', ]
             if self.generations == 1:
-                H298_reac = self.reac_mol.getH298(thermo_db)
+                H298_reac = mol_object.getH298(thermo_db)
                 update_field = {'reactant_energy': H298_reac}
                 config_collection.update_one(targets[0], {"$set": update_field}, True)
             else:
