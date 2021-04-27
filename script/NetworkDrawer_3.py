@@ -131,7 +131,7 @@ def draw(target_product = None):
     nx.draw(G, pos,
             edge_color=colors,
             with_labels=True,
-            node_color='none',
+            node_color='green',
             font_size=5, 
             node_size=1500,
             connectionstyle='arc3, rad = 0.15')

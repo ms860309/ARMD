@@ -61,7 +61,7 @@ class Generate(object):
           (beginAtomIdx, endAtomIdx, bondOrder)
     """
 
-    def __init__(self, reac_mol, reactant_graph, bond_dissociation_cutoff, use_inchi_key, fixed_atom=None, SnBEA = None):
+    def __init__(self, reac_mol, reactant_graph, bond_dissociation_cutoff, use_inchi_key, fixed_atom=None, catalyst = None):
         self.reac_mol = reac_mol
         self.reactant_inchikey = [reac_mol.write('inchiKey').strip()]
         self.reac_mol_graph = reactant_graph
@@ -73,7 +73,7 @@ class Generate(object):
 
         self.initialize()
         self.reactant_coords = [np.array([atom.coords for atom in self.reac_mol]).reshape(len(self.atoms), 3)]
-        self.SnBEA = SnBEA
+        self.catalyst = catalyst
 
     def initialize(self):
         """
@@ -87,7 +87,7 @@ class Generate(object):
 
         if self.fixed_atom:
             self.active_site_oxygen = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] == 8]
-            self.active_site_metal = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] in [42, 50, 74]]
+            self.active_site_metal = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] in [42, 50, 74, 13]]
             self.reactant_oxygen = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atom and reactant_atoms == 8]
             self.reactant_carbon = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atom and reactant_atoms == 6]
             # The zeolite usually reactant with its faced active site oxygen
@@ -112,114 +112,178 @@ class Generate(object):
         else:
             self.reactant_carbon = [idx for idx, reactant_atoms in enumerate(self.atoms) if reactant_atoms == 6]
 
-    def generateProducts(self, nbreak=2, nform=2):
+    def gen_bond_can_form_and_bond_can_break(self, bonds_form_all):
         """
-        Generate all possible products from the reactant under the constraints
-        of breaking a maximum of `nbreak` and forming a maximum of `nform`
-        bonds.
+        Generate bond can form and bond can break for lewis acid or bronsted acid zeolite
         """
-        if nbreak > 3 or nform > 3:
-            raise Exception('Breaking/forming bonds is limited to a maximum of 3')
 
-        # Extract valences as a mutable sequence
-        reactant_valences = [atom.OBAtom.GetExplicitValence() for atom in self.reac_mol]
-        # Initialize set for storing bonds of products
-        # A set is used to ensure that no duplicate products are added
-        products_bonds = set()
-
-        # Generate all possibilities for forming bonds
-        natoms = len(self.atoms)
-        bonds_form_all = [(atom1_idx, atom2_idx, 1)
-                          for atom1_idx in range(natoms - 1)
-                          for atom2_idx in range(atom1_idx + 1, natoms)]
         bond_can_break = []
         if self.fixed_atom:
-            bond_can_form = [bonds for bonds in bonds_form_all if bonds[0] not in self.fixed_atom and bonds[1] not in self.fixed_atom]
-            # index start from 0
-            # HR (reactant hydrogen, -OH) <---> OA (active site oxygen)
-            # Like active site recovery
-            rh_ao = [(hydrogen, oxygen, 1) 
-                    for hydrogen in self.reactant_hydrogen 
-                    for oxygen in self.active_site_oxygen]
-            # Lewis acid Sn with oxygen
-            # Reactant oxygen (OR)<---> Sn
-            ro_metal = [(oxygen, metal, 1)
-                        for oxygen in self.reactant_oxygen 
-                        for metal in self.active_site_metal]
-            # HR (reactant hydrogen, -CH) <---> OA (active site oxygen)
-            ch_ao = [(hydrogen, oxygen, 1)
-                    for hydrogen in self.reactant_hydrogen_2
-                    for oxygen in self.active_site_oxygen]
-            # Add to bond can form
-            bond_can_form.extend(rh_ao)
-            bond_can_form.extend(ro_metal)
-            bond_can_form.extend(ch_ao)
-            # Copy the bond can form
-            bond_can_form_copy = bond_can_form[:]
-            # Remove the cracking and dehydrogenation
-            possible_bond_1 = [(carbon_and_hydrogen, hydrogen, 1) 
+            if self.catalyst in ['SnBEA', 'WBEA', 'MoBEA']:
+                bond_can_form = [bonds for bonds in bonds_form_all if bonds[0] not in self.fixed_atom and bonds[1] not in self.fixed_atom]
+                # index start from 0
+                # HR (reactant hydrogen, -OH) <---> OA (active site oxygen)
+                # Like active site recovery
+                rh_ao = [(hydrogen, oxygen, 1) 
+                        for hydrogen in self.reactant_hydrogen 
+                        for oxygen in self.active_site_oxygen]
+
+                # Lewis acid Sn with oxygen
+                # Reactant oxygen (OR)<---> Sn
+                ro_metal = [(oxygen, metal, 1)
+                            for oxygen in self.reactant_oxygen 
+                            for metal in self.active_site_metal]
+
+                # HR (reactant hydrogen, -CH) <---> OA (active site oxygen)
+                ch_ao = [(hydrogen, oxygen, 1)
+                        for hydrogen in self.reactant_hydrogen_2
+                        for oxygen in self.active_site_oxygen]
+
+                # Add to bond can form
+                bond_can_form.extend(rh_ao)
+                bond_can_form.extend(ro_metal)
+                bond_can_form.extend(ch_ao)
+
+                # Copy the bond can form
+                bond_can_form_copy = bond_can_form[:]
+
+                # Remove the cracking and dehydrogenation
+                possible_bond_1 = [(carbon_and_hydrogen, hydrogen, 1) 
+                                    for carbon_and_hydrogen in self.reactant_carbon + self.reactant_hydrogen_2 
+                                    for hydrogen in self.active_site_hydrogen]
+                possible_bond = [(hydrogen, carbon_and_hydrogen, 1) 
                                 for carbon_and_hydrogen in self.reactant_carbon + self.reactant_hydrogen_2 
                                 for hydrogen in self.active_site_hydrogen]
-            possible_bond = [(hydrogen, carbon_and_hydrogen, 1) 
-                            for carbon_and_hydrogen in self.reactant_carbon + self.reactant_hydrogen_2 
-                            for hydrogen in self.active_site_hydrogen]
-            possible_bond.extend(possible_bond_1)
+                possible_bond.extend(possible_bond_1)
 
-            for bond in bond_can_form_copy:
-                # If active site have two hydrogen, preventing them become hydrogen
-                if bond[0] in self.active_site_hydrogen and bond[1] in self.active_site_hydrogen:
-                    bond_can_form.remove(bond)
-                # reactant -OH --> active site hydrogen
-                if (bond[0] in self.reactant_hydrogen and bond[1] in self.active_site_hydrogen) or (bond[0] in self.active_site_hydrogen and bond[1] in self.reactant_hydrogen):
-                    bond_can_form.remove(bond)
-                # Remove the reactant C-H  --> active site oxygen
-                if self.SnBEA != '0':
-                    if (bond[0] in self.active_site_oxygen and bond[1] in self.reactant_hydrogen_2) or (bond[0] in self.reactant_hydrogen_2 and bond[1] in self.active_site_oxygen):
+                for bond in bond_can_form_copy:
+                    # If active site have two hydrogen, preventing them become hydrogen
+                    if bond[0] in self.active_site_hydrogen and bond[1] in self.active_site_hydrogen:
                         bond_can_form.remove(bond)
-                if bond in possible_bond:
-                    bond_can_form.remove(bond)
+                    # reactant -OH --> active site hydrogen
+                    if (bond[0] in self.reactant_hydrogen and bond[1] in self.active_site_hydrogen) or (bond[0] in self.active_site_hydrogen and bond[1] in self.reactant_hydrogen):
+                        bond_can_form.remove(bond)
+                    if bond in possible_bond:
+                        bond_can_form.remove(bond)
 
-            for bonds in self.reactant_bonds:
-                # Remove the original C-H bond (prevent CH bond type greater than 1 C=H)
-                if (self.atoms[bonds[0]] == 6 and self.atoms[bonds[1]] == 1) or (self.atoms[bonds[1]] == 6 and self.atoms[bonds[0]] == 1):
-                    bond_can_form.remove(bonds)
-                    # Prevent the dehydrogenation from the same CH. For example CH3  --> CH + H2
-                    if self.atoms[bonds[0]] == 6:
-                        hydrogen = [i[1] for i in self.reactant_bonds if i[0] == bonds[0] if self.atoms[i[1]] == 1]
-                        combs = combinations(hydrogen, 2)
-                        for comb in combs:
-                            if (comb[0], comb[1], 1) in bond_can_form:
-                                bond_can_form.remove((comb[0], comb[1], 1))
-                    elif self.atoms[bonds[1]] == 6:
-                        hydrogen = [i[1] for i in self.reactant_bonds if i[0] == bonds[0] if self.atoms[i[1]] == 1]
-                        combs = combinations(hydrogen, 2)
-                        for comb in combs:
-                            if (comb[0], comb[1], 1) in bond_can_form:
-                                bond_can_form.remove((comb[0], comb[1], 1))
-                # Remove the C-O triple bond
-                elif (self.atoms[bonds[0]] == 6 and self.atoms[bonds[1]] == 8) or (self.atoms[bonds[1]] == 8 and self.atoms[bonds[0]] == 6):
-                    if bonds[2] == 2:
-                        bond_can_form.remove((bonds[0], bonds[1], 1))
-                # Remove the original O-H bond (prevent OH bond type greater than 1 O=H)
-                elif (self.atoms[bonds[0]] == 1 and self.atoms[bonds[1]] == 8) or (self.atoms[bonds[1]] == 8 and self.atoms[bonds[0]] == 1):
-                    if (bonds[0], bonds[1], 1) in bond_can_form:
-                        bond_can_form.remove((bonds[0], bonds[1], 1))
-                    elif (bonds[1], bonds[0], 1) in bond_can_form:
-                        bond_can_form.remove((bonds[1], bonds[0], 1))
-                # Remove the C-C quadra bond
-                elif self.atoms[bonds[0]] == 6 and self.atoms[bonds[1]] == 6:
-                    if bonds[2] == 3:
-                        bond_can_form.remove((bonds[0], bonds[1], 1))
+                for bonds in self.reactant_bonds:
+                    # Remove the original C-H bond (prevent CH bond type greater than 1 C=H)
+                    if (self.atoms[bonds[0]] == 6 and self.atoms[bonds[1]] == 1) or (self.atoms[bonds[1]] == 6 and self.atoms[bonds[0]] == 1):
+                        bond_can_form.remove(bonds)
+                        # Prevent the dehydrogenation from the same CH. For example CH3  --> CH + H2
+                        if self.atoms[bonds[0]] == 6:
+                            hydrogen = [i[1] for i in self.reactant_bonds if i[0] == bonds[0] if self.atoms[i[1]] == 1]
+                            combs = combinations(hydrogen, 2)
+                            for comb in combs:
+                                if (comb[0], comb[1], 1) in bond_can_form:
+                                    bond_can_form.remove((comb[0], comb[1], 1))
+                        elif self.atoms[bonds[1]] == 6:
+                            hydrogen = [i[1] for i in self.reactant_bonds if i[0] == bonds[0] if self.atoms[i[1]] == 1]
+                            combs = combinations(hydrogen, 2)
+                            for comb in combs:
+                                if (comb[0], comb[1], 1) in bond_can_form:
+                                    bond_can_form.remove((comb[0], comb[1], 1))
 
-                # Create bond can form list
-                if bonds[0] not in self.fixed_atom or bonds[1] not in self.fixed_atom:
-                    order = bonds[2]
-                    while order > 1:
-                        bond_can_break.append((bonds[0], bonds[1], order - 1))
-                        order -= 1
-                    bond_can_break.append(bonds)
-            bond_can_form = sorted(bond_can_form, key = itemgetter(0))
-            bond_can_break = sorted(bond_can_break, key = itemgetter(0))
+                    # Remove the C-O triple bond
+                    elif (self.atoms[bonds[0]] == 6 and self.atoms[bonds[1]] == 8) or (self.atoms[bonds[1]] == 8 and self.atoms[bonds[0]] == 6):
+                        if bonds[2] == 2:
+                            bond_can_form.remove((bonds[0], bonds[1], 1))
+
+                    # Remove the original O-H bond (prevent OH bond type greater than 1 O=H)
+                    elif (self.atoms[bonds[0]] == 1 and self.atoms[bonds[1]] == 8) or (self.atoms[bonds[1]] == 8 and self.atoms[bonds[0]] == 1):
+                        if (bonds[0], bonds[1], 1) in bond_can_form:
+                            bond_can_form.remove((bonds[0], bonds[1], 1))
+                        elif (bonds[1], bonds[0], 1) in bond_can_form:
+                            bond_can_form.remove((bonds[1], bonds[0], 1))
+
+                    # Remove the C-C quadra bond
+                    elif self.atoms[bonds[0]] == 6 and self.atoms[bonds[1]] == 6:
+                        if bonds[2] == 3:
+                            bond_can_form.remove((bonds[0], bonds[1], 1))
+
+                    # Create bond can form list
+                    if bonds[0] not in self.fixed_atom or bonds[1] not in self.fixed_atom:
+                        order = bonds[2]
+                        while order > 1:
+                            bond_can_break.append((bonds[0], bonds[1], order - 1))
+                            order -= 1
+                        bond_can_break.append(bonds)
+
+                bond_can_form = sorted(bond_can_form, key = itemgetter(0))
+                bond_can_break = sorted(bond_can_break, key = itemgetter(0))
+
+            elif self.catalyst in ['HZSM5']:
+                bond_can_form = [bonds for bonds in bonds_form_all if bonds[0] not in self.fixed_atom and bonds[1] not in self.fixed_atom]
+                # index start from 0
+                # HR (reactant hydrogen, -OH) <---> OA (active site oxygen)
+                # Like active site recovery
+                rh_ao = [(hydrogen, oxygen, 1) 
+                        for hydrogen in self.reactant_hydrogen 
+                        for oxygen in self.active_site_oxygen]
+
+                # HR (reactant hydrogen, -CH) <---> OA (active site oxygen)
+                ch_ao = [(hydrogen, oxygen, 1)
+                        for hydrogen in self.reactant_hydrogen_2
+                        for oxygen in self.active_site_oxygen]
+
+                # Add to bond can form
+                bond_can_form.extend(rh_ao)
+                bond_can_form.extend(ch_ao)
+
+                # Copy the bond can form
+                bond_can_form_copy = bond_can_form[:]
+
+                for bond in bond_can_form_copy:
+                    # If active site have two hydrogen, preventing them become hydrogen
+                    if bond[0] in self.active_site_hydrogen and bond[1] in self.active_site_hydrogen:
+                        bond_can_form.remove(bond)
+
+                for bonds in self.reactant_bonds:
+                    # Remove the original C-H bond (prevent CH bond type greater than 1 C=H)
+                    if (self.atoms[bonds[0]] == 6 and self.atoms[bonds[1]] == 1) or (self.atoms[bonds[1]] == 6 and self.atoms[bonds[0]] == 1):
+                        bond_can_form.remove(bonds)
+                        # Prevent the dehydrogenation from the same CH. For example CH3  --> CH + H2
+                        if self.atoms[bonds[0]] == 6:
+                            hydrogen = [i[1] for i in self.reactant_bonds if i[0] == bonds[0] if self.atoms[i[1]] == 1]
+                            combs = combinations(hydrogen, 2)
+                            for comb in combs:
+                                if (comb[0], comb[1], 1) in bond_can_form:
+                                    bond_can_form.remove((comb[0], comb[1], 1))
+                        elif self.atoms[bonds[1]] == 6:
+                            hydrogen = [i[1] for i in self.reactant_bonds if i[0] == bonds[0] if self.atoms[i[1]] == 1]
+                            combs = combinations(hydrogen, 2)
+                            for comb in combs:
+                                if (comb[0], comb[1], 1) in bond_can_form:
+                                    bond_can_form.remove((comb[0], comb[1], 1))
+
+                    # Remove the C-O triple bond
+                    elif (self.atoms[bonds[0]] == 6 and self.atoms[bonds[1]] == 8) or (self.atoms[bonds[1]] == 8 and self.atoms[bonds[0]] == 6):
+                        if bonds[2] == 2:
+                            bond_can_form.remove((bonds[0], bonds[1], 1))
+
+                    # Remove the original O-H bond (prevent OH bond type greater than 1 O=H)
+                    elif (self.atoms[bonds[0]] == 1 and self.atoms[bonds[1]] == 8) or (self.atoms[bonds[1]] == 8 and self.atoms[bonds[0]] == 1):
+                        if (bonds[0], bonds[1], 1) in bond_can_form:
+                            bond_can_form.remove((bonds[0], bonds[1], 1))
+                        elif (bonds[1], bonds[0], 1) in bond_can_form:
+                            bond_can_form.remove((bonds[1], bonds[0], 1))
+
+                    # Remove the C-C quadra bond
+                    elif self.atoms[bonds[0]] == 6 and self.atoms[bonds[1]] == 6:
+                        if bonds[2] == 3:
+                            bond_can_form.remove((bonds[0], bonds[1], 1))
+
+                    # Create bond can form list
+                    if bonds[0] not in self.fixed_atom or bonds[1] not in self.fixed_atom:
+                        order = bonds[2]
+                        while order > 1:
+                            bond_can_break.append((bonds[0], bonds[1], order - 1))
+                            order -= 1
+                        bond_can_break.append(bonds)
+
+                bond_can_form = sorted(bond_can_form, key = itemgetter(0))
+                bond_can_break = sorted(bond_can_break, key = itemgetter(0))
+
         else:
             bond_can_form = bonds_form_all[:]
             # Remove the original C-H bond
@@ -241,6 +305,32 @@ class Generate(object):
                 bond_can_break.append(bonds)
             bond_can_form = sorted(bond_can_form, key = itemgetter(0))
             bond_can_break = sorted(bond_can_break, key = itemgetter(0))
+
+        return bond_can_form, bond_can_break
+
+    def generateProducts(self, nbreak=2, nform=2):
+        """
+        Generate all possible products from the reactant under the constraints
+        of breaking a maximum of `nbreak` and forming a maximum of `nform`
+        bonds.
+        """
+        if nbreak > 3 or nform > 3:
+            raise Exception('Breaking/forming bonds is limited to a maximum of 3')
+
+        # Extract valences as a mutable sequence
+        reactant_valences = [atom.OBAtom.GetExplicitValence() for atom in self.reac_mol]
+        # Initialize set for storing bonds of products
+        # A set is used to ensure that no duplicate products are added
+        products_bonds = set()
+
+        # Generate all possibilities for forming bonds
+        natoms = len(self.atoms)
+        bonds_form_all = [(atom1_idx, atom2_idx, 1)
+                          for atom1_idx in range(natoms - 1)
+                          for atom2_idx in range(atom1_idx + 1, natoms)]
+
+        # Generate bond can form and bond can break
+        bond_can_form, bond_can_break = self.gen_bond_can_form_and_bond_can_break(bonds_form_all)
 
         # Generate products
         bf_combinations = ((0, 1), (1, 0), (1, 1), (1, 2), (2, 1), (2, 2), (2, 3), (3, 1), (3, 2), (3, 3))

@@ -22,9 +22,13 @@ class QChem(object):
             with open(outputfile) as f:
                 self.log = f.read().splitlines()
                 result = True
+                restart = True
                 if ' **  OPTIMIZATION CONVERGED  **' not in self.log:
                     result = False
-                if not result:
+                if ' **  MAXIMUM OPTIMIZATION CYCLES REACHED  **' not in self.log:
+                    restart = False
+                print(restart)
+                if not result and not restart:
                     for line in self.log:
                         if 'fatal error' in line:
                             raise QChemError(f'Q-Chem job {outputfile} had an error!')
@@ -140,14 +144,10 @@ class QChem(object):
             for atom, xyz in zip(symobol[:natoms], geometry[:natoms]):
                 f.write('{}  {}  {}  {}\n'.format(atom, xyz[0], xyz[1], xyz[2]))
 
-
 """
-logfile='/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/database/test.out'
+logfile='/home/jianyi/Sn_BEA_complete/AutomaticReactionDiscovery/reactions/UYFCJUSUJARWAH-UHFFFAOYSA-N_2/QMMM_TS/qmmm_freq_ts.out'
 try:
     q = QChem(outputfile=logfile)
 except:
     print('error')
-
-e = q.get_energy()
-print(e)
 """

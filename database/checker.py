@@ -48,7 +48,7 @@ def select_targets(qm_collection:object, job_name:str) -> list:
     keyname = '{}_status'.format(job_name)
     query = {keyname:
              {"$in":
-              ["job_launched", "job_running", "job_queueing", "restart"]
+              ["job_launched", "job_running", "job_queueing"]
               }
              }
     targets = list(qm_collection.find(query))
@@ -1119,7 +1119,7 @@ def check_qmmm_opt_jobs(qm_collection:object):
 QMMM FREQ OPT
 """
 
-def select_qmmm_opt_finished_target(qm_collection:object) -> list:
+def select_qmmm_freq_opt_finished_target(qm_collection:object) -> list:
     """
     This method is to inform job checker which targets 
     to check, which need meet one requirement:
@@ -1193,7 +1193,7 @@ def check_qmmm_freq_opt_jobs(qm_collection:object):
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
-    targets = select_targets(qm_collection, job_name='qmmm_opt_product')
+    targets = select_targets(qm_collection, job_name='qmmm_freq_opt_product')
     # 2. check the job pbs_status
     for target in targets:
         job_id = target['qmmm_freq_opt_product_jobid']
@@ -1220,7 +1220,7 @@ def check_qmmm_freq_opt_jobs(qm_collection:object):
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
-    finished_targets = select_qmmm_opt_finished_target(qm_collection)
+    finished_targets = select_qmmm_freq_opt_finished_target(qm_collection)
     for target in finished_targets:
         update_field = {
             'qmmm_freq_opt_status': 'job_success', 'qmmm_freq_status': 'job_unrun'
