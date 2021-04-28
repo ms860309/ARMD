@@ -814,7 +814,7 @@ def create_qmmm_freq_opt(qmmm_dir:str, target_geometry:str, ncpus:int=16, mpipro
 def update_qmmm_freq_opt_status(qm_collection:object, target:object, job_id_1:str, job_id_2:str):
     update_field = {'qmmm_freq_opt_reactant_status': "job_launched", 'qmmm_freq_opt_reactant_jobid': job_id_1,
                     'qmmm_freq_opt_product_status': "job_launched", 'qmmm_freq_opt_product_jobid': job_id_2}
-    qm_collection.update_one(target, {"$unset": {'qmmm_opt_status': ""}, "$set": update_field}, True)
+    qm_collection.update_one(target, {"$unset": {'qmmm_freq_opt_status':'job_unrun'}, "$set": update_field}, True)
 
 """
 QMMM FREQ TS
