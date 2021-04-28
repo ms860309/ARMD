@@ -588,7 +588,7 @@ def print_information(generations):
                        [
                            {"qmmm_freq_opt_reactant_status":
                             {"$in":
-                             ['job_fail']}
+                             ['job_fail', 'qmmm ts fail']}
                             },
                            {'generations': generations}
                        ]
@@ -597,7 +597,7 @@ def print_information(generations):
                        [
                            {"qmmm_freq_opt_product_status":
                             {"$in":
-                             ['job_fail']}
+                             ['job_fail', 'qmmm ts fail']}
                             },
                            {'generations': generations}
                        ]
