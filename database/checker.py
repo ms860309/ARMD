@@ -448,12 +448,23 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
         reactant_smiles = pyMol_3.write('can').split()[0].split('.')
         product_smiles = pyMol_4.write('can').split()[0].split('.')
         if len(reactant_smiles) > 1:
-            reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
+            reactant_part_smiles = []
+            for rs in reactant_smiles:
+                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                    if metal not in rs and 'C' in ps:
+                        reactant_part_smiles.append(rs)
+            reactant_part_smiles = set(reactant_part_smiles)
+
         else:
             reactant_part_smiles = set(reactant_smiles)
-
+            
+        product_part_smiles = []
         if len(product_smiles) > 1:
-            product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
+            for ps in product_smiles:
+                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                    if metal not in ps and 'C' in ps:
+                        product_part_smiles.append(ps)
+            product_part_smiles = set(product_part_smiles)
         else:
             product_part_smiles = set(product_smiles)
 
@@ -917,17 +928,29 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
             reactant_smiles = ard_qm_target['reactant_smiles'].split('.')
             product_smiles = ard_qm_target['product_smiles'].split('.')
             if len(reactant_smiles) > 1:
-                reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
+                reactant_part_smiles = []
+                for rs in reactant_smiles:
+                    for metal in ['Sn', 'W', 'Mo', 'Al']:
+                        if metal not in rs and 'C' in ps:
+                            reactant_part_smiles.append(rs)
+                reactant_part_smiles = set(reactant_part_smiles)
+
             else:
                 reactant_part_smiles = set(reactant_smiles)
-
+                
+            product_part_smiles = []
             if len(product_smiles) > 1:
-                product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
+                for ps in product_smiles:
+                    for metal in ['Sn', 'W', 'Mo', 'Al']:
+                        if metal not in ps and 'C' in ps:
+                            product_part_smiles.append(ps)
+                product_part_smiles = set(product_part_smiles)
             else:
                 product_part_smiles = set(product_smiles)
 
             if reactant_part_smiles == product_part_smiles:
                 same = True
+
             # Prevent the product already be a reactant before
             if not same:
                 for finished_reactant_part in finished_reactant_smiles_part_list:
@@ -971,12 +994,23 @@ def insert_qmmm(qm_collection:object, reactions_collection:object):
         reactant_smiles = ard_qm_target['reactant_smiles'].split('.')
         product_smiles = ard_qm_target['product_smiles'].split('.')
         if len(reactant_smiles) > 1:
-            reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
+            reactant_part_smiles = []
+            for rs in reactant_smiles:
+                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                    if metal not in rs and 'C' in ps:
+                        reactant_part_smiles.append(rs)
+            reactant_part_smiles = set(reactant_part_smiles)
+
         else:
             reactant_part_smiles = set(reactant_smiles)
-
+            
+        product_part_smiles = []
         if len(product_smiles) > 1:
-            product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
+            for ps in product_smiles:
+                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                    if metal not in ps and 'C' in ps:
+                        product_part_smiles.append(ps)
+            product_part_smiles = set(product_part_smiles)
         else:
             product_part_smiles = set(product_smiles)
 
