@@ -955,24 +955,46 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
             finished_reactant_list.append(i['reactant_inchi_key'])
             reactant_smiles = i['reactant_smiles'].split('.')
             if len(reactant_smiles) > 1:
-                reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
+                for rs in reactant_smiles:
+                    for metal in ['Sn', 'W', 'Mo', 'Al']:
+                        if metal not in rs and 'C' in ps:
+                            reactant_part_smiles.append(rs)
+                reactant_part_smiles = set(reactant_part_smiles)
             finished_reactant_smiles_part_list.append(reactant_part_smiles)
 
-        reactions = list(reactions_collection.aggregate([{
-            '$match': {
-                'irc_opt_status': 'job_success',
-                'irc_equal': {'$in': acceptable_condition},
-                'ard_status': {'$nin': ['already insert to qm']},
-                'product_inchi_key':{'$nin': finished_reactant_list},
-                'barrier': {'$lte': barrier_threshold, '$gte': -100.0},
-                # Filter the energy fail
-                'delta_H': {'$lt': 200, '$gte': -10000.0} #-10000 is to filter the failed jobs
-            }}, {
-            '$group': {
-                '_id': "$reaction",
-                'barrier': {'$min': "$barrier"}
-            }}
-        ]))
+        if qmmm:
+            reactions = list(reactions_collection.aggregate([{
+                '$match': {
+                    'irc_opt_status': 'job_success',
+                    'irc_equal': {'$in': acceptable_condition},
+                    'ard_status': {'$nin': ['already insert to qm']},
+                    'product_inchi_key':{'$nin': finished_reactant_list},
+                    'qmmm_barrier': {'$lte': barrier_threshold, '$gte': -100.0},
+                    # Filter the energy fail
+                    'qmmm_delta_H': {'$lt': 200, '$gte': -10000.0} #-10000 is to filter the failed jobs
+                }}, {
+                '$group': {
+                    '_id': "$reaction",
+                    'barrier': {'$min': "$barrier"}
+                }}
+            ]))
+        else:
+            reactions = list(reactions_collection.aggregate([{
+                '$match': {
+                    'irc_opt_status': 'job_success',
+                    'irc_equal': {'$in': acceptable_condition},
+                    'ard_status': {'$nin': ['already insert to qm']},
+                    'product_inchi_key':{'$nin': finished_reactant_list},
+                    'barrier': {'$lte': barrier_threshold, '$gte': -100.0},
+                    # Filter the energy fail
+                    'delta_H': {'$lt': 200, '$gte': -10000.0} #-10000 is to filter the failed jobs
+                }}, {
+                '$group': {
+                    '_id': "$reaction",
+                    'barrier': {'$min': "$barrier"}
+                }}
+            ]))
+
         # If the same product but different active site, then choose the lowest barrier one.
         tmp = {}
         for i in reactions:
