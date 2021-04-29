@@ -288,6 +288,7 @@ def print_information(generations):
                        {"irc_equal":
                         {"$in":
                          ['forward equal to reverse', 
+                         'same forward and reverse reactant part but different active site',
                           'unintended']}
                         },
                        {'generations': generations}
@@ -298,6 +299,7 @@ def print_information(generations):
                        {"irc_equal":
                         {"$nin":
                          ['forward equal to reverse', 
+                         'same forward and reverse reactant part but different active site',
                           'unintended',
                           'forward equal to reactant',
                           'backward equal to reactant']}
