@@ -410,14 +410,14 @@ def select_irc_equal_target(qm_collection:object) -> list:
     targets = list(qm_collection.find(query))
     return targets
 
-def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom_path:str=None):
+def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False):
     targets = select_irc_equal_target(qm_collection)
     acceptable_condition = ['forward equal to reactant',
                             'backward equal to reactant']
     # special_condition = ['forward equal to reverse', 'unintended']
 
     for target in targets:
-        new_status, forward, backward = check_irc_equal_status(target, cluster_bond_path=cluster_bond_path, fixed_atom_path = fixed_atom_path)
+        new_status, forward, backward = check_irc_equal_status(target, cluster_bond_path=cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=active_site)
         orig_status = target['irc_equal']
         if orig_status != new_status:
             if new_status in acceptable_condition:
@@ -434,7 +434,7 @@ def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom
                 }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
-def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom_path:str=None) -> Union[str, object, object]:
+def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False) -> Union[str, object, object]:
     irc_path = path.join(target['path'], 'IRC/')
     forward_end_output = os.path.join(irc_path, 'irc_forward.xyz')
     backward_end_output = os.path.join(irc_path, 'irc_backward.xyz')
@@ -443,7 +443,27 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
     pyMol_4 = xyz_to_pyMol(backward_end_output, cluster_bond_path=cluster_bond_path)
 
     reactant_inchi_key = target['reactant_inchi_key']
+    same = False
+    if not active_site:
+        reactant_smiles = pyMol_3.write('can').split()[0].split('.')
+        product_smiles = pyMol_4.write('can').split()[0].split('.')
+        if len(reactant_smiles) > 1:
+            reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
+        else:
+            reactant_part_smiles = set(reactant_smiles)
+
+        if len(product_smiles) > 1:
+            product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
+        else:
+            product_part_smiles = set(product_smiles)
+
+        if reactant_part_smiles == product_part_smiles:
+            same = True
+
+
     if pyMol_3.write('inchiKey').strip() == pyMol_4.write('inchiKey').strip():
+        return 'forward equal to reverse', pyMol_3, pyMol_4
+    elif pyMol_3.write('inchiKey').strip() != pyMol_4.write('inchiKey').strip() and same:
         return 'forward equal to reverse', pyMol_3, pyMol_4
     elif pyMol_3.write('inchiKey').strip() == reactant_inchi_key:
         f = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
@@ -1858,7 +1878,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_irc_jobs(qm_collection)
     check_irc_opt_jobs(qm_collection, level_of_theory=level_of_theory)
     check_irc_opt_side_fail_jobs(qm_collection)
-    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path)
+    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False)
     check_barrier(qm_collection)
     insert_reaction(qm_collection, reactions_collection)
     insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=60.0)
