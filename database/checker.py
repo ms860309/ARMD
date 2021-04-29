@@ -410,14 +410,14 @@ def select_irc_equal_target(qm_collection:object) -> list:
     targets = list(qm_collection.find(query))
     return targets
 
-def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom_path:str=None):
+def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False):
     targets = select_irc_equal_target(qm_collection)
     acceptable_condition = ['forward equal to reactant',
                             'backward equal to reactant']
     # special_condition = ['forward equal to reverse', 'unintended']
 
     for target in targets:
-        new_status, forward, backward = check_irc_equal_status(target, cluster_bond_path=cluster_bond_path, fixed_atom_path = fixed_atom_path)
+        new_status, forward, backward = check_irc_equal_status(target, cluster_bond_path=cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=active_site)
         orig_status = target['irc_equal']
         if orig_status != new_status:
             if new_status in acceptable_condition:
@@ -434,7 +434,7 @@ def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom
                 }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
-def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom_path:str=None) -> Union[str, object, object]:
+def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False) -> Union[str, object, object]:
     irc_path = path.join(target['path'], 'IRC/')
     forward_end_output = os.path.join(irc_path, 'irc_forward.xyz')
     backward_end_output = os.path.join(irc_path, 'irc_backward.xyz')
@@ -443,8 +443,39 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
     pyMol_4 = xyz_to_pyMol(backward_end_output, cluster_bond_path=cluster_bond_path)
 
     reactant_inchi_key = target['reactant_inchi_key']
+    same = False
+    if not active_site:
+        reactant_smiles = pyMol_3.write('can').split()[0].split('.')
+        product_smiles = pyMol_4.write('can').split()[0].split('.')
+        if len(reactant_smiles) > 1:
+            reactant_part_smiles = []
+            for rs in reactant_smiles:
+                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                    if metal not in rs and 'C' in ps:
+                        reactant_part_smiles.append(rs)
+            reactant_part_smiles = set(reactant_part_smiles)
+
+        else:
+            reactant_part_smiles = set(reactant_smiles)
+            
+        product_part_smiles = []
+        if len(product_smiles) > 1:
+            for ps in product_smiles:
+                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                    if metal not in ps and 'C' in ps:
+                        product_part_smiles.append(ps)
+            product_part_smiles = set(product_part_smiles)
+        else:
+            product_part_smiles = set(product_smiles)
+
+        if reactant_part_smiles == product_part_smiles:
+            same = True
+
+
     if pyMol_3.write('inchiKey').strip() == pyMol_4.write('inchiKey').strip():
         return 'forward equal to reverse', pyMol_3, pyMol_4
+    elif pyMol_3.write('inchiKey').strip() != pyMol_4.write('inchiKey').strip() and same:
+        return 'same forward and reverse reactant part but different active site', pyMol_3, pyMol_4
     elif pyMol_3.write('inchiKey').strip() == reactant_inchi_key:
         f = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
         status, msg = f.initialization()
@@ -788,7 +819,7 @@ def insert_reaction(qm_collection:object, reactions_collection:object):
 ARD check unrun
 """
 
-def insert_ard(qm_collection:object, reactions_collection:object, statistics_collection:object, config_collection:object, barrier_threshold:float=60.0):
+def insert_ard(qm_collection:object, reactions_collection:object, statistics_collection:object, config_collection:object, barrier_threshold:float=60.0, qmmm:bool=True):
     use_irc = list(config_collection.find({'generations':1}))[0]['use_irc']
     ard_query = {"ard_status":
                  {"$in":
@@ -842,14 +873,69 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
                              {"$in":
                               ['need insert']}}
 
+    qmmm_query = {'$or':
+                     [
+                         {"qmmm_opt_status":
+                          {"$in":
+                           ["job_unrun"]}},
+                         {'qmmm_opt_reactant_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_opt_product_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_freq_opt_status':
+                             {'$in':
+                              ["job_unrun"]}},
+                         {'qmmm_freq_opt_reactant_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_freq_opt_product_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_freq_status':
+                             {'$in':
+                              ["job_unrun"]}},
+                         {'qmmm_freq_reactant_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_freq_reactant_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_freq_ts_status':
+                             {'$in':
+                              ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_refine_status':
+                             {'$in':
+                              ["job_unrun"]}},
+                         {'qmmm_ts_refine_status':
+                             {'$in':
+                              ["job_unrun"]}},
+                         {'qmmm_refine_reactant_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_refine_product_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_refine_ts_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                     ]
+                     }
+
     if use_irc == '0':
         not_finished_number = len(list(qm_collection.find({'$or':
                                                 [energy_query, ssm_query, ts_query, insert_reaction_query, ts_refine_query, ard_query]
                                                 })))
     else:
-        not_finished_number = len(list(qm_collection.find({'$or':
-                                                [energy_query, ssm_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ts_refine_query, ard_query]
-                                                })))
+        if qmmm:
+            not_finished_number = len(list(qm_collection.find({'$or':
+                                                    [energy_query, ssm_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ts_refine_query, ard_query, qmmm_query]
+                                                    })))
+        else:
+            not_finished_number = len(list(qm_collection.find({'$or':
+                                                    [energy_query, ssm_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ts_refine_query, ard_query]
+                                                    })))
 
     ard_had_add_number = qm_collection.count_documents({})
     ard_should_add_number = 0
@@ -869,24 +955,46 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
             finished_reactant_list.append(i['reactant_inchi_key'])
             reactant_smiles = i['reactant_smiles'].split('.')
             if len(reactant_smiles) > 1:
-                reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
+                for rs in reactant_smiles:
+                    for metal in ['Sn', 'W', 'Mo', 'Al']:
+                        if metal not in rs and 'C' in ps:
+                            reactant_part_smiles.append(rs)
+                reactant_part_smiles = set(reactant_part_smiles)
             finished_reactant_smiles_part_list.append(reactant_part_smiles)
 
-        reactions = list(reactions_collection.aggregate([{
-            '$match': {
-                'irc_opt_status': 'job_success',
-                'irc_equal': {'$in': acceptable_condition},
-                'ard_status': {'$nin': ['already insert to qm']},
-                'product_inchi_key':{'$nin': finished_reactant_list},
-                'barrier': {'$lte': barrier_threshold, '$gte': -100.0},
-                # Filter the energy fail
-                'delta_H': {'$lt': 200, '$gte': -10000.0} #-10000 is to filter the failed jobs
-            }}, {
-            '$group': {
-                '_id': "$reaction",
-                'barrier': {'$min': "$barrier"}
-            }}
-        ]))
+        if qmmm:
+            reactions = list(reactions_collection.aggregate([{
+                '$match': {
+                    'irc_opt_status': 'job_success',
+                    'irc_equal': {'$in': acceptable_condition},
+                    'ard_status': {'$nin': ['already insert to qm']},
+                    'product_inchi_key':{'$nin': finished_reactant_list},
+                    'qmmm_barrier': {'$lte': barrier_threshold, '$gte': -100.0},
+                    # Filter the energy fail
+                    'qmmm_delta_H': {'$lt': 200, '$gte': -10000.0} #-10000 is to filter the failed jobs
+                }}, {
+                '$group': {
+                    '_id': "$reaction",
+                    'barrier': {'$min': "$barrier"}
+                }}
+            ]))
+        else:
+            reactions = list(reactions_collection.aggregate([{
+                '$match': {
+                    'irc_opt_status': 'job_success',
+                    'irc_equal': {'$in': acceptable_condition},
+                    'ard_status': {'$nin': ['already insert to qm']},
+                    'product_inchi_key':{'$nin': finished_reactant_list},
+                    'barrier': {'$lte': barrier_threshold, '$gte': -100.0},
+                    # Filter the energy fail
+                    'delta_H': {'$lt': 200, '$gte': -10000.0} #-10000 is to filter the failed jobs
+                }}, {
+                '$group': {
+                    '_id': "$reaction",
+                    'barrier': {'$min': "$barrier"}
+                }}
+            ]))
+
         # If the same product but different active site, then choose the lowest barrier one.
         tmp = {}
         for i in reactions:
@@ -897,17 +1005,29 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
             reactant_smiles = ard_qm_target['reactant_smiles'].split('.')
             product_smiles = ard_qm_target['product_smiles'].split('.')
             if len(reactant_smiles) > 1:
-                reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
+                reactant_part_smiles = []
+                for rs in reactant_smiles:
+                    for metal in ['Sn', 'W', 'Mo', 'Al']:
+                        if metal not in rs and 'C' in ps:
+                            reactant_part_smiles.append(rs)
+                reactant_part_smiles = set(reactant_part_smiles)
+
             else:
                 reactant_part_smiles = set(reactant_smiles)
-
+                
+            product_part_smiles = []
             if len(product_smiles) > 1:
-                product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
+                for ps in product_smiles:
+                    for metal in ['Sn', 'W', 'Mo', 'Al']:
+                        if metal not in ps and 'C' in ps:
+                            product_part_smiles.append(ps)
+                product_part_smiles = set(product_part_smiles)
             else:
                 product_part_smiles = set(product_smiles)
 
             if reactant_part_smiles == product_part_smiles:
                 same = True
+
             # Prevent the product already be a reactant before
             if not same:
                 for finished_reactant_part in finished_reactant_smiles_part_list:
@@ -951,12 +1071,23 @@ def insert_qmmm(qm_collection:object, reactions_collection:object):
         reactant_smiles = ard_qm_target['reactant_smiles'].split('.')
         product_smiles = ard_qm_target['product_smiles'].split('.')
         if len(reactant_smiles) > 1:
-            reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
+            reactant_part_smiles = []
+            for rs in reactant_smiles:
+                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                    if metal not in rs and 'C' in ps:
+                        reactant_part_smiles.append(rs)
+            reactant_part_smiles = set(reactant_part_smiles)
+
         else:
             reactant_part_smiles = set(reactant_smiles)
-
+            
+        product_part_smiles = []
         if len(product_smiles) > 1:
-            product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
+            for ps in product_smiles:
+                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                    if metal not in ps and 'C' in ps:
+                        product_part_smiles.append(ps)
+            product_part_smiles = set(product_part_smiles)
         else:
             product_part_smiles = set(product_smiles)
 
@@ -1858,10 +1989,10 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_irc_jobs(qm_collection)
     check_irc_opt_jobs(qm_collection, level_of_theory=level_of_theory)
     check_irc_opt_side_fail_jobs(qm_collection)
-    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path)
+    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False)
     check_barrier(qm_collection)
     insert_reaction(qm_collection, reactions_collection)
-    insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=60.0)
+    insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=60.0, qmmm=True)
 
     check_qmmm_opt_jobs(qm_collection)
     check_qmmm_freq_opt_jobs(qm_collection, restart_times = 2)
