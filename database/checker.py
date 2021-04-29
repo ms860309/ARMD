@@ -1215,7 +1215,7 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, restart_times:int = 2):
             if times >= restart_times:
                 new_status = check_qmmm_freq_opt_content(target['path'], direction='product', restart=True)
             else:
-                new_status = check_qmmm_freq_opt_content(target['path'], direction='reactant')
+                new_status = check_qmmm_freq_opt_content(target['path'], direction='product')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1785,7 +1785,7 @@ def check_qmmm_freq_ts_side_fail_jobs(qm_collection:object):
     # 2. check the job pbs_status
     for target in targets:
         if target['qmmm_freq_opt_reactant_status'] in ["job_running", "job_queueing", "job_launched"]:
-            job_id = target['qmmm_freq_opt_reacrant_jobid']
+            job_id = target['qmmm_freq_opt_reactant_jobid']
             commands = ['qdel', job_id]
             process = subprocess.Popen(commands,
                                     stdout=subprocess.PIPE,
@@ -1796,7 +1796,7 @@ def check_qmmm_freq_ts_side_fail_jobs(qm_collection:object):
                 }
             qm_collection.update_one(target, {"$set": update_field}, True)
         elif target['qmmm_freq_opt_product_status'] in ["job_running", "job_queueing", "job_launched"]:
-            job_id = target['irc_forward_opt_jobid']
+            job_id = target['qmmm_freq_opt_product_jobid']
             commands = ['qdel', job_id]
             process = subprocess.Popen(commands,
                                     stdout=subprocess.PIPE,

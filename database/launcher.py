@@ -723,7 +723,7 @@ def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, num:int=10, ncpus:in
             product = path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz')
             subfile_2 = create_qmmm_freq_opt(qmmm_product_dir, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
             cmd_2 = 'qsub {}'.format(subfile_2)
-            process = subprocess.Popen([cmd_1],
+            process = subprocess.Popen([cmd_2],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, shell=True)
             stdout, stderr = process.communicate()
