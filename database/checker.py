@@ -414,7 +414,6 @@ def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom
     targets = select_irc_equal_target(qm_collection)
     acceptable_condition = ['forward equal to reactant',
                             'backward equal to reactant']
-    # special_condition = ['forward equal to reverse', 'unintended']
 
     for target in targets:
         new_status, forward, backward = check_irc_equal_status(target, cluster_bond_path=cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=active_site)
@@ -451,7 +450,7 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
             reactant_part_smiles = []
             for rs in reactant_smiles:
                 for metal in ['Sn', 'W', 'Mo', 'Al']:
-                    if metal not in rs and 'C' in ps:
+                    if metal not in rs and 'C' in rs:
                         reactant_part_smiles.append(rs)
             reactant_part_smiles = set(reactant_part_smiles)
 

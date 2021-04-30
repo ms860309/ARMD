@@ -38,6 +38,9 @@ def extract_data(barrier_threshold=200.0):
         if same:
             reactions.remove(reaction)
 
+        if reaction['manual_check'] != 'need check':
+            reactions.remove(reaction)
+
     reactant_smi, product_smi, barrier, generations, er_smi, ep_smi = [], [], [], [], [], []
     for target in reactions:
         reactant_smiles = target['reactant_smiles'].split('.')
@@ -136,7 +139,7 @@ def draw(target_product = None):
             node_size=1500,
             connectionstyle='arc3, rad = 0.15')
 
-    #nx.draw_networkx_edge_labels(G, pos, font_size=8)
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=_dict, font_size=8)
     nx.draw_networkx_labels(G,pos,labels,font_size=10,font_color='r')
     root_to_leaf_paths(eG, target_product = target_product)
     
