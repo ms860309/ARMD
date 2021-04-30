@@ -410,13 +410,13 @@ def select_irc_equal_target(qm_collection:object) -> list:
     targets = list(qm_collection.find(query))
     return targets
 
-def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False):
+def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False, qm_silicon:list=[], check_mm_overlap:bool=True):
     targets = select_irc_equal_target(qm_collection)
     acceptable_condition = ['forward equal to reactant',
                             'backward equal to reactant']
 
     for target in targets:
-        new_status, forward, backward = check_irc_equal_status(target, cluster_bond_path=cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=active_site)
+        new_status, forward, backward = check_irc_equal_status(target, cluster_bond_path=cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=active_site, qm_silicon=qm_silicon, check_mm_overlap=check_mm_overlap)
         orig_status = target['irc_equal']
         if orig_status != new_status:
             if new_status in acceptable_condition:
@@ -433,7 +433,7 @@ def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom
                 }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
-def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False) -> Union[str, object, object]:
+def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False, qm_silicon:list=[], check_mm_overlap:bool=True) -> Union[str, object, object]:
     irc_path = path.join(target['path'], 'IRC/')
     forward_end_output = os.path.join(irc_path, 'irc_forward.xyz')
     backward_end_output = os.path.join(irc_path, 'irc_backward.xyz')
@@ -476,20 +476,20 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
     elif pyMol_3.write('inchiKey').strip() != pyMol_4.write('inchiKey').strip() and same:
         return 'same forward and reverse reactant part but different active site', pyMol_3, pyMol_4
     elif pyMol_3.write('inchiKey').strip() == reactant_inchi_key:
-        f = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
-        status, msg = f.initialization()
-        f2 = FILTER(reactant_file=forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
-        status2, msg2 = f2.initialization()
+        f = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path, qm_silicon = qm_silicon)
+        status, msg = f.initialization(check_mm_overlap=check_mm_overlap)
+        f2 = FILTER(reactant_file=forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path, qm_silicon = qm_silicon)
+        status2, msg2 = f2.initialization(check_mm_overlap=check_mm_overlap)
         if status == 'job_success' and status2 == 'job_success':
             shutil.copyfile(backward_end_output, irc_reactant_path)
             return 'forward equal to reactant', pyMol_3, pyMol_4
         else:
             return msg, pyMol_3, pyMol_4
     elif pyMol_4.write('inchiKey').strip() == reactant_inchi_key:
-        f = FILTER(reactant_file=forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
-        status, msg = f.initialization()
-        f2 = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
-        status2, msg2 = f2.initialization()
+        f = FILTER(reactant_file=forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path, qm_silicon = qm_silicon)
+        status, msg = f.initialization(check_mm_overlap=check_mm_overlap)
+        f2 = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path, qm_silicon = qm_silicon)
+        status2, msg2 = f2.initialization(check_mm_overlap=check_mm_overlap)
         if status == 'job_success' and status2 == 'job_success':
             shutil.copyfile(forward_end_output, irc_reactant_path)
             return 'backward equal to reactant', pyMol_4, pyMol_3
@@ -1998,6 +1998,9 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     reactions_collection = db['reactions']
     statistics_collection = db['statistics']
     config_collection = db['config']
+    targets = list(config_collection.find({'generations': 1}))
+    qm_silicon = targets[0]['silicon_toward_reactant']
+
     if cluster_bond_path:
         # use the checker.py path as the reference
         checker_path = os.path.realpath(sys.argv[0])
@@ -2012,7 +2015,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_irc_jobs(qm_collection)
     check_irc_opt_jobs(qm_collection, level_of_theory=level_of_theory)
     check_irc_opt_side_fail_jobs(qm_collection)
-    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False)
+    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False, qm_silicon=qm_silicon, check_mm_overlap=True)
     check_barrier(qm_collection)
     insert_reaction(qm_collection, reactions_collection)
     insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=60.0, qmmm=True)

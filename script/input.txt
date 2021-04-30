@@ -12,4 +12,5 @@ use_inchi_key                  1                    # Use inchi key as a filter
 constraint                     1                    # The index of constraint atom index (start from 0). eg. constraint forcefield
 fixed_atom                     1                    # fix some atom that can't be break or form(bond_can_break: one of the atom should not in fixed_atom, )
 use_irc                        1                    # Use irc check or not (QChem irc is not robust, maybe ts job success and have only one imaginary frequency is enough)
+silicon_toward_reactant        [19,20,22]           # The silicon index faced reactant. index start from 0
 catalyst                       SnBEA                    # Type of cluster use SnBEA or HZSM5

@@ -7,7 +7,7 @@ import numpy as np
 from statistics import mean
 
 class FILTER(object):
-    def __init__(self, reactant_file, cluster_bond_file = None, bond_file = None, fixed_atom = None):
+    def __init__(self, reactant_file, cluster_bond_file = None, bond_file = None, fixed_atom = None, qm_silicon = []):
         self.reactant_file = reactant_file
         self.cluster_bond_file = cluster_bond_file
         self.bond_file = bond_file
@@ -16,8 +16,9 @@ class FILTER(object):
             with open(self.fixed_atom, 'r') as f:
                 lines = f.read()
             self.fixed_atom = eval(lines)
+        self.qm_silicon = qm_silicon
 
-    def initialization(self):
+    def initialization(self, check_mm_overlap = True):
         status = True
         mol = next(pb.readfile('xyz', self.reactant_file))
         if self.cluster_bond_file:
@@ -57,14 +58,19 @@ class FILTER(object):
             if '[OH]' in frag and 'Sn' not in frag:
                 return 'job_fail', 'non-bonded OH group'
         
-        a = self.check_overlap_mm_region()
-
-
-        status, msg = self.reactant_bonds()
+        if check_mm_overlap:
+            status, msg = self.check_overlap_mm_region(self.qm_silicon)
+        else:
+            status = True
+            
         if status:
-            status, msg = self.check_unreasonable_connection()
+            status, msg = self.reactant_bonds()
             if status:
-                return 'job_success', msg
+                status, msg = self.check_unreasonable_connection()
+                if status:
+                    return 'job_success', msg
+                else:
+                    return 'job_fail', msg
             else:
                 return 'job_fail', msg
         else:
@@ -122,43 +128,41 @@ class FILTER(object):
                 return False, 'reactant oxygen have connection with active site oxygen.'
         return True, 'check_unreasonable_connection is pass.'
 
-    def check_overlap_mm_region(self, qm_silicon = [19,20,22], mm_silicon = 21):
+    def check_overlap_mm_region(self, qm_silicon = [], threshold = 5.4):
         # mm silicon index start from 0
         # Choose the silicon in cluster model which is in mm region
         self.mol.gen3D(self.fixed_atom, make3D=False)
         if len(self.mol.mols) == 1:
-            return True
+            return True, 'pass'
         else:
             nodes_1 = [mol.toNode() for mol in self.mol.mols]
             fd1 = [node.getCentroid() for node in nodes_1]
-            tmps, dist1, dist2 = [], [], []
+            tmps, dist2 = [], []
             for idx, i in enumerate(self.mol.mols):
                 if all(idx2 not in self.fixed_atom for idx2 in i.mols_indices[idx]):
-                    tmps.append(idx)
-            mm_silicon_coord = self.mol[mm_silicon].coords
+                    if any(self.atoms[idx2] == 6 or self.atoms[idx2] == 8 for idx2 in i.mols_indices[idx]):
+                        tmps.append(idx)
 
             for tmp in tmps:
-                diff = mm_silicon_coord - fd1[tmp]
-                dist1.append(np.linalg.norm(diff))
                 for qm_si in qm_silicon:
                     diff2 = self.mol[qm_si].coords - fd1[tmp]
                     dist2.append(np.linalg.norm(diff2))
 
-            if mean(dist2) > 5:
-                print(mean(dist2))
+            if mean(dist2) > threshold:
+                return False, 'reactant maybe in the mm region'
 
 
 
-cluster_bond = '/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/script/bonds.txt'
-fixed_atom = '/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/script/fixed_atom.txt'
+# cluster_bond = '/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/script/bonds.txt'
+# fixed_atom = '/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/script/fixed_atom.txt'
 
-a = os.listdir('/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/code/ard/reactions')
-for i in a:
-    print('---------')
-    print(i)
-    b = os.path.join('/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/code/ard/reactions', i)
-    reactant_file = os.path.join(b, 'reactant.xyz')
-    f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
-    state, msg = f.initialization()
-    # print(state)
-    # print(msg)
+# a = os.listdir('/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/code/ard/reactions')
+# for i in a:
+#     print('---------')
+#     print(i)
+#     b = os.path.join('/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/code/ard/reactions', i)
+#     reactant_file = os.path.join(b, 'reactant.xyz')
+#     f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
+#     state, msg = f.initialization()
+#     # print(state)
+#     # print(msg)

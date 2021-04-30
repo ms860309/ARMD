@@ -58,7 +58,7 @@ class Network(object):
         config_collection = db['config']
         statistics_collection = db['statistics']
         targets = list(config_collection.find({'generations': 1}))
-        config_collection.update_one(targets[0], {"$set": {'config_path':kwargs['config_path']}}, True)
+        config_collection.update_one(targets[0], {"$set": {'config_path':kwargs['config_path'], 'silicon_toward_reactant':eval(kwargs['silicon_toward_reactant'])}}, True)
         # Reactant information
         reactant_inchi_key = mol_object.write('inchiKey').strip()  # inchikey
 
