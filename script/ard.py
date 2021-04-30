@@ -88,6 +88,7 @@ if __name__ == '__main__':
     kwargs['output_dir'] = output_dir
     kwargs['generations'] = args.generations
     kwargs['ard_path'] = ard_path
+    kwargs['config_path'] = os.path.join(os.path.dirname(ard_path), 'config')
     kwargs['reactant_path'] = reactant_file
 
     # Execute job

@@ -57,7 +57,7 @@ class FILTER(object):
             if '[OH]' in frag and 'Sn' not in frag:
                 return 'job_fail', 'non-bonded OH group'
         
-        #a = self.check_overlap_mm_region()
+        a = self.check_overlap_mm_region()
 
 
         status, msg = self.reactant_bonds()
@@ -149,16 +149,16 @@ class FILTER(object):
 
 
 
-# cluster_bond = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/script/bonds.txt'
-# fixed_atom = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/script/fixed_atom.txt'
+cluster_bond = '/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/script/bonds.txt'
+fixed_atom = '/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/script/fixed_atom.txt'
 
-# a = os.listdir('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions')
-# for i in a:
-#     print('---------')
-#     print(i)
-#     b = os.path.join('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions', i)
-#     reactant_file = os.path.join(b, 'reactant.xyz')
-#     f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
-#     state, msg = f.initialization()
-#     # print(state)
-#     # print(msg)
+a = os.listdir('/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/code/ard/reactions')
+for i in a:
+    print('---------')
+    print(i)
+    b = os.path.join('/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/code/ard/reactions', i)
+    reactant_file = os.path.join(b, 'reactant.xyz')
+    f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
+    state, msg = f.initialization()
+    # print(state)
+    # print(msg)

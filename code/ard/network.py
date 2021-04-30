@@ -58,7 +58,7 @@ class Network(object):
         config_collection = db['config']
         statistics_collection = db['statistics']
         targets = list(config_collection.find({'generations': 1}))
-
+        config_collection.update_one(targets[0], {"$set": {'config_path':kwargs['config_path']}}, True)
         # Reactant information
         reactant_inchi_key = mol_object.write('inchiKey').strip()  # inchikey
 
@@ -69,13 +69,13 @@ class Network(object):
         prod_mols = gen.prod_mols
 
         prod_mols_filtered = []
-        self.logger.info('{} possible products are generated\n'.format(len(prod_mols)))
+        self.logger.info(f'{len(prod_mols)} possible products are generated\n')
         add_bonds = gen.add_bonds
         break_bonds = gen.break_bonds
 
         # Filter reactions based on standard heat of reaction  delta H
         if self.method.lower() == 'mopac':
-            self.logger.info('Now use {} to filter the delta H of reactions....\n'.format(self.method))
+            self.logger.info(f'Now use {self.method} to filter the delta H of reactions....\n')
             if self.generations == 1:
                 os.mkdir(os.path.join(os.path.dirname(self.ard_path), 'reactions'))
                 H298_reac = self.get_mopac_H298(mol_object)
@@ -100,12 +100,12 @@ class Network(object):
             self.logger.info('Now use {} to filter the delta H of reactions....\n'.format(self.method))
             if self.generations == 1:
                 os.mkdir(os.path.join(os.path.dirname(self.ard_path), 'reactions'))
-                H298_reac = self.get_xtb_H298(mol_object)
+                H298_reac = self.get_xtb_H298(config_path=kwargs['config_path'])
                 config_collection.update_one(targets[0], {"$set": {'reactant_energy': H298_reac, 'use_irc': self.use_irc}}, True)
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_xtb(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
-                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, refH=None):
+                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, config_path = kwargs['config_path'], refH=None):
                         prod_mols_filtered.append(prod_mol)
                     mol_object.setCoordsFromMol(mol_object_copy)
             else:
@@ -113,7 +113,7 @@ class Network(object):
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_xtb(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
-                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, refH=H298_reac):
+                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, config_path = kwargs['config_path'], refH=H298_reac):
                         prod_mols_filtered.append(prod_mol)
                     mol_object.setCoordsFromMol(mol_object_copy)
         else:
@@ -221,11 +221,11 @@ class Network(object):
             self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
             return 0
 
-    def filter_dh_xtb(self, reac_obj, cluster_bond, prod_mol, form_bonds, break_bonds, total_prod_num, qm_collection, refH=None):
+    def filter_dh_xtb(self, reac_obj, cluster_bond, prod_mol, form_bonds, break_bonds, total_prod_num, qm_collection, config_path, refH=None):
         self.count += 1
         xtb_object = XTB(reac_obj, prod_mol, self.forcefield, self.constraintff_alg, form_bonds, break_bonds,
                          self.logger, total_prod_num, self.count, self.constraint, self.fixed_atom, cluster_bond)
-        H298_reac, H298_prod = xtb_object.xtb_get_H298(self.reactant_path)
+        H298_reac, H298_prod = xtb_object.xtb_get_H298(self.reactant_path, config_path)
 
         if H298_prod == False or H298_reac == False:
             return 0
@@ -299,7 +299,7 @@ class Network(object):
         mol_hf = mopac.getHeatofFormation(tmpdir, 'reactant.out')
         return float(mol_hf)
 
-    def get_xtb_H298(self, mol_object):
+    def get_xtb_H298(self, config_path):
         tmpdir = os.path.join(self.reactant_path, 'tmp')
         reactant_path = os.path.join(tmpdir, 'reactant.xyz')
         if os.path.exists(tmpdir):
@@ -309,8 +309,7 @@ class Network(object):
 
         shutil.copyfile(os.path.join(self.ard_path, 'reactant.xyz'), reactant_path)
         try:
-            self.runXTB(tmpdir, 'reactant.xyz')
-            mol_hf = self.getE(tmpdir, 'reactant.xyz')
+            mol_hf = self.runXTB(tmpdir, config_path, 'reactant.xyz')
         except:
             raise Exception('The initial reactant energy calculation by xtb is fail.')
         return float(mol_hf)
@@ -508,29 +507,12 @@ class Network(object):
                     else:
                         return symbols, np.array(coords)
 
-    def getE(self, tmpdir, target='reactant.xyz'):
-        """
-        Here the energy is Eh (hartree)
-        """
-        input_path = os.path.join(tmpdir, target)
-        with open(input_path, 'r') as f:
-            lines = f.readlines()
-        HeatofFormation = lines[1].strip().split()[1]
-        return HeatofFormation
-
-    def runXTB(self, tmpdir, target='reactant.xyz'):
+    def runXTB(self, tmpdir, config_path, target='reactant.xyz'):
         input_path = os.path.join(tmpdir, target)
         outname = '{}.xyz'.format(target.split('.')[0])
         output_path = os.path.join(tmpdir, 'xtbopt.xyz')
         new_output_path = os.path.join(tmpdir, outname)
-
-        config_path = os.path.join(os.path.dirname(
-            os.path.dirname(tmpdir)), 'config')
         constraint_path = os.path.join(config_path, 'xtb_constraint.inp')
-        if not os.path.exists(constraint_path):
-            config_path = os.path.join(os.path.dirname(
-                os.path.dirname(os.path.dirname(tmpdir))), 'config')
-            constraint_path = os.path.join(config_path, 'xtb_constraint.inp')
 
         if self.constraint == None:
             p = Popen(['xtb', input_path, '--opt', 'tight'])
@@ -540,3 +522,8 @@ class Network(object):
             p = Popen(['xtb', '--opt', 'tight', '--input', constraint_path, input_path])
             p.wait()
             os.rename(output_path, new_output_path)
+
+        with open(input_path, 'r') as f:
+            lines = f.readlines()
+        HeatofFormation = lines[1].strip().split()[1]
+        return HeatofFormation

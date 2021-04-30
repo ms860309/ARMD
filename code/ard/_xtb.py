@@ -39,7 +39,7 @@ class XTB(object):
         self.fixed_atom = fixed_atom
         self.cluster_bond = cluster_bond
 
-    def xtb_get_H298(self, _reactant_path):
+    def xtb_get_H298(self, _reactant_path, config_path):
         """
         Create a directory folder called "tmp" for mopac calculation
         Create a input file called "input.mop" for mopac calculation
@@ -64,7 +64,7 @@ class XTB(object):
                 f.write(reac_geo)
             start_time = time.time()
             try:
-                self.runXTB(tmpdir, 'reactant.xyz')
+                self.runXTB(tmpdir, config_path, 'reactant.xyz')
                 reactant_energy = self.getE(tmpdir, 'reactant.xyz')
             except:
                 self.logger.info('xTB reactant fail')
@@ -73,7 +73,7 @@ class XTB(object):
             with open(product_path, 'w') as f:
                 f.write(prod_geo)
             try:
-                self.runXTB(tmpdir, 'product.xyz')
+                self.runXTB(tmpdir, config_path, 'product.xyz')
                 product_energy = self.getE(tmpdir, 'product.xyz')
             except:
                 self.logger.info('xTB product fail')
@@ -176,17 +176,11 @@ class XTB(object):
         HeatofFormation = lines[1].strip().split()[1]
         return HeatofFormation
 
-    def runXTB(self, tmpdir, target='reactant.xyz'):
+    def runXTB(self, tmpdir, config_path, target='reactant.xyz'):
         input_path = path.join(tmpdir, target)
         outname = '{}.xyz'.format(target.split('.')[0])
         output_path = path.join(tmpdir, 'xtbopt.xyz')
-
-        config_path = path.join(path.dirname(path.dirname(tmpdir)), 'config')
         constraint_path = path.join(config_path, 'xtb_constraint.inp')
-        if not path.exists(constraint_path):
-            # Second generation and later
-            config_path = path.join(path.dirname(path.dirname(path.dirname(tmpdir))), 'config')
-            constraint_path = path.join(config_path, 'xtb_constraint.inp')
 
         new_output_path = path.join(tmpdir, outname)
         if self.constraint == None:

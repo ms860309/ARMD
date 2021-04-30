@@ -14,7 +14,6 @@ import time
 # third party
 from openbabel import openbabel as ob
 from openbabel import pybel as pb
-import multiprocessing as mp
 import logging
 import networkx as nx
 
