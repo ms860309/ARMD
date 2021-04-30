@@ -1915,60 +1915,84 @@ def check_qmmm_freq_ts_side_fail_jobs(qm_collection:object):
     targets = select_qmmm_freq_ts_side_fail_target(qm_collection)
     # 2. check the job pbs_status
     for target in targets:
-        if target['qmmm_freq_opt_reactant_status'] in ["job_running", "job_queueing", "job_launched"]:
-            job_id = target['qmmm_freq_opt_reactant_jobid']
-            commands = ['qdel', job_id]
-            process = subprocess.Popen(commands,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
-            update_field = {
-                'qmmm_freq_opt_reactant_status': 'qmmm ts fail'
-                }
-            qm_collection.update_one(target, {"$set": update_field}, True)
-        elif target['qmmm_freq_opt_product_status'] in ["job_running", "job_queueing", "job_launched"]:
-            job_id = target['qmmm_freq_opt_product_jobid']
-            commands = ['qdel', job_id]
-            process = subprocess.Popen(commands,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
-            update_field = {
-                'qmmm_freq_opt_reactant_status': 'qmmm ts fail'
-                }
-            qm_collection.update_one(target, {"$set": update_field}, True)
-        elif target['qmmm_freq_opt_status'] in ["job_unrun"]:
-            update_field = {
-                'qmmm_freq_opt_status': 'qmmm ts fail'
-                }
-            qm_collection.update_one(target, {"$set": update_field}, True)
-        elif target['qmmm_opt_reactant_status'] in ["job_running", "job_queueing", "job_launched"]:
-            job_id = target['qmmm_opt_reacrant_jobid']
-            commands = ['qdel', job_id]
-            process = subprocess.Popen(commands,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
-            update_field = {
-                'qmmm_opt_reactant_status': 'qmmm ts fail'
-                }
-            qm_collection.update_one(target, {"$set": update_field}, True)
-        elif target['qmmm_opt_product_status'] in ["job_running", "job_queueing", "job_launched"]:
-            job_id = target['qmmm_opt_product_jobid']
-            commands = ['qdel', job_id]
-            process = subprocess.Popen(commands,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-            stdout, stderr = process.communicate()
-            update_field = {
-                'qmmm_opt_product_status': 'qmmm ts fail'
-                }
-            qm_collection.update_one(target, {"$set": update_field}, True)
-        elif target['qmmm_opt_status'] in ["job_unrun"]:
-            update_field = {
-                'qmmm_opt_status': 'qmmm ts fail'
-                }
-            qm_collection.update_one(target, {"$set": update_field}, True)
+        try:
+            if target['qmmm_freq_opt_reactant_status'] in ["job_running", "job_queueing", "job_launched"]:
+                job_id = target['qmmm_freq_opt_reactant_jobid']
+                commands = ['qdel', job_id]
+                process = subprocess.Popen(commands,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                update_field = {
+                    'qmmm_freq_opt_reactant_status': 'qmmm ts fail'
+                    }
+                qm_collection.update_one(target, {"$set": update_field}, True)
+        except:
+            pass
+
+        try:
+            if target['qmmm_freq_opt_product_status'] in ["job_running", "job_queueing", "job_launched"]:
+                job_id = target['qmmm_freq_opt_product_jobid']
+                commands = ['qdel', job_id]
+                process = subprocess.Popen(commands,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                update_field = {
+                    'qmmm_freq_opt_product_status': 'qmmm ts fail'
+                    }
+                qm_collection.update_one(target, {"$set": update_field}, True)
+        except:
+            pass
+
+        try:
+            if target['qmmm_freq_opt_status'] in ["job_unrun"]:
+                update_field = {
+                    'qmmm_freq_opt_status': 'qmmm ts fail'
+                    }
+                qm_collection.update_one(target, {"$set": update_field}, True)
+        except:
+            pass
+
+        try:
+            if target['qmmm_opt_reactant_status'] in ["job_running", "job_queueing", "job_launched"]:
+                job_id = target['qmmm_opt_reacrant_jobid']
+                commands = ['qdel', job_id]
+                process = subprocess.Popen(commands,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                update_field = {
+                    'qmmm_opt_reactant_status': 'qmmm ts fail'
+                    }
+                qm_collection.update_one(target, {"$set": update_field}, True)
+        except:
+            pass
+
+        try:
+            if target['qmmm_opt_product_status'] in ["job_running", "job_queueing", "job_launched"]:
+                job_id = target['qmmm_opt_product_jobid']
+                commands = ['qdel', job_id]
+                process = subprocess.Popen(commands,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                update_field = {
+                    'qmmm_opt_product_status': 'qmmm ts fail'
+                    }
+                qm_collection.update_one(target, {"$set": update_field}, True)
+        except:
+            pass
+        
+        try:
+            if target['qmmm_opt_status'] in ["job_unrun"]:
+                update_field = {
+                    'qmmm_opt_status': 'qmmm ts fail'
+                    }
+                qm_collection.update_one(target, {"$set": update_field}, True)
+        except:
+            pass
+        
 
 def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     qm_collection = db['qm_calculate_center']
