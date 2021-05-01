@@ -57,9 +57,9 @@ class FILTER(object):
         for frag in self.mol.write('can').split()[0].split('.'):
             if '[OH]' in frag and 'Sn' not in frag:
                 return 'job_fail', 'non-bonded OH group'
-        
+
         if check_mm_overlap:
-            status, msg = self.check_overlap_mm_region(self.qm_silicon)
+            status, msg = self.check_overlap_mm_region(qm_silicon=self.qm_silicon)
         else:
             status = True
             
@@ -150,6 +150,8 @@ class FILTER(object):
 
             if mean(dist2) > threshold:
                 return False, 'reactant maybe in the mm region'
+            else:
+                return True, 'pass'
 
 
 
@@ -161,8 +163,8 @@ class FILTER(object):
 #     print('---------')
 #     print(i)
 #     b = os.path.join('/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/code/ard/reactions', i)
-#     reactant_file = os.path.join(b, 'reactant.xyz')
-#     f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
-#     state, msg = f.initialization()
+#     reactant_file = os.path.join(b, 'product.xyz')
+#     f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom, qm_silicon=[19,20,22])
+#     state, msg = f.initialization(check_mm_overlap=True)
 #     # print(state)
 #     # print(msg)
