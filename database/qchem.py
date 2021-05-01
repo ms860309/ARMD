@@ -9,7 +9,7 @@ class QChemError(Exception):
 class QChem(object):
     """
     Extract the information from QChem output.
-    The methods of this class have only been validated for Q-Chem 5.1 DFT
+    The methods of this class have only been validated for Q-Chem 5.3 DFT
     calculations.
     """
 
@@ -23,12 +23,15 @@ class QChem(object):
                 self.log = f.read().splitlines()
                 result = True
                 restart = True
+                special_case = True
                 if ' **  OPTIMIZATION CONVERGED  **' not in self.log:
                     result = False
                 if ' **  MAXIMUM OPTIMIZATION CYCLES REACHED  **' not in self.log:
                     restart = False
-                print(restart)
-                if not result and not restart:
+                if ' ** UNABLE TO DETERMINE Lamda IN FormD **' not in self.log:
+                    special_case = True
+
+                if not result and not restart and not special_case:
                     for line in self.log:
                         if 'fatal error' in line:
                             raise QChemError(f'Q-Chem job {outputfile} had an error!')
@@ -144,10 +147,9 @@ class QChem(object):
             for atom, xyz in zip(symobol[:natoms], geometry[:natoms]):
                 f.write('{}  {}  {}  {}\n'.format(atom, xyz[0], xyz[1], xyz[2]))
 
-"""
-logfile='/home/jianyi/Sn_BEA_complete/AutomaticReactionDiscovery/reactions/UYFCJUSUJARWAH-UHFFFAOYSA-N_2/QMMM_TS/qmmm_freq_ts.out'
-try:
-    q = QChem(outputfile=logfile)
-except:
-    print('error')
-"""
+
+# logfile='/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/database/qmmm_freq_ts.out'
+# try:
+#     q = QChem(outputfile=logfile)
+# except:
+#     print('error')

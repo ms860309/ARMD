@@ -855,7 +855,7 @@ def print_information(generations):
     print('{} nodes are failed in IRC OPT job'.format(len(irc_opt_targets_3)))
     print('{} nodes are failed in QMMM OPT job'.format(len(qmmm_opt_targets_3)))
     print('{} nodes are failed in QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_3)))
-    print('{} nodes are qmmm ts fail QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_8)))
+    print('{} nodes are qmmm ts failed QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_8)))
     print('{} nodes are failed in QMMM TS'.format(len(qmmm_freq_ts_targets_3)))
     print('{} nodes are failed in QMMM FREQ'.format(len(qmmm_freq_targets_3)))
     print('{} nodes are failed in QMMM TS FREQ'.format(len(qmmm_ts_freq_targets_3)))

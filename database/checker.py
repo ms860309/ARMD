@@ -1452,8 +1452,8 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
                         'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
-            reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
-            qm_collection.update_one(target, {"$set": update_field}, True)
+            reactions_collection.update_one(reaction_target, {"$set":update_field_reaction}, True)
+            qm_collection.update_one(target, {"$set":update_field}, True)
 
     targets = select_targets(qm_collection, job_name='qmmm_freq_product')
     # 2. check the job pbs_status
@@ -1821,7 +1821,8 @@ def select_qmmm_freq_ts_side_fail_target(qm_collection:object) -> list:
     1. status is job_launched or job_running
     Returns a list of targe
     """
-    query = {'$or':[{'$and':
+    query = {'$or':[
+            {'$and':
             [
                 {"qmmm_freq_ts_status":
                 {"$in":
@@ -2005,7 +2006,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
 
     check_qmmm_opt_jobs(qm_collection)
     check_qmmm_freq_opt_jobs(qm_collection, restart_times = 2)
-    check_qmmm_freq_ts_jobs(qm_collection, restart_times = 2)
+    check_qmmm_freq_ts_jobs(qm_collection, restart_times = 3)
     check_qmmm_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_ts_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_refine_jobs(qm_collection, reactions_collection)
