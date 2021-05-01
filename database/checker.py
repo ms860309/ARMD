@@ -1001,19 +1001,7 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
             ard_qm_target = list(qm_collection.find({'path': dir_path['path']}))[0]
             # Prevent reactant equal to product but with different active site (maybe proton at the different oxygen)
             same = False
-            reactant_smiles = ard_qm_target['reactant_smiles'].split('.')
             product_smiles = ard_qm_target['product_smiles'].split('.')
-            if len(reactant_smiles) > 1:
-                reactant_part_smiles = []
-                for rs in reactant_smiles:
-                    for metal in ['Sn', 'W', 'Mo', 'Al']:
-                        if metal not in rs and 'C' in ps:
-                            reactant_part_smiles.append(rs)
-                reactant_part_smiles = set(reactant_part_smiles)
-
-            else:
-                reactant_part_smiles = set(reactant_smiles)
-                
             product_part_smiles = []
             if len(product_smiles) > 1:
                 for ps in product_smiles:
@@ -1023,16 +1011,11 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
                 product_part_smiles = set(product_part_smiles)
             else:
                 product_part_smiles = set(product_smiles)
-
-            if reactant_part_smiles == product_part_smiles:
-                same = True
-
             # Prevent the product already be a reactant before
-            if not same:
-                for finished_reactant_part in finished_reactant_smiles_part_list:
-                    if product_part_smiles == finished_reactant_part:
-                        same = True
-                        break
+            for finished_reactant_part in finished_reactant_smiles_part_list:
+                if product_part_smiles == finished_reactant_part:
+                    same = True
+                    break
             if not same and ard_qm_target['product_smiles'] not in tmp:
                 tmp[ard_qm_target['product_smiles']] = [i['barrier'], ard_qm_target, dir_path]
             elif not same and tmp[ard_qm_target['product_smiles']][0] > i['barrier']:

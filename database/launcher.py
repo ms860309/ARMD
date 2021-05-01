@@ -76,7 +76,7 @@ def create_qchem_ssm_sub_file(dir_path:str, SSM_dir_path:str, config_path:str, n
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'")
+                    f"start=$(date +\'%s\')\n")
     target_path = f'cd {SSM_dir_path}\n'
     calculator = 'module load qchem\n'
     # activate conda env is necessary because gsm install on the environment
@@ -100,7 +100,7 @@ def create_qchem_ssm_sub_file(dir_path:str, SSM_dir_path:str, config_path:str, n
             f"echo \"It took $(($(date +\'%s\') - $start)) seconds\"")
 
     with open(subfile, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {target_path} {calculator} {initialization} {env} {scratch} {command} {clean}')
+        f.write(f'{shell}{pbs_setting}{target_path}{calculator}{initialization}{env}{scratch}{command}{clean}')
 
     return subfile
 
@@ -117,10 +117,10 @@ def create_orca_ssm_sub_file(dir_path:str, SSM_dir_path:str, config_path:str, nc
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'"
+                    f"start=$(date +\'%s\')\n"
                     f'export MKL_NUM_THREADS={ncpus}\n'
                     f'export OMP_NUM_THREADS={ompthreads}\n'
-                    f'export OMP_STACKSIZE={mem}G')
+                    f'export OMP_STACKSIZE={mem}G\n')
     target_path = f'cd {SSM_dir_path}\n'
     # activate conda env is necessary because gsm install on the environment
     initialization = 'source ~/.bashrc\n'
@@ -143,7 +143,7 @@ def create_orca_ssm_sub_file(dir_path:str, SSM_dir_path:str, config_path:str, nc
             'conda deactivate\n'
             f"echo \"It took $(($(date +\'%s\') - $start)) seconds\"")
     with open(subfile, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {target_path} {initialization} {env} {scratch} {command} {clean}')
+        f.write(f'{shell}{pbs_setting}{target_path}{initialization}{env}{scratch}{command}{clean}')
 
     return subfile
 
@@ -179,7 +179,7 @@ def launch_ts_refine_jobs(qm_collection:object, config_path:str, num:int=100, nc
     print(highlight_text('TS refine'))
     print('\nTS refine launced {} jobs\n'.format(count))
 
-def create_ts_refine_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str, ncpus:int=1, mpiprocs:int=1, ompthreads:int=1, mem:int=2) -> str:
+def create_ts_refine_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str, ncpus:int=1, mpiprocs:int=1, ompthreads:int=1, mem:int=1) -> str:
     tsnode_path = path.join(SSM_dir_path, 'TSnode.xyz')
     ts_input_file = path.join(TS_dir_path, 'ts_refine.in')
     subfile = path.join(TS_dir_path, 'ts_refine.job')
@@ -191,7 +191,7 @@ def create_ts_refine_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'"
+                    f"start=$(date +\'%s\')\n"
                     f'export MKL_NUM_THREADS={ncpus}\n'
                     f'export OMP_NUM_THREADS={ompthreads}\n'
                     f'export OMP_STACKSIZE={mem}G\n')
@@ -211,15 +211,13 @@ def create_ts_refine_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str
         lines = f1.read().splitlines()
     with open(ts_input_file, 'w') as f2:
         for line in config:
-            f2.write(line + '\n')
-        f2.write(f'\n%pal\nnprocs {ncpus}\nend\n\n')
-        f2.write('*xyz 0 1\n')
-
+            f2.write(f'{line}\n')
+        f2.write(f'\n%pal\nnprocs {ncpus}\nend\n\n*xyz 0 1\n')
         for line in lines[2:]:
-            f2.write(line + '\n')
+            f2.write(f'{line}\n')
         f2.write('*')
     with open(subfile, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {initialization} {calculator} {scratch} {command} {copy_the_refine_xyz} {clean}')
+        f.write(f'{shell}{pbs_setting}{initialization}{calculator}{scratch}{command}{copy_the_refine_xyz}{clean}')
 
     return subfile
 
@@ -277,7 +275,7 @@ def create_qchem_ts_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str,
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'")
+                    f"start=$(date +\'%s\')\n")
     target_path = f'cd {TS_dir_path}\n'
     calculator = 'module load qchem\n'
     initialization = 'source ~/.bashrc\n'
@@ -296,9 +294,9 @@ def create_qchem_ts_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str,
                 config[(i+1):(i+1)] = cblock
                 break
         for line in config:
-            f2.write(line + '\n')
+            f2.write(f'{line}\n')
     with open(subfile, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {target_path} {calculator} {initialization} {scratch} {command} {clean}')
+        f.write(f'{shell}{pbs_setting}{target_path}{calculator}{initialization}{scratch}{command}{clean}')
 
     return subfile
 
@@ -318,7 +316,7 @@ def create_orca_ts_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str, 
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'")
+                    f"start=$(date +\'%s\')\n")
     calculator = 'module load orca\n'
     initialization = 'source ~/.bashrc\n'
     scratch = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
@@ -334,22 +332,21 @@ def create_orca_ts_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str, 
         lines = f1.read().splitlines()
     with open(ts_input_file, 'w') as f2:
         for line in config:
-            f2.write(line + '\n')
-        f2.write(f'\n%pal\nnprocs {ncpus}\nend\n\n')
-        f2.write('*xyz 0 1\n')
+            f2.write(f'{line}\n')
+        f2.write(f'\n%pal\nnprocs {ncpus}\nend\n\n*xyz 0 1\n')
         if Hcap:
             num = len(lines[2:]) - Hcap
             for idx, line in enumerate(lines[2:]):
                 if idx < num:
-                    f2.write(f'{line} \n')
+                    f2.write(f'{line}\n')
                 else:
-                    f2.write(f'{line} m=100000000000000000 \n')
+                    f2.write(f'{line} m=100000000000000000\n')
         else:
             for line in lines[2:]:
-                f2.write(f'{line} \n')
+                f2.write(f'{line}\n')
         f2.write('*')
     with open(subfile, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {initialization} {calculator} {scratch} {command} {copy_the_refine_xyz} {clean}')
+        f.write(f'{shell}{pbs_setting}{initialization}{calculator}{scratch}{command}{copy_the_refine_xyz}{clean}')
 
     return subfile
 
@@ -395,7 +392,7 @@ def create_irc_sub_file(TS_dir_path:str, IRC_dir_path:str, config_path:str, ncpu
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'")
+                    f"start=$(date +\'%s\')\n")
     target_path = f'cd {IRC_dir_path}\n'
     initialization = 'source ~/.bashrc\n'
     env = 'conda activate ard\n'
@@ -407,7 +404,7 @@ def create_irc_sub_file(TS_dir_path:str, IRC_dir_path:str, config_path:str, ncpu
             f"echo \"It took $(($(date +\'%s\') - $start)) seconds\"")
 
     with open(subfile, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {target_path} {initialization} {env} {scratch} {command} {clean}')
+        f.write(f'{shell}{pbs_setting}{target_path}{initialization}{env}{scratch}{command}{clean}')
 
     return subfile
 
@@ -479,7 +476,7 @@ def create_qchem_irc_opt_sub_file(irc_path:str, config_path:str, forward:str, ba
                 config[(i+1):(i+1)] = cblock
                 break
         for line in config:
-            f2.write(line + '\n')
+            f2.write(f'{line}\n')
     with open(backward, 'r') as f1:
         lines = f1.read().splitlines()
     with open(irc_opt_backward_input, 'w') as f2:
@@ -490,13 +487,13 @@ def create_qchem_irc_opt_sub_file(irc_path:str, config_path:str, forward:str, ba
                 config[(i+1):(i+1)] = cblock
                 break
         for line in config:
-            f2.write(line + '\n')
+            f2.write(f'{line}\n')
 
     shell = '#!/usr/bin/bash\n'
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'")
+                    f"start=$(date +\'%s\')\n")
     initialization = 'source ~/.bashrc\n'
     target_path = f'cd {irc_path}\n'
     calculator = 'module load qchem\n'
@@ -507,9 +504,9 @@ def create_qchem_irc_opt_sub_file(irc_path:str, config_path:str, forward:str, ba
     clean = ('rm -r $QCSCRATCH\n'
             f"echo \"It took $(($(date +\'%s\') - $start)) seconds\"")
     with open(subfile_1, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {initialization} {target_path} {calculator} {scratch} {command_1} {clean}')
+        f.write(f'{shell}{pbs_setting}{initialization}{target_path}{calculator}{scratch}{command_1}{clean}')
     with open(subfile_2, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {initialization} {target_path} {calculator} {scratch} {command_2} {clean}')
+        f.write(f'{shell}{pbs_setting}{initialization}{target_path}{calculator}{scratch}{command_2}{clean}')
 
     return subfile_1, subfile_2
 
@@ -526,7 +523,7 @@ def create_orca_irc_opt_sub_file(irc_path:str, config_path:str, forward:str, bac
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'")
+                    f"start=$(date +\'%s\')\n")
     initialization = 'source ~/.bashrc\n'
     calculator = 'module load orca\n'
     scratch_1 = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
@@ -552,21 +549,20 @@ def create_orca_irc_opt_sub_file(irc_path:str, config_path:str, forward:str, bac
             job2idx = len(config)
         for line in config[:job2idx]:
             f2.write(f'{line} \n')
-        f2.write(f'\n%pal\nnprocs {ncpus}\nend\n\n')
-        f2.write('*xyz 0 1\n')
+        f2.write(f'\n%pal\nnprocs {ncpus}\nend\n\n*xyz 0 1\n')
         if Hcap:
             num = len(lines[2:]) - Hcap
             for idx, line in enumerate(lines[2:]):
                 if idx < num:
-                    f2.write(f'{line} \n')
+                    f2.write(f'{line}\n')
                 else:
-                    f2.write(f'{line} m=100000000000000000 \n')
+                    f2.write(f'{line} m=100000000000000000\n')
         else:
             for line in lines[2:]:
-                f2.write(f'{line} \n')
+                f2.write(f'{line}\n')
         f2.write('*\n\n')
         for line in config[job2idx:]:
-            f2.write(f'{line} \n')
+            f2.write(f'{line}\n')
 
     with open(backward, 'r') as f1:
         lines = f1.read().splitlines()
@@ -576,27 +572,26 @@ def create_orca_irc_opt_sub_file(irc_path:str, config_path:str, forward:str, bac
         else:
             job2idx = len(config)
         for line in config[:job2idx]:
-            f2.write(f'{line} \n')
-        f2.write(f'\n%pal\nnprocs {ncpus}\nend\n\n')
-        f2.write('*xyz 0 1\n')
+            f2.write(f'{line}\n')
+        f2.write(f'\n%pal\nnprocs {ncpus}\nend\n\n*xyz 0 1\n')
         if Hcap:
             num = len(lines[2:]) - Hcap
             for idx, line in enumerate(lines[2:]):
                 if idx < num:
-                    f2.write(f'{line} \n')
+                    f2.write(f'{line}\n')
                 else:
-                    f2.write(f'{line} m=100000000000000000 \n')
+                    f2.write(f'{line} m=100000000000000000\n')
         else:
             for line in lines[2:]:
-                f2.write(f'{line} \n')
+                f2.write(f'{line}\n')
         f2.write('*\n\n')
         for line in config[job2idx:]:
-            f2.write(f'{line} \n')
+            f2.write(f'{line}\n')
 
     with open(subfile_1, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {initialization} {calculator} {scratch_1} {command_1} {copy_the_refine_xyz_1} {clean}')
+        f.write(f'{shell}{pbs_setting}{initialization}{calculator}{scratch_1}{command_1}{copy_the_refine_xyz_1}{clean}')
     with open(subfile_2, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {initialization} {calculator} {scratch_2} {command_2} {copy_the_refine_xyz_2} {clean}')
+        f.write(f'{shell}{pbs_setting}{initialization}{calculator}{scratch_2}{command_2}{copy_the_refine_xyz_2}{clean}')
 
     return subfile_1, subfile_2
 
@@ -693,37 +688,37 @@ def create_qmmm_opt(qmmm_dir:str, config_path:str, target_geometry:str, ncpus:in
     with open(qmmm_opt_input, 'w') as f:
         for k, text in enumerate(config):
             if '$MOLECULE' not in text.upper():
-                f.write(f'{text} \n')
+                f.write(f'{text}\n')
             else:
                 break
-        f.write('$MOLECULE \n')
+        f.write('$MOLECULE\n')
         for l, line in enumerate(qm_xyzs):
             if len(line) > 2:
                 connectivity = '\t'.join(line[-5:])
                 geometry = f'{lines[1+l]} \t {connectivity}'
-                f.write(f'{geometry} \n')
+                f.write(f'{geometry}\n')
             else:
                 line = ' '.join(line)
-                f.write(f'{line} \n')
+                f.write(f'{line}\n')
         for last_text in config[k + 2 + nqm_atoms:]:
-            f.write(f'{last_text} \n')
+            f.write(f'{last_text}\n')
 
     shell = '#!/usr/bin/bash\n'
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'")
+                    f"start=$(date +\'%s\')\n")
     initialization = 'source ~/.bashrc\n'
-    target_path = f'cd {qmmm_dir} \n'
+    target_path = f'cd {qmmm_dir}\n'
     calculator = 'module load qchem\n'
     scratch = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
                 'mkdir -p $QCSCRATCH\n')
-    command = f'qchem -nt {ncpus} {qmmm_opt_input} {qmmm_opt_output}'
+    command = f'qchem -nt {ncpus} {qmmm_opt_input} {qmmm_opt_output}\n'
     clean = ('rm -r $QCSCRATCH\n'
             f"echo \"It took $(($(date +\'%s\') - $start)) seconds\"")
 
     with open(subfile, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {initialization} {calculator} {target_path} {scratch} {command} {clean}')
+        f.write(f'{shell}{pbs_setting}{initialization}{calculator}{target_path}{scratch}{command}{clean}')
 
     return subfile
 
@@ -849,52 +844,51 @@ def create_qmmm_freq_opt(qmmm_dir:str, config_path:str, target_geometry:str, ncp
     with open(qmmm_freq_opt_input, 'w') as f:
         for k, text in enumerate(config):
             if '$MOLECULE' not in text.upper():
-                f.write(f'{text} \n')
+                f.write(f'{text}\n')
             else:
                 break
-        f.write('$MOLECULE \n')
+        f.write('$MOLECULE\n')
         for l, line in enumerate(qm_xyzs):
             if len(line) > 2:
                 connectivity = '\t'.join(line[-5:])
                 geometry = f'{lines[1+l]} \t {connectivity}'
-                f.write(f'{geometry} \n')
+                f.write(f'{geometry}\n')
             else:
                 line = ' '.join(line)
-                f.write(f'{line} \n')
+                f.write(f'{line}\n')
         for m, last_text in enumerate(config[k + 2 + nqm_atoms:]):
             if '$MOLECULE' not in last_text.upper():
-                f.write(f'{last_text} \n')
+                f.write(f'{last_text}\n')
             else:
                 break
-        f.write('$MOLECULE \n')
+        f.write('$MOLECULE\n')
         for n, line in enumerate(qm_xyzs):
             if len(line) > 2:
                 connectivity = '\t'.join(line[-5:])
                 geometry = f'{lines[1+n]} \t {connectivity}'
-                f.write(f'{geometry} \n')
+                f.write(f'{geometry}\n')
             else:
                 line = ' '.join(line)
-                f.write(f'{line} \n')
+                f.write(f'{line}\n')
         for last_text in config[k + m + 2 * 2 + nqm_atoms * 2:]:
-            f.write(f'{last_text} \n')
+            f.write(f'{last_text}\n')
 
     shell = '#!/usr/bin/bash\n'
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'")
+                    f"start=$(date +\'%s\')\n")
     initialization = 'source ~/.bashrc\n'
-    target_path = f'cd {qmmm_dir} \n'
+    target_path = f'cd {qmmm_dir}\n'
     calculator = 'module load qchem\n'
     scratch = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
                 'mkdir -p $QCSCRATCH\n')
-    command = f'qchem -nt {ncpus} {qmmm_freq_opt_input} {qmmm_freq_opt_output}'
-    command = 'qchem -nt {} {} {}'.format(ncpus, qmmm_freq_opt_input, qmmm_freq_opt_output)
+    command = f'qchem -nt {ncpus} {qmmm_freq_opt_input} {qmmm_freq_opt_output}\n'
     clean = ('rm -r $QCSCRATCH\n'
             f"echo \"It took $(($(date +\'%s\') - $start)) seconds\"")
 
     with open(subfile, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {initialization} {calculator} {target_path} {scratch} {command} {clean}')
+        f.write(f'{shell}{pbs_setting}{initialization}{calculator}{target_path}{scratch}{command}{clean}')
 
     return subfile
 
@@ -974,48 +968,48 @@ def create_qmmm_freq_ts(qmmm_dir:str, config_path:str, target_geometry:str, ncpu
                 f.write(f'{text} \n')
             else:
                 break
-        f.write('$MOLECULE \n')
+        f.write('$MOLECULE\n')
         for l, line in enumerate(qm_xyzs):
             if len(line) > 2:
                 connectivity = '\t'.join(line[-5:])
                 geometry = f'{lines[1+l]} \t {connectivity}'
-                f.write(f'{geometry} \n')
+                f.write(f'{geometry}\n')
             else:
                 line = ' '.join(line)
-                f.write(f'{line} \n')
+                f.write(f'{line}\n')
         for m, last_text in enumerate(config[k + 2 + nqm_atoms:]):
             if '$MOLECULE' not in last_text.upper():
-                f.write(f'{last_text} \n')
+                f.write(f'{last_text}\n')
             else:
                 break
-        f.write('$MOLECULE \n')
+        f.write('$MOLECULE\n')
         for n, line in enumerate(qm_xyzs):
             if len(line) > 2:
                 connectivity = '\t'.join(line[-5:])
                 geometry = f'{lines[1+n]} \t {connectivity}'
-                f.write(f'{geometry} \n')
+                f.write(f'{geometry}\n')
             else:
                 line = ' '.join(line)
-                f.write(f'{line} \n')
+                f.write(f'{line}\n')
         for last_text in config[k + m + 2 * 2 + nqm_atoms * 2:]:
-            f.write(f'{last_text} \n')
+            f.write(f'{last_text}\n')
 
     shell = '#!/usr/bin/bash\n'
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'")
+                    f"start=$(date +\'%s\')\n")
     initialization = 'source ~/.bashrc\n'
-    target_path = f'cd {qmmm_dir} \n'
+    target_path = f'cd {qmmm_dir}\n'
     calculator = 'module load qchem\n'
     scratch = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
                 'mkdir -p $QCSCRATCH\n')
-    command = f'qchem -nt {ncpus} {qmmm_freq_ts_input} {qmmm_freq_ts_output}'
+    command = f'qchem -nt {ncpus} {qmmm_freq_ts_input} {qmmm_freq_ts_output}\n'
     clean = ('rm -r $QCSCRATCH\n'
             f"echo \"It took $(($(date +\'%s\') - $start)) seconds\"")
 
     with open(subfile, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {initialization} {calculator} {target_path} {scratch} {command} {clean}')ch))
+        f.write(f'{shell}{pbs_setting}{initialization}{calculator}{target_path}{scratch}{command}{clean}')
 
     return subfile
 
@@ -1101,37 +1095,37 @@ def create_qmmm_freq(qmmm_dir:str, config_path:str, target_geometry:str, ncpus:i
     with open(qmmm_freq_input, 'w') as f:
         for k, text in enumerate(config):
             if '$MOLECULE' not in text.upper():
-                f.write(f'{text} \n')
+                f.write(f'{text}\n')
             else:
                 break
-        f.write('$MOLECULE \n')
+        f.write('$MOLECULE\n')
         for l, line in enumerate(qm_xyzs):
             if len(line) > 2:
                 connectivity = '\t'.join(line[-5:])
                 geometry = f'{lines[1+l]} \t {connectivity}'
-                f.write(f'{geometry} \n')
+                f.write(f'{geometry}\n')
             else:
                 line = ' '.join(line)
-                f.write(f'{line} \n')
+                f.write(f'{line}\n')
         for last_text in config[k + 2 + nqm_atoms:]:
-            f.write(f'{last_text} \n')
+            f.write(f'{last_text}\n')
 
     shell = '#!/usr/bin/bash\n'
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'")
+                    f"start=$(date +\'%s\')\n")
     initialization = 'source ~/.bashrc\n'
-    target_path = f'cd {qmmm_dir} \n'
+    target_path = f'cd {qmmm_dir}\n'
     calculator = 'module load qchem\n'
     scratch = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
                 'mkdir -p $QCSCRATCH\n')
-    command = f'qchem -nt {ncpus} {qmmm_freq_input} {qmmm_freq_output}'
+    command = f'qchem -nt {ncpus} {qmmm_freq_input} {qmmm_freq_output}\n'
     clean = ('rm -r $QCSCRATCH\n'
             f"echo \"It took $(($(date +\'%s\') - $start)) seconds\"")
 
     with open(subfile, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {initialization} {calculator} {target_path} {scratch} {command} {clean}')
+        f.write(f'{shell}{pbs_setting}{initialization}{calculator}{target_path}{scratch}{command}{clean}')
 
     return subfile
 
@@ -1281,37 +1275,37 @@ def create_qmmm_refine(qmmm_dir:str, config_path:str, target_geometry:str, ncpus
     with open(qmmm_sp_input, 'w') as f:
         for k, text in enumerate(config):
             if '$MOLECULE' not in text.upper():
-                f.write(f'{text} \n')
+                f.write(f'{text}\n')
             else:
                 break
-        f.write('$MOLECULE \n')
+        f.write('$MOLECULE\n')
         for l, line in enumerate(qm_xyzs):
             if len(line) > 2:
                 connectivity = '\t'.join(line[-5:])
                 geometry = f'{lines[1+l]} \t {connectivity}'
-                f.write(f'{geometry} \n')
+                f.write(f'{geometry}\n')
             else:
                 line = ' '.join(line)
-                f.write(f'{line} \n')
+                f.write(f'{line}\n')
         for last_text in config[k + 2 + nqm_atoms:]:
-            f.write(f'{last_text} \n')
+            f.write(f'{last_text}\n')
 
     shell = '#!/usr/bin/bash\n'
     pbs_setting = (f'#PBS -l select=1:ncpus={ncpus}:mpiprocs={mpiprocs}:ompthreads={ompthreads}\n'
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
-                    f"start=$(date +\'%s\')\n'")
+                    f"start=$(date +\'%s\')\n")
     initialization = 'source ~/.bashrc\n'
-    target_path = f'cd {qmmm_dir} \n'
+    target_path = f'cd {qmmm_dir}\n'
     calculator = 'module load qchem\n'
     scratch = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
                 'mkdir -p $QCSCRATCH\n')
-    command = f'qchem -nt {ncpus} {qmmm_sp_input} {qmmm_sp_output}'
+    command = f'qchem -nt {ncpus} {qmmm_sp_input} {qmmm_sp_output}\n'
     clean = ('rm -r $QCSCRATCH\n'
             f"echo \"It took $(($(date +\'%s\') - $start)) seconds\"")
 
     with open(subfile, 'w') as f:
-        f.write(f'{shell} {pbs_setting} {initialization} {calculator} {target_path} {scratch} {command} {clean}')
+        f.write(f'{shell}{pbs_setting}{initialization}{calculator}{target_path}{scratch}{command}{clean}')
 
     return subfile
 
