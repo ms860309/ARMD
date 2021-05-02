@@ -68,6 +68,9 @@ $rem
         SCF_GUESS                 READ
         GEOM_OPT_HESSIAN          READ
         SYM_IGNORE                TRUE
+        GEOM_OPT_TOL_GRADIENT     100
+        GEOM_OPT_TOL_DISPLACEMENT 400
+        GEOM_OPT_TOL_ENERGY       33
         SYMMETRY                  FALSE
         WAVEFUNCTION_ANALYSIS     FALSE
 $end

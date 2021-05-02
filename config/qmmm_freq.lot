@@ -1,24 +1,24 @@
 $rem   
-jobtype  FREQ
-geom_opt_coords   0
-max_scf_cycles   250
-exchange   wb97x-d
-BASIS   def2-SVP
-ECP   def2-ecp
-QM_MM_INTERFACE   Zeolite
-force_field   charmm27
-user_connect   TRUE
-symmetry   off
-sym_ignore   TRUE
-print_input   true
-qmmm_print   false
-qm_mm   TRUE
-qmmm_full_hessian   FALSE
-mem_total   24000
-mem_static   450
-AIMD_FIXED_ATOMS 675
-pop_mulliken false
-isotopes true
+jobtype            FREQ
+exchange           wb97x-d
+BASIS              def2-SVP
+ECP                def2-ecp
+geom_opt_coords    0
+max_scf_cycles     250
+QM_MM_INTERFACE    Zeolite
+force_field        charmm27
+user_connect       TRUE
+symmetry           off
+sym_ignore         TRUE
+print_input        TRUE
+qmmm_print         FALSE
+qm_mm              TRUE
+qmmm_full_hessian  FALSE
+mem_total          24000
+mem_static         450
+AIMD_FIXED_ATOMS   675
+pop_mulliken       FALSE
+isotopes           TRUE
 $end   
 
 $QM_ATOMS
