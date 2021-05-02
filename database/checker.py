@@ -939,8 +939,7 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
     ard_had_add_number = qm_collection.count_documents({})
     ard_should_add_number = 0
     should_adds = list(statistics_collection.find({}))
-    for i in should_adds:
-        ard_should_add_number += i['add how many products']
+    ard_should_add_number = sum([i['add how many products'] for i in should_adds])
 
     if int(not_finished_number) == 0 and int(ard_had_add_number) == int(ard_should_add_number):
         insert_qmmm(qm_collection, reactions_collection)

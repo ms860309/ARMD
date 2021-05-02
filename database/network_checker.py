@@ -871,15 +871,8 @@ def update_network_status():
     qm_collection = db['qm_calculate_center']
     statistics_collection = db['statistics']
     ard_had_add_number = qm_collection.count_documents({})
-    ard_should_add_number = sum(
-        statistics_collection.distinct("add how many products"))
+    ard_should_add_number = sum([i['add how many products'] for i in list(statistics_collection.find({}))])
 
-    running_query = {"ard_status":
-                     {"$in":
-                      ["job_unrun", "job_launched", "job_running", "job_queueing"]
-                      }
-                     }
-    ard_nodes = list(qm_collection.find(running_query))
     ard_query = {"ard_status":
                  {"$in":
                   ["job_unrun", "job_launched", "job_running", "job_queueing"]
@@ -948,11 +941,60 @@ def update_network_status():
     insert_reaction_query = {"insert_reaction":
                              {"$in":
                               ['need insert']}}
+    qmmm_query = {'$or':
+                     [
+                         {"qmmm_opt_status":
+                          {"$in":
+                           ["job_unrun"]}},
+                         {'qmmm_opt_reactant_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_opt_product_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_freq_opt_status':
+                             {'$in':
+                              ["job_unrun"]}},
+                         {'qmmm_freq_opt_reactant_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_freq_opt_product_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_freq_status':
+                             {'$in':
+                              ["job_unrun"]}},
+                         {'qmmm_freq_reactant_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_freq_reactant_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_freq_ts_status':
+                             {'$in':
+                              ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_refine_status':
+                             {'$in':
+                              ["job_unrun"]}},
+                         {'qmmm_ts_refine_status':
+                             {'$in':
+                              ["job_unrun"]}},
+                         {'qmmm_refine_reactant_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_refine_product_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                         {'qmmm_refine_ts_status':
+                             {'$in':
+                              ["job_launched", "job_running", "job_queueing"]}},
+                     ]
+                     }
     not_finished_number = len(list(qm_collection.find({'$or':
-                                            [energy_query, ssm_query, low_opt_query, opt_query, ts_query, insert_reaction_query, ts_refine_query, irc_query, irc_equal_query, irc_opt_query, ard_query]
+                                            [energy_query, ssm_query, low_opt_query, opt_query, ts_query, insert_reaction_query, ts_refine_query, irc_query, irc_equal_query, irc_opt_query, ard_query, qmmm_query]
                                             })))
-
-    if ard_had_add_number - 1 == ard_should_add_number and len(ard_nodes) == 0 and not_finished_number == 0:
+                                            
+    if ard_had_add_number - 1 == ard_should_add_number and not_finished_number == 0:
         print('Network converged')
 
         target = list(status_collection.find({}))

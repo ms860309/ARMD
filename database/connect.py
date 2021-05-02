@@ -159,3 +159,18 @@ for i in b:
     except:
         pass
 """
+
+qm_collection = db['qm_calculate_center']
+statistics_collection = db['statistics']
+a = list(qm_collection.find({'generations':1}))
+b = list(qm_collection.find({'generations':2}))
+c = list(qm_collection.find({'generations':3}))
+d = list(qm_collection.find({'generations':4}))
+e = list(qm_collection.find({'generations':5}))
+f = list(qm_collection.find({'generations':6}))
+g = list(qm_collection.find({'generations':7}))
+print(len(a), len(b), len(c), len(d), len(e), len(f), len(g))
+
+ard_should_add_number = sum([i['add how many products'] for i in list(statistics_collection.find({}))])
+
+print(ard_should_add_number)
