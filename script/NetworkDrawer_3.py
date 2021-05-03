@@ -13,47 +13,36 @@ def extract_data(barrier_threshold=200.0):
 
     reaction_collection = db['reactions']
     qm_collection = db['qm_calculate_center']
-    reactions = list(reaction_collection.find({}))
-
+    treactions = list(reaction_collection.aggregate([{
+                '$group': {
+                    '_id': "$reaction",
+                    'barrier': {'$min': "$barrier"}
+                }}
+            ]))
+    reactions = [list(reaction_collection.find({'reaction': i['_id'], 'barrier': i['barrier']}))[0] for i in treactions]
     # Remove the reactant equal to product but with the different active site.
     # e.g. The Proton is at the different oxygen
     reactions_copy = reactions[:]
     for reaction in reactions_copy:
-        same = False
-        reactant_smiles = reaction['reactant_smiles'].split('.')
-        product_smiles = reaction['product_smiles'].split('.')
-        if len(reactant_smiles) > 1:
-            reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs and 'C' in rs])
-        else:
-            reactant_part_smiles = set(reactant_smiles)
-
-        if len(product_smiles) > 1:
-            product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps and 'C' in ps])
-        else:
-            product_part_smiles = set(product_smiles)
-
-        if reactant_part_smiles == product_part_smiles:
-            same = True
-
-        if same:
-            reactions.remove(reaction)
-
         if reaction['manual_check'] != 'need check':
             reactions.remove(reaction)
 
     reactant_smi, product_smi, barrier, generations, er_smi, ep_smi = [], [], [], [], [], []
     for target in reactions:
+        
+        if round(target['barrier'], 2) > 65.0:
+            continue
         reactant_smiles = target['reactant_smiles'].split('.')
         product_smiles = target['product_smiles'].split('.')
         if len(reactant_smiles) > 1:
             reactant_part_smiles = set([rs for rs in reactant_smiles if 'Sn' not in rs])
-            reactant_part_smiles = '.'.join(reactant_part_smiles)
+            reactant_part_smiles = '\n\n'.join(reactant_part_smiles)
         else:
             reactant_part_smiles = list(set(reactant_smiles))[0]
 
         if len(product_smiles) > 1:
             product_part_smiles = set([ps for ps in product_smiles if 'Sn' not in ps])
-            product_part_smiles = '.'.join(product_part_smiles)
+            product_part_smiles = '\n\n'.join(product_part_smiles)
         else:
             product_part_smiles = list(set(product_smiles))[0]
 
@@ -61,10 +50,8 @@ def extract_data(barrier_threshold=200.0):
         product_smi.append(product_part_smiles)
         er_smi.append(target['reactant_smiles'])
         ep_smi.append(target['product_smiles'])
-        # print(target['barrier'])
-        barrier.append(round(target['barrier'], 2))
         generations.append(target['generations'])
-
+        barrier.append(round(target['barrier'], 2))
         test_target = list(qm_collection.find({'path': target['path']}))[0]
         # dH = (test_target['product_xtb_hf'] - test_target['reactant_xtb_hf']) * 627.5095
     zipped = zip(reactant_smi, product_smi, generations, barrier, er_smi, ep_smi)
@@ -72,8 +59,8 @@ def extract_data(barrier_threshold=200.0):
     return zipped
 
 def draw(target_product = None):
-    G = nx.DiGraph()  # create object
-    eG = nx.DiGraph() # For get energy
+    G = nx.Graph()  # create object
+    eG = nx.Graph() # For get energy
     zipped = extract_data()
     _dict = {}
     labels = {}
@@ -121,7 +108,7 @@ def draw(target_product = None):
             eG.add_edge(m, n)
             _dict[(i, j)] = k
 
-    plt.figure(figsize=(10, 10))
+    plt.figure(figsize=(20, 20))
     
     colors = nx.get_edge_attributes(G, 'color').values()
     weights = nx.get_edge_attributes(G, 'weight').values()
@@ -129,21 +116,21 @@ def draw(target_product = None):
     # pos = nx.circular_layout(G)
     # pos = nx.shell_layout(G)
     # pos = nx.spring_layout(G)
-    pos = nx.kamada_kawai_layout(G, scale=3)
+    pos = nx.kamada_kawai_layout(G)
 
     nx.draw(G, pos,
             edge_color=colors,
             with_labels=True,
             node_color='green',
             font_size=5, 
-            node_size=1500,
+            node_size=20,
             connectionstyle='arc3, rad = 0.15')
 
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=_dict, font_size=8)
+    # nx.draw_networkx_edge_labels(G, pos, edge_labels=_dict, font_size=8)
     nx.draw_networkx_labels(G,pos,labels,font_size=10,font_color='r')
     root_to_leaf_paths(eG, target_product = target_product)
     
-    plt.savefig("simple_path_3.png", dpi=1000) # save as png
+    plt.savefig("simple_path_3.png", dpi=1500) # save as png
     plt.show()
 
 
