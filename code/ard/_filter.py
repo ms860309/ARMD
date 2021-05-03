@@ -147,23 +147,30 @@ class FILTER(object):
                 for qm_si in qm_silicon:
                     diff2 = self.mol[qm_si].coords - fd1[tmp]
                     dist2.append(np.linalg.norm(diff2))
-
-            if mean(dist2) > threshold:
-                return False, 'reactant maybe in the mm region'
+            # print(max(dist2))
+            # print(mean(dist2))
+            if max(dist2) > 6.5 and mean(dist2) > 5.4:
+                # print(max(dist2))
+                # print(mean(dist2))
+                return False, 'Overlap with the mm region'
             else:
                 return True, 'pass'
 
 
 
-# cluster_bond = '/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/script/bonds.txt'
-# fixed_atom = '/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/script/fixed_atom.txt'
+# cluster_bond = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/script/bonds.txt'
+# fixed_atom = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/script/fixed_atom.txt'
+# # reactant_file = os.path.join('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions', 'UYFCJUSUJARWAH-UHFFFAOYSA-N_9/product.xyz')
+# # f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom, qm_silicon=[19,20,22])
+# # state, msg = f.initialization(check_mm_overlap=True)
 
-# a = os.listdir('/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/code/ard/reactions')
+
+# a = os.listdir('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions')
 # for i in a:
 #     print('---------')
 #     print(i)
-#     b = os.path.join('/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/code/ard/reactions', i)
-#     reactant_file = os.path.join(b, 'product.xyz')
+#     b = os.path.join('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions', i)
+#     reactant_file = os.path.join(b, 'reactant.xyz')
 #     f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom, qm_silicon=[19,20,22])
 #     state, msg = f.initialization(check_mm_overlap=True)
 #     # print(state)
