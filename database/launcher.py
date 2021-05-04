@@ -780,6 +780,11 @@ def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num
         if target['qmmm_freq_opt_reactant_status'] == 'restart':
             qmmm_reactant_dir = path.join(target['path'], 'QMMM_REACTANT')
             reactant = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz')
+            if os.path.exists(qmmm_reactant_dir):
+                os.chdir(qmmm_reactant_dir)
+            else:
+                os.mkdir(qmmm_reactant_dir)
+                os.chdir(qmmm_reactant_dir)
             subfile_1 = create_qmmm_freq_opt(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
             commands_1 = ['qsub', subfile_1]
             process = subprocess.Popen(commands_1,
@@ -797,6 +802,11 @@ def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num
         if target['qmmm_freq_opt_product_status'] == 'restart':
             qmmm_product_dir = path.join(target['path'], 'QMMM_PRODUCT')
             product = path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz')
+            if os.path.exists(qmmm_product_dir):
+                os.chdir(qmmm_product_dir)
+            else:
+                os.mkdir(qmmm_product_dir)
+                os.chdir(qmmm_product_dir)
             subfile_2 = create_qmmm_freq_opt(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
             commands_2 = ['qsub', subfile_2]
             process = subprocess.Popen(commands_2,
