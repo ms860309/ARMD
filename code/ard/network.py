@@ -66,12 +66,11 @@ class Network(object):
         gen = Generate(mol_object, **kwargs)
         self.logger.info('Generating all possible products...')
         gen.generateProducts()
-        prod_mols = gen.prod_mols
-
+        prod_mols = gen.get_prods()
+        add_bonds = gen.get_add_bonds()
+        break_bonds = gen.get_break_bonds()
         prod_mols_filtered = []
         self.logger.info(f'{len(prod_mols)} possible products are generated\n')
-        add_bonds = gen.add_bonds
-        break_bonds = gen.break_bonds
 
         # Filter reactions based on standard heat of reaction  delta H
         if self.method.lower() == 'mopac':

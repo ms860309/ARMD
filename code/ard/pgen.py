@@ -496,6 +496,15 @@ class Generate(object):
                 return True
         return False
 
+    def get_prods(self):
+        return self.prod_mols
+
+    def get_add_bonds(self):
+        return self.add_bonds
+
+    def get_break_bonds(self):
+        return self.break_bonds
+
     def _generateProductsHelper(self, nbreak, nform, products, bonds, valences, bond_can_form, bond_can_break, bonds_broken=None):
         """
         Generate products recursively given the number of bonds that should be

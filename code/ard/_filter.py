@@ -179,7 +179,6 @@ class FILTER(object):
                 if dist < vdw_rad * threshold_ratio:
                     dist2.append(dist)
         if dist2:
-            print(min(dist2))
             return False, 'Maybe overlap with the mm region'
         else:
             return True, 'pass'
