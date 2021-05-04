@@ -10,10 +10,9 @@ import props
 ELEMENT_TABLE = props.ElementData()
 
 class FILTER(object):
-    def __init__(self, reactant_file, cluster_bond_file = None, bond_file = None, fixed_atom = None):
+    def __init__(self, reactant_file, cluster_bond_file = None, fixed_atom = None):
         self.reactant_file = reactant_file
         self.cluster_bond_file = cluster_bond_file
-        self.bond_file = bond_file
         self.fixed_atom = fixed_atom
         if self.fixed_atom:
             with open(self.fixed_atom, 'r') as f:
@@ -21,7 +20,6 @@ class FILTER(object):
             self.fixed_atom = eval(lines)
         
     def initialization(self):
-        status = True
         mol = next(pb.readfile('xyz', self.reactant_file))
         if self.cluster_bond_file:
             m = pb.ob.OBMol()
@@ -50,7 +48,6 @@ class FILTER(object):
             m.SetTotalCharge(int(mol.charge))
             m.Center()
             m.EndModify()
-            
             self.mol = gen3D.Molecule(m)
         else:
             self.mol = gen3D.Molecule(mol.OBMol)
@@ -59,6 +56,7 @@ class FILTER(object):
         for frag in self.mol.write('can').split()[0].split('.'):
             if '[OH]' in frag and 'Sn' not in frag:
                 return 'job_fail', 'non-bonded OH group'
+        return 'pass', 'pass'
 
     def check_feasible_rxn(self, check_mm_overlap = True, qmmm = None, qm_atoms = 23, threshold_ratio = 0.6):
         status, msg = self.initialization()
@@ -181,6 +179,7 @@ class FILTER(object):
                 if dist < vdw_rad * threshold_ratio:
                     dist2.append(dist)
         if dist2:
+            print(min(dist2))
             return False, 'Maybe overlap with the mm region'
         else:
             return True, 'pass'
@@ -190,9 +189,9 @@ class FILTER(object):
 # fixed_atom = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/script/fixed_atom.txt'
 # qmmm = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/qmmm.xyz'
 # qmmm_mol = next(pb.readfile('xyz', qmmm))
-# reactant_file = os.path.join('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions', 'UYFCJUSUJARWAH-UHFFFAOYSA-N_9/product.xyz')
-# f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
-# msg = f.check_overlap_mm_region_2(qmmm = qmmm_mol, qm_atoms = 23)
+# # reactant_file = os.path.join('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions', 'UYFCJUSUJARWAH-UHFFFAOYSA-N_9/product.xyz')
+# # f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
+# # msg = f.check_overlap_mm_region_2(qmmm = qmmm_mol, qm_atoms = 23)
 
 
 # a = os.listdir('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions')
@@ -200,10 +199,9 @@ class FILTER(object):
 #     print('---------')
 #     print(i)
 #     b = os.path.join('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions', i)
-#     reactant_file = os.path.join(b, 'product.xyz')
-#     f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
-#     msg = f.check_overlap_mm_region_2(qmmm = qmmm_mol, qm_atoms = 23)
-#     print(msg)
+#     reactant_file = os.path.join(b, 'reactant.xyz')
+#     f = FILTER(reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
+#     status, msg = f.check_feasible_rxn(check_mm_overlap = True, qmmm = qmmm_mol, qm_atoms = 23, threshold_ratio = 0.6)
 #     # state, msg = f.check_feasible_rxn(check_mm_overlap=True)
 #     # print(state)
 #     # print(msg)
