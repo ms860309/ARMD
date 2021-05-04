@@ -5,9 +5,12 @@ from openbabel import pybel as pb
 import gen3D
 import numpy as np
 from statistics import mean
+import props
+
+ELEMENT_TABLE = props.ElementData()
 
 class FILTER(object):
-    def __init__(self, reactant_file, cluster_bond_file = None, bond_file = None, fixed_atom = None, qm_silicon = []):
+    def __init__(self, reactant_file, cluster_bond_file = None, bond_file = None, fixed_atom = None):
         self.reactant_file = reactant_file
         self.cluster_bond_file = cluster_bond_file
         self.bond_file = bond_file
@@ -16,9 +19,8 @@ class FILTER(object):
             with open(self.fixed_atom, 'r') as f:
                 lines = f.read()
             self.fixed_atom = eval(lines)
-        self.qm_silicon = qm_silicon
-
-    def initialization(self, check_mm_overlap = True):
+        
+    def initialization(self):
         status = True
         mol = next(pb.readfile('xyz', self.reactant_file))
         if self.cluster_bond_file:
@@ -58,13 +60,18 @@ class FILTER(object):
             if '[OH]' in frag and 'Sn' not in frag:
                 return 'job_fail', 'non-bonded OH group'
 
+    def check_feasible_rxn(self, check_mm_overlap = True, qmmm = None, qm_atoms = 23, threshold_ratio = 0.6):
+        status, msg = self.initialization()
+        if status == 'job_fail':
+            return 'job_fail', msg
+
         if check_mm_overlap:
-            status, msg = self.check_overlap_mm_region(qm_silicon=self.qm_silicon)
+            status, msg = self.check_overlap_mm_region_v2(qmmm = qmmm, qm_atoms = qm_atoms, threshold_ratio = threshold_ratio)
         else:
             status = True
             
         if status:
-            status, msg = self.reactant_bonds()
+            status, msg = self.check_reactant_bonds()
             if status:
                 status, msg = self.check_unreasonable_connection()
                 if status:
@@ -76,7 +83,7 @@ class FILTER(object):
         else:
             return 'job_fail', msg
 
-    def reactant_bonds(self):
+    def check_reactant_bonds(self):
         # extract reactant bonds
         reactant_bonds = [tuple(sorted((bond.GetBeginAtomIdx() - 1, bond.GetEndAtomIdx() - 1)) + [bond.GetBondOrder()])
                             for bond in pb.ob.OBMolBondIter(self.mol.OBMol)]
@@ -156,13 +163,36 @@ class FILTER(object):
             else:
                 return True, 'pass'
 
+    def check_overlap_mm_region_v2(self, qmmm = None, qm_atoms = 23, threshold_ratio = 0.6):
+        """
+        The distance between qm atoms and mm atoms should greater than 0.6 vdw radius.
+        """
+        dist2 = []
+        for idx1, qm_atom in enumerate(self.mol):
+            if idx1 >= qm_atoms:
+                continue
+            for idx2, mm_atom in enumerate(qmmm):
+                if idx2 < qm_atoms:
+                    continue
+                diff2 = np.array(qm_atom.coords) - np.array(mm_atom.coords)
+                dist = np.linalg.norm(diff2)
+                element = ELEMENT_TABLE.from_atomic_number(qm_atom.OBAtom.GetAtomicNum())
+                vdw_rad = element.vdw_radius
+                if dist < vdw_rad * threshold_ratio:
+                    dist2.append(dist)
+        if dist2:
+            return False, 'Maybe overlap with the mm region'
+        else:
+            return True, 'pass'
 
 
 # cluster_bond = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/script/bonds.txt'
 # fixed_atom = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/script/fixed_atom.txt'
-# # reactant_file = os.path.join('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions', 'UYFCJUSUJARWAH-UHFFFAOYSA-N_9/product.xyz')
-# # f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom, qm_silicon=[19,20,22])
-# # state, msg = f.initialization(check_mm_overlap=True)
+# qmmm = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/qmmm.xyz'
+# qmmm_mol = next(pb.readfile('xyz', qmmm))
+# reactant_file = os.path.join('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions', 'UYFCJUSUJARWAH-UHFFFAOYSA-N_9/product.xyz')
+# f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
+# msg = f.check_overlap_mm_region_2(qmmm = qmmm_mol, qm_atoms = 23)
 
 
 # a = os.listdir('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions')
@@ -170,8 +200,10 @@ class FILTER(object):
 #     print('---------')
 #     print(i)
 #     b = os.path.join('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions', i)
-#     reactant_file = os.path.join(b, 'reactant.xyz')
-#     f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom, qm_silicon=[19,20,22])
-#     state, msg = f.initialization(check_mm_overlap=True)
+#     reactant_file = os.path.join(b, 'product.xyz')
+#     f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
+#     msg = f.check_overlap_mm_region_2(qmmm = qmmm_mol, qm_atoms = 23)
+#     print(msg)
+#     # state, msg = f.check_feasible_rxn(check_mm_overlap=True)
 #     # print(state)
 #     # print(msg)

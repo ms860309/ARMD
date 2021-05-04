@@ -410,13 +410,13 @@ def select_irc_equal_target(qm_collection:object) -> list:
     targets = list(qm_collection.find(query))
     return targets
 
-def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False, qm_silicon:list=[], check_mm_overlap:bool=True):
+def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False, check_mm_overlap:bool=True, qmmm:object=None, qm_atoms:int=23, threshold_ratio:float=0.6):
     targets = select_irc_equal_target(qm_collection)
     acceptable_condition = ['forward equal to reactant',
                             'backward equal to reactant']
 
     for target in targets:
-        new_status, forward, backward = check_irc_equal_status(target, cluster_bond_path=cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=active_site, qm_silicon=qm_silicon, check_mm_overlap=check_mm_overlap)
+        new_status, forward, backward = check_irc_equal_status(target, cluster_bond_path=cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=active_site, check_mm_overlap=check_mm_overlap, qmmm=qmmm, qm_atoms=qm_atoms, threshold_ratio=threshold_ratio)
         orig_status = target['irc_equal']
         if orig_status != new_status:
             if new_status in acceptable_condition:
@@ -433,8 +433,15 @@ def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom
                 }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
-def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False, qm_silicon:list=[], check_mm_overlap:bool=True) -> Union[str, object, object]:
-    irc_path = path.join(target['path'], 'IRC/')
+def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False, check_mm_overlap:bool=True, qmmm:object=None, qm_atoms:int=23, threshold_ratio:float=0.6) -> Union[str, object, object]:
+    """
+    If you only want to consider the reactant part then active_site should be "False". --> You can want to consider active site
+    check_mm_overlap: Set to ture. It will check if the qm atoms overlap with mm atoms
+    qmmm: An object to pymol from ./config/qmmm.xyz
+    qm_atoms: The first {} of atoms to be qm atoms
+    threshold_ratio: the distance between qm atoms and mm atoms can be ratio * vdw_ratio
+    """
+    irc_path = path.join(target['path'], 'IRC')
     forward_end_output = os.path.join(irc_path, 'irc_forward.xyz')
     backward_end_output = os.path.join(irc_path, 'irc_backward.xyz')
     irc_reactant_path = path.join(target['path'], 'irc_reactant.xyz')  # for next generation
@@ -476,20 +483,20 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
     elif pyMol_3.write('inchiKey').strip() != pyMol_4.write('inchiKey').strip() and same:
         return 'same forward and reverse reactant part but different active site', pyMol_3, pyMol_4
     elif pyMol_3.write('inchiKey').strip() == reactant_inchi_key:
-        f = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path, qm_silicon = qm_silicon)
-        status, msg = f.initialization(check_mm_overlap=check_mm_overlap)
-        f2 = FILTER(reactant_file=forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path, qm_silicon = qm_silicon)
-        status2, msg2 = f2.initialization(check_mm_overlap=check_mm_overlap)
+        f = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
+        status, msg = f.check_feasible_rxn(check_mm_overlap=check_mm_overlap, qmmm = qmmm, qm_atoms = qm_atoms, threshold_ratio = threshold_ratio)
+        f2 = FILTER(reactant_file=forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
+        status2, msg2 = f2.check_feasible_rxn(check_mm_overlap=check_mm_overlap, qmmm = qmmm, qm_atoms = qm_atoms, threshold_ratio = threshold_ratio)
         if status == 'job_success' and status2 == 'job_success':
             shutil.copyfile(backward_end_output, irc_reactant_path)
             return 'forward equal to reactant', pyMol_3, pyMol_4
         else:
             return msg, pyMol_3, pyMol_4
     elif pyMol_4.write('inchiKey').strip() == reactant_inchi_key:
-        f = FILTER(reactant_file=forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path, qm_silicon = qm_silicon)
-        status, msg = f.initialization(check_mm_overlap=check_mm_overlap)
-        f2 = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path, qm_silicon = qm_silicon)
-        status2, msg2 = f2.initialization(check_mm_overlap=check_mm_overlap)
+        f = FILTER(reactant_file=forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
+        status, msg = f.check_feasible_rxn(check_mm_overlap=check_mm_overlap, qmmm = qmmm, qm_atoms = qm_atoms, threshold_ratio = threshold_ratio)
+        f2 = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
+        status2, msg2 = f2.check_feasible_rxn(check_mm_overlap=check_mm_overlap, qmmm = qmmm, qm_atoms = qm_atoms, threshold_ratio = threshold_ratio)
         if status == 'job_success' and status2 == 'job_success':
             shutil.copyfile(forward_end_output, irc_reactant_path)
             return 'backward equal to reactant', pyMol_4, pyMol_3
@@ -1982,7 +1989,8 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     statistics_collection = db['statistics']
     config_collection = db['config']
     targets = list(config_collection.find({'generations': 1}))
-    qm_silicon = targets[0]['silicon_toward_reactant']
+    qmmm_path = targets[0]['config_path']
+    qmmm = next(pybel.readfile('xyz', qmmm_path))
 
     if cluster_bond_path:
         # use the checker.py path as the reference
@@ -1998,7 +2006,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_irc_jobs(qm_collection)
     check_irc_opt_jobs(qm_collection, level_of_theory=level_of_theory)
     check_irc_opt_side_fail_jobs(qm_collection)
-    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False, qm_silicon=qm_silicon, check_mm_overlap=True)
+    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False, check_mm_overlap=True, qmmm=qmmm, qm_atoms=23, threshold_ratio=0.6)
     check_barrier(qm_collection)
     insert_reaction(qm_collection, reactions_collection)
     insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=60.0, qmmm=True)
@@ -2009,6 +2017,6 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_qmmm_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_ts_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_refine_jobs(qm_collection, reactions_collection)
-    check_qmmm_freq_ts_side_fail_jobs(qm_collection)
+    # check_qmmm_freq_ts_side_fail_jobs(qm_collection)
 
 check_jobs(refine=True, cluster_bond_path=True, level_of_theory='ORCA')
