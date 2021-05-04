@@ -1145,8 +1145,8 @@ def select_qmmm_opt_finished_target(qm_collection:object) -> list:
     return targets
 
 def check_qmmm_opt_content(dir_path:str, direction:str='reactant') -> str:
-    qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT/')
-    qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT/')
+    qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
+    qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT')
     if direction == 'reactant':
         output_path = path.join(qmmm_reactant_dir, 'qmmm_opt.out')
     else:
@@ -1258,8 +1258,8 @@ def select_qmmm_freq_opt_finished_target(qm_collection:object) -> list:
     return targets
 
 def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:bool=False) -> str:
-    qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT/')
-    qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT/')
+    qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
+    qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT')
     if direction == 'reactant':
         output_path = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.out')
     else:
@@ -1389,8 +1389,8 @@ def select_qmmm_freq_finished_target() -> list:
     return targets
 
 def check_qmmm_freq_content(dir_path:str, direction:str='reactant') -> Union[str, float]:
-    qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT/')
-    qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT/')
+    qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
+    qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT')
 
     if direction == 'reactant':
         output_path = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.out')
@@ -1516,7 +1516,7 @@ QMMM FREQ TS
 """
 
 def check_qmmm_freq_ts_content(dir_path:str, restart:bool=False) -> str:
-    qmmm_ts_dir = path.join(dir_path, 'QMMM_TS/')
+    qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
     output_path = path.join(qmmm_ts_dir, 'qmmm_freq_ts.out')
     ts = path.join(qmmm_ts_dir, 'qmmm_ts.xyz')
     try:
@@ -1574,7 +1574,7 @@ QMMM TS FREQ
 """
 
 def check_qmmm_ts_freq_content(dir_path:str) -> Union[str, float]:
-    qmmm_ts_dir = path.join(dir_path, 'QMMM_TS/')
+    qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
     output_path = path.join(qmmm_ts_dir, 'qmmm_freq.out')
     ts_path = path.join(qmmm_ts_dir, 'qmmm_final.xyz')
 
@@ -1669,9 +1669,9 @@ def select_qmmm_refine_finished_target(qm_collection:object) -> list:
     return targets
 
 def check_qmmm_refine_content(dir_path:str, direction:str='reactant') -> Union[str, float]:
-    qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT/')
+    qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
     qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT/')
-    qmmm_ts_dir = path.join(dir_path, 'QMMM_TS/')
+    qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
     if direction == 'reactant':
         output_path = path.join(qmmm_reactant_dir, 'qmmm_sp.out')
     elif direction == 'product':
@@ -1989,7 +1989,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     statistics_collection = db['statistics']
     config_collection = db['config']
     targets = list(config_collection.find({'generations': 1}))
-    qmmm_path = targets[0]['config_path']
+    qmmm_path = path.join(targets[0]['config_path'], 'qmmm.xyz')
     qmmm = next(pybel.readfile('xyz', qmmm_path))
 
     if cluster_bond_path:
