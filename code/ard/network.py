@@ -1,7 +1,6 @@
 # standard library imports
 import os
-import time
-import psutil
+from os import path
 import shutil
 
 # third party
@@ -47,7 +46,7 @@ class Network(object):
         self.count = 0
         self.fixed_atom = kwargs['fixed_atom']
         self.use_irc = kwargs['use_irc']
-        self.reactant_path = os.path.dirname(kwargs['reactant_path'])
+        self.reactant_path = path.dirname(kwargs['reactant_path'])
 
     def genNetwork(self, mol_object, **kwargs):
         """
@@ -76,7 +75,7 @@ class Network(object):
         if self.method.lower() == 'mopac':
             self.logger.info(f'Now use {self.method} to filter the delta H of reactions....\n')
             if self.generations == 1:
-                os.mkdir(os.path.join(os.path.dirname(self.ard_path), 'reactions'))
+                os.mkdir(path.join(path.dirname(self.ard_path), 'reactions'))
                 H298_reac = self.get_mopac_H298(mol_object)
                 config_collection.update_one(targets[0], {"$set": {'reactant_energy': H298_reac, 'use_irc': self.use_irc}}, True)
                 mol_object_copy = mol_object.copy()
@@ -98,7 +97,7 @@ class Network(object):
         elif self.method.lower() == 'xtb':
             self.logger.info('Now use {} to filter the delta H of reactions....\n'.format(self.method))
             if self.generations == 1:
-                os.mkdir(os.path.join(os.path.dirname(self.ard_path), 'reactions'))
+                os.mkdir(path.join(path.dirname(self.ard_path), 'reactions'))
                 H298_reac = self.get_xtb_H298(config_path=kwargs['config_path'])
                 config_collection.update_one(targets[0], {"$set": {'reactant_energy': H298_reac, 'use_irc': self.use_irc}}, True)
                 mol_object_copy = mol_object.copy()
@@ -119,7 +118,7 @@ class Network(object):
             self.logger.info('Now use {} to filter the delta H of reactions....\n'.format(self.method))
             # Load thermo database and choose which libraries to search
             thermo_db = ThermoDatabase()
-            thermo_db.load(os.path.join(
+            thermo_db.load(path.join(
                 settings['database.directory'], 'thermo'))
             thermo_db.libraryOrder = ['primaryThermoLibrary', 'NISTThermoLibrary', 'thermo_DFT_CCSDTF12_BAC',
                                       'CBS_QB3_1dHR', 'DFT_QCI_thermo', 'BurkeH2O2', 'GRI-Mech3.0-N', ]
@@ -192,8 +191,8 @@ class Network(object):
         if dH < self.dh_cutoff:
             self.logger.info('Delta H is {}, smaller than threshold'.format(dH))
 
-            reactant_output = os.path.join(self.reactant_path, 'tmp/reactant.out')
-            product_output = os.path.join(self.reactant_path, 'tmp/product.out')
+            reactant_output = path.join(self.reactant_path, 'tmp/reactant.out')
+            product_output = path.join(self.reactant_path, 'tmp/product.out')
 
             dir_path = self.mopac_output(reactant_output, product_output, form_bonds, break_bonds, prod_mol)
             reactant_inchi_key = reac_obj.write('inchiKey').strip()
@@ -237,8 +236,8 @@ class Network(object):
 
         if dH < self.dh_cutoff:
             self.logger.info('Delta H is {}, smaller than threshold'.format(dH))
-            reactant_output = os.path.join(self.reactant_path, 'tmp/reactant.xyz')
-            product_output = os.path.join(self.reactant_path, 'tmp/product.xyz')
+            reactant_output = path.join(self.reactant_path, 'tmp/reactant.xyz')
+            product_output = path.join(self.reactant_path, 'tmp/product.xyz')
 
             dir_path = self.xtb_output(reactant_output, product_output, form_bonds, break_bonds, prod_mol)
             reactant_inchi_key = reac_obj.write('inchiKey').strip()
@@ -267,9 +266,9 @@ class Network(object):
             return 0
 
     def get_mopac_H298(self, mol_object, charge=0, multiplicity='SINGLET'):
-        tmpdir = os.path.join(self.reactant_path, 'tmp')
-        reactant_path = os.path.join(tmpdir, 'reactant.mop')
-        if os.path.exists(tmpdir):
+        tmpdir = path.join(self.reactant_path, 'tmp')
+        reactant_path = path.join(tmpdir, 'reactant.mop')
+        if path.exists(tmpdir):
             shutil.rmtree(tmpdir)
         os.mkdir(tmpdir)
 
@@ -299,14 +298,14 @@ class Network(object):
         return float(mol_hf)
 
     def get_xtb_H298(self, config_path):
-        tmpdir = os.path.join(self.reactant_path, 'tmp')
-        reactant_path = os.path.join(tmpdir, 'reactant.xyz')
-        if os.path.exists(tmpdir):
+        tmpdir = path.join(self.reactant_path, 'tmp')
+        reactant_path = path.join(tmpdir, 'reactant.xyz')
+        if path.exists(tmpdir):
             shutil.rmtree(tmpdir)
         os.mkdir(tmpdir)
         os.chdir(tmpdir)
 
-        shutil.copyfile(os.path.join(self.ard_path, 'reactant.xyz'), reactant_path)
+        shutil.copyfile(path.join(self.ard_path, 'reactant.xyz'), reactant_path)
         try:
             mol_hf = self.runXTB(tmpdir, config_path, 'reactant.xyz')
         except:
@@ -352,8 +351,8 @@ class Network(object):
         product = product_mol.toNode()
         self.logger.info(
             'Reactant and product geometry is :\n{}\n****\n{}'.format(str(reactant), str(product)))
-        subdir = os.path.join(os.path.dirname(self.ard_path), 'reactions')
-        if not os.path.exists(subdir):
+        subdir = path.join(path.dirname(self.ard_path), 'reactions')
+        if not path.exists(subdir):
             os.mkdir(subdir)
         b_dirname = product_mol.write('inchiKey').strip()
         dirname = self.dir_check(subdir, b_dirname)
@@ -369,8 +368,8 @@ class Network(object):
         return output_dir
 
     def mopac_output(self, reactant_output, product_output, add_bonds, break_bonds, prod_mol, **kwargs):
-        subdir = os.path.join(os.path.dirname(self.ard_path), 'reactions')
-        if not os.path.exists(subdir):
+        subdir = path.join(path.dirname(self.ard_path), 'reactions')
+        if not path.exists(subdir):
             os.mkdir(subdir)
         b_dirname = prod_mol.write('inchiKey').strip()
         dirname = self.dir_check(subdir, b_dirname)
@@ -388,8 +387,8 @@ class Network(object):
         return output_dir
 
     def xtb_output(self, reactant_output, product_output, add_bonds, break_bonds, prod_mol, **kwargs):
-        subdir = os.path.join(os.path.dirname(self.ard_path), 'reactions')
-        if not os.path.exists(subdir):
+        subdir = path.join(path.dirname(self.ard_path), 'reactions')
+        if not path.exists(subdir):
             os.mkdir(subdir)
         
         b_dirname = prod_mol.write('inchiKey').strip()
@@ -398,8 +397,8 @@ class Network(object):
         output_dir = util.makeOutputSubdirectory(subdir, dirname)
         kwargs['output_dir'] = output_dir
 
-        shutil.copyfile(reactant_output, os.path.join(output_dir, 'reactant.xyz'))
-        shutil.copyfile(product_output, os.path.join(output_dir, 'product.xyz'))
+        shutil.copyfile(reactant_output, path.join(output_dir, 'reactant.xyz'))
+        shutil.copyfile(product_output, path.join(output_dir, 'product.xyz'))
         self.makeisomerFile(add_bonds, break_bonds, **kwargs)
         return output_dir
 
@@ -432,7 +431,7 @@ class Network(object):
         check = True
         while check:
             new_name = '{}_{}'.format(b_dirname, num)
-            if os.path.exists(os.path.join(subdir, new_name)):
+            if path.exists(path.join(subdir, new_name)):
                 num += 1
             else:
                 check = False
@@ -443,7 +442,7 @@ class Network(object):
         """
         Create input file for TS search and return path to file.
         """
-        output = os.path.join(kwargs['output_dir'], 'de_ssm_input.xyz')
+        output = path.join(kwargs['output_dir'], 'de_ssm_input.xyz')
         nreac_atoms = len(reactant.getListOfAtoms())
         nproduct_atoms = len(product.getListOfAtoms())
 
@@ -457,7 +456,7 @@ class Network(object):
         """
         Create input file for network drawing.
         """
-        output = os.path.join(kwargs['output_dir'], filename)
+        output = path.join(kwargs['output_dir'], filename)
 
         if symbol is not None and geometry is not None:
             natoms = len(symbol)
@@ -478,7 +477,7 @@ class Network(object):
         Create input file(add which bonds) for Single ended String Method (SSM) calculation.
         only for break 2 form 2 if more then need modify
         """
-        output = os.path.join(kwargs['output_dir'], 'add_bonds.txt')
+        output = path.join(kwargs['output_dir'], 'add_bonds.txt')
 
         with open(output, 'w') as f:
             if len(add_bonds) != 0:
@@ -507,11 +506,11 @@ class Network(object):
                         return symbols, np.array(coords)
 
     def runXTB(self, tmpdir, config_path, target='reactant.xyz'):
-        input_path = os.path.join(tmpdir, target)
+        input_path = path.join(tmpdir, target)
         outname = '{}.xyz'.format(target.split('.')[0])
-        output_path = os.path.join(tmpdir, 'xtbopt.xyz')
-        new_output_path = os.path.join(tmpdir, outname)
-        constraint_path = os.path.join(config_path, 'xtb_constraint.inp')
+        output_path = path.join(tmpdir, 'xtbopt.xyz')
+        new_output_path = path.join(tmpdir, outname)
+        constraint_path = path.join(config_path, 'xtb_constraint.inp')
 
         if self.constraint == None:
             p = Popen(['xtb', input_path, '--opt', 'tight'])

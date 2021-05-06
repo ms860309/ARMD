@@ -8,7 +8,7 @@ state searches.
 """
 
 # standard library imports
-import os
+from os import path
 import time
 
 # third party
@@ -64,7 +64,7 @@ class ARD(object):
         self.dh_cutoff = float(kwargs['dh_cutoff'])
         self.bond_dissociation_cutoff = float(kwargs['bond_dissociation_cutoff'])
         log_level = logging.INFO
-        self.logger = util.initializeLog(log_level, os.path.join(os.path.dirname(kwargs['reactant_path']), 'ARD.log'), logname='main')
+        self.logger = util.initializeLog(log_level, path.join(path.dirname(kwargs['reactant_path']), 'ARD.log'), logname='main')
         self.initialize()
 
     def initialize(self):

@@ -85,7 +85,7 @@ def create_qchem_ssm_sub_file(dir_path:str, SSM_dir_path:str, config_path:str, n
     env = 'conda activate ard\n'
     scratch = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
                 'mkdir -p $QCSCRATCH\n')
-    if os.path.exists(frozen_file):
+    if path.exists(frozen_file):
         with open(frozen_file, 'r') as f:
             lines = f.read().splitlines()
         if lines:
@@ -128,7 +128,7 @@ def create_orca_ssm_sub_file(dir_path:str, SSM_dir_path:str, config_path:str, nc
     env = 'conda activate ard\n'    
     scratch = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
                 'mkdir -p $QCSCRATCH\n')
-    if os.path.exists(frozen_file):
+    if path.exists(frozen_file):
         with open(frozen_file, 'r') as f:
             lines = f.read().splitlines()
         if lines:
@@ -235,7 +235,7 @@ def launch_ts_jobs(qm_collection:object, config_path:str, num:int=100, level_of_
     for target in targets[:num]:
         SSM_dir_path = path.join(target['path'], 'SSM')
         TS_dir_path = path.join(target['path'], 'TS')
-        if os.path.exists(TS_dir_path):
+        if path.exists(TS_dir_path):
             os.chdir(TS_dir_path)
         else:
             os.mkdir(TS_dir_path)
@@ -262,7 +262,7 @@ def launch_ts_jobs(qm_collection:object, config_path:str, num:int=100, level_of_
 
 def create_qchem_ts_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str, ncpus:int=4, mpiprocs:int=1, ompthreads:int=4) -> str:
     refine_path = path.join(TS_dir_path, 'ts_refine.xyz')
-    if os.path.exists(refine_path):
+    if path.exists(refine_path):
         tsnode_path = refine_path
     else:
         tsnode_path = path.join(SSM_dir_path, 'TSnode.xyz')
@@ -303,7 +303,7 @@ def create_qchem_ts_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str,
 
 def create_orca_ts_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str, ncpus:int=4, mpiprocs:int=4, ompthreads:int=1, Hcap:int=None) -> str:
     refine_path = path.join(TS_dir_path, 'ts_refine.xyz')
-    if os.path.exists(refine_path):
+    if path.exists(refine_path):
         tsnode_path = refine_path
     else:
         tsnode_path = path.join(SSM_dir_path, 'TSnode.xyz')
@@ -423,13 +423,13 @@ def launch_irc_opt_jobs(qm_collection:object, config_path:str, num:int=100, leve
         IRC_dir_path = path.join(target['path'], 'IRC')
         os.chdir(IRC_dir_path)
 
-        first_output = os.path.join(IRC_dir_path, 'finished_first.xyz')
-        last_output = os.path.join(IRC_dir_path, 'finished_last.xyz')
-        forward_end_output = os.path.join(IRC_dir_path, 'forward_end_opt.xyz')
-        backward_end_output = os.path.join(IRC_dir_path, 'backward_end_opt.xyz')
-        if not os.path.exists(forward_end_output):
+        first_output = path.join(IRC_dir_path, 'finished_first.xyz')
+        last_output = path.join(IRC_dir_path, 'finished_last.xyz')
+        forward_end_output = path.join(IRC_dir_path, 'forward_end_opt.xyz')
+        backward_end_output = path.join(IRC_dir_path, 'backward_end_opt.xyz')
+        if not path.exists(forward_end_output):
             forward_end_output = first_output
-        if not os.path.exists(backward_end_output):
+        if not path.exists(backward_end_output):
             backward_end_output = last_output
         if level_of_theory.upper() == 'QCHEM':
             subfile_1, subfile_2 = create_qchem_irc_opt_sub_file(IRC_dir_path, config_path, forward_end_output, backward_end_output, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
@@ -620,7 +620,7 @@ def launch_qmmm_opt_jobs(qm_collection:object, config_path:str, num:int=10, ncpu
         else:
             reactant = path.join(IRC_dir_path, 'irc_backward.xyz')
             product = path.join(IRC_dir_path, 'irc_forward.xyz')
-        if os.path.exists(qmmm_reactant_dir):
+        if path.exists(qmmm_reactant_dir):
             os.chdir(qmmm_reactant_dir)
         else:
             os.mkdir(qmmm_reactant_dir)
@@ -636,7 +636,7 @@ def launch_qmmm_opt_jobs(qm_collection:object, config_path:str, num:int=10, ncpu
         job_id_1 = stdout.decode().replace("\n", "")
 
         qmmm_product_dir = path.join(target['path'], 'QMMM_PRODUCT')
-        if os.path.exists(qmmm_product_dir):
+        if path.exists(qmmm_product_dir):
             os.chdir(qmmm_product_dir)
         else:
             os.mkdir(qmmm_product_dir)
@@ -737,7 +737,7 @@ def launch_qmmm_freq_opt_jobs(qm_collection:object, config_path:str, num:int=10,
     for target in targets[:num]:
         qmmm_reactant_dir = path.join(target['path'], 'QMMM_REACTANT')
         reactant = path.join(qmmm_reactant_dir, 'qmmm_opt.xyz')
-        if os.path.exists(qmmm_reactant_dir):
+        if path.exists(qmmm_reactant_dir):
             os.chdir(qmmm_reactant_dir)
         else:
             os.mkdir(qmmm_reactant_dir)
@@ -754,7 +754,7 @@ def launch_qmmm_freq_opt_jobs(qm_collection:object, config_path:str, num:int=10,
 
         qmmm_product_dir = path.join(target['path'], 'QMMM_PRODUCT')
         product = path.join(qmmm_product_dir, 'qmmm_opt.xyz')
-        if os.path.exists(qmmm_product_dir):
+        if path.exists(qmmm_product_dir):
             os.chdir(qmmm_product_dir)
         else:
             os.mkdir(qmmm_product_dir)
@@ -773,19 +773,19 @@ def launch_qmmm_freq_opt_jobs(qm_collection:object, config_path:str, num:int=10,
     print(highlight_text('QMMM FREQ OPT'))
     print('\nQMMM freq opt launced {} jobs (forward + backward)\n'.format(count * 2))
 
-def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num:int=10, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16):
+def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num:int=10, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16, restart:bool=True):
     targets = select_targets(qm_collection, job_name='qmmm_freq_opt_reactant')
     count = 0
     for target in targets[:num]:
         if target['qmmm_freq_opt_reactant_status'] == 'restart':
             qmmm_reactant_dir = path.join(target['path'], 'QMMM_REACTANT')
             reactant = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz')
-            if os.path.exists(qmmm_reactant_dir):
+            if path.exists(qmmm_reactant_dir):
                 os.chdir(qmmm_reactant_dir)
             else:
                 os.mkdir(qmmm_reactant_dir)
                 os.chdir(qmmm_reactant_dir)
-            subfile_1 = create_qmmm_freq_opt(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
+            subfile_1 = create_qmmm_freq_opt(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads, restart=True)
             commands_1 = ['qsub', subfile_1]
             process = subprocess.Popen(commands_1,
                                     stdout=subprocess.PIPE,
@@ -802,12 +802,12 @@ def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num
         if target['qmmm_freq_opt_product_status'] == 'restart':
             qmmm_product_dir = path.join(target['path'], 'QMMM_PRODUCT')
             product = path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz')
-            if os.path.exists(qmmm_product_dir):
+            if path.exists(qmmm_product_dir):
                 os.chdir(qmmm_product_dir)
             else:
                 os.mkdir(qmmm_product_dir)
                 os.chdir(qmmm_product_dir)
-            subfile_2 = create_qmmm_freq_opt(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
+            subfile_2 = create_qmmm_freq_opt(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads, restart=True)
             commands_2 = ['qsub', subfile_2]
             process = subprocess.Popen(commands_2,
                                     stdout=subprocess.PIPE,
@@ -821,8 +821,11 @@ def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num
     print(highlight_text('QMMM FREQ OPT RESTART'))
     print('\nQMMM freq opt restart launced {} jobs\n'.format(count))
 
-def create_qmmm_freq_opt(qmmm_dir:str, config_path:str, target_geometry:str, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16) -> str:
-    qmmm_freq_opt_config = path.join(config_path, 'qmmm_freq_opt.lot')
+def create_qmmm_freq_opt(qmmm_dir:str, config_path:str, target_geometry:str, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16, restart:bool=False) -> str:
+    if restart:
+        qmmm_freq_opt_config = path.join(config_path, 'qmmm_freq_opt_restart.lot')
+    else:
+        qmmm_freq_opt_config = path.join(config_path, 'qmmm_freq_opt.lot')
     qmmm_freq_opt_input = path.join(qmmm_dir, 'qmmm_freq_opt.in')
     qmmm_freq_opt_output = path.join(qmmm_dir, 'qmmm_freq_opt.out')
     subfile = path.join(qmmm_dir, 'qmmm_freq_opt.job')
@@ -922,7 +925,7 @@ def launch_qmmm_freq_ts_jobs(qm_collection:object, config_path:str, num:int=10, 
         else:
             ts = path.join(IRC_dir_path, 'ts_geo.xyz')
 
-        if os.path.exists(qmmm_ts_dir):
+        if path.exists(qmmm_ts_dir):
             os.chdir(qmmm_ts_dir)
         else:
             os.mkdir(qmmm_ts_dir)
@@ -1034,7 +1037,7 @@ def launch_qmmm_freq_jobs(qm_collection:object, config_path:str, num:int=10, ncp
         qmmm_reactant_dir = path.join(target['path'], 'QMMM_REACTANT')
         reactant = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz')
 
-        if os.path.exists(qmmm_reactant_dir):
+        if path.exists(qmmm_reactant_dir):
             os.chdir(qmmm_reactant_dir)
         else:
             os.mkdir(qmmm_reactant_dir)
@@ -1052,7 +1055,7 @@ def launch_qmmm_freq_jobs(qm_collection:object, config_path:str, num:int=10, ncp
 
         qmmm_product_dir = path.join(target['path'], 'QMMM_PRODUCT')
         product = path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz')
-        if os.path.exists(qmmm_product_dir):
+        if path.exists(qmmm_product_dir):
             os.chdir(qmmm_product_dir)
         else:
             os.mkdir(qmmm_product_dir)
@@ -1155,7 +1158,7 @@ def launch_qmmm_ts_freq_jobs(qm_collection:object, config_path:str, num:int=10, 
         qmmm_ts_dir = path.join(target['path'], 'QMMM_TS')
         ts = path.join(qmmm_ts_dir, 'qmmm_ts.xyz')
 
-        if os.path.exists(qmmm_ts_dir):
+        if path.exists(qmmm_ts_dir):
             os.chdir(qmmm_ts_dir)
         else:
             os.mkdir(qmmm_ts_dir)
@@ -1198,7 +1201,7 @@ def launch_qmmm_refine_jobs(qm_collection:object, config_path:str, num:int=10, n
     for target in targets[:num]:
         qmmm_reactant_dir = path.join(target['path'], 'QMMM_REACTANT')
         reactant = path.join(qmmm_reactant_dir, 'qmmm_final.xyz')
-        if os.path.exists(qmmm_reactant_dir):
+        if path.exists(qmmm_reactant_dir):
             os.chdir(qmmm_reactant_dir)
         else:
             os.mkdir(qmmm_reactant_dir)
@@ -1215,7 +1218,7 @@ def launch_qmmm_refine_jobs(qm_collection:object, config_path:str, num:int=10, n
 
         qmmm_product_dir = path.join(target['path'], 'QMMM_PRODUCT')
         product = path.join(qmmm_product_dir, 'qmmm_final.xyz')
-        if os.path.exists(qmmm_product_dir):
+        if path.exists(qmmm_product_dir):
             os.chdir(qmmm_product_dir)
         else:
             os.mkdir(qmmm_product_dir)
@@ -1231,7 +1234,7 @@ def launch_qmmm_refine_jobs(qm_collection:object, config_path:str, num:int=10, n
 
         qmmm_ts_dir = path.join(target['path'], 'QMMM_TS')
         ts = path.join(qmmm_ts_dir, 'qmmm_final.xyz')
-        if os.path.exists(qmmm_ts_dir):
+        if path.exists(qmmm_ts_dir):
             os.chdir(qmmm_ts_dir)
         else:
             os.mkdir(qmmm_ts_dir)
@@ -1339,7 +1342,7 @@ def launch_jobs(num=30, level_of_theory='ORCA', ncpus=4, mpiprocs=1, ompthreads=
 
     launch_qmmm_opt_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
     launch_qmmm_freq_opt_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
-    launch_qmmm_freq_opt_restart_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
+    launch_qmmm_freq_opt_restart_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16, restart=True)
     launch_qmmm_freq_ts_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
     launch_qmmm_freq_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
     launch_qmmm_ts_freq_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)

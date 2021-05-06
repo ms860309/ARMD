@@ -8,12 +8,9 @@ if __name__ == '__main__':
     import sys
     import os
     from os import path
-    sys.path.append(path.join(path.dirname(
-        path.dirname(path.abspath(__file__))), 'code/ard'))
-    sys.path.append(path.join(path.dirname(
-        path.dirname(path.abspath(__file__))), 'code/mol_graph'))
-    sys.path.append(path.join(path.dirname(
-        path.dirname(path.abspath(__file__))), 'database'))
+    sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'code/ard'))
+    sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'code/mol_graph'))
+    sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'database'))
 
     # third party
     import argparse
@@ -49,9 +46,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Read input file
-    input_file = os.path.abspath(args.file)
-    ard_path = os.path.dirname(os.path.abspath(args.file))
-    reactant_file = os.path.abspath(args.reactant)
+    input_file = path.abspath(args.file)
+    ard_path = path.dirname(path.abspath(args.file))
+    reactant_file = path.abspath(args.reactant)
     kwargs = readInput(input_file)
 
     # Constraint
@@ -88,7 +85,7 @@ if __name__ == '__main__':
     kwargs['output_dir'] = output_dir
     kwargs['generations'] = args.generations
     kwargs['ard_path'] = ard_path
-    kwargs['config_path'] = os.path.join(os.path.dirname(ard_path), 'config')
+    kwargs['config_path'] = path.join(path.dirname(ard_path), 'config')
     kwargs['reactant_path'] = reactant_file
 
     # Execute job

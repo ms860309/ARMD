@@ -33,7 +33,7 @@ def launch_ard_jobs(ncpus=8, mpiprocs=1, ompthreads=8):
     if config_collection.estimated_document_count() == 0:
         print(highlight_text('Starting ARD network exploring'))
         script_path = path.join(path.dirname(path.dirname(path.abspath(__file__))), 'script')
-        if os.path.exists(script_path):
+        if path.exists(script_path):
             os.chdir(script_path)
         subfile = create_ard_sub_file(
             script_path, script_path, 1, 'reactant.xyz', ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)

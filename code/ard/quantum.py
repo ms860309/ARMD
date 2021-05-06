@@ -8,6 +8,7 @@ executing quantum jobs.
 
 # standard library imports
 import os
+from os import path
 import re
 import sys
 
@@ -46,16 +47,16 @@ def which(program):
     it does not exist.
     """
     def is_exe(fpath):
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+        return path.isfile(fpath) and os.access(fpath, os.X_OK)
 
-    fpath, fname = os.path.split(program)
+    fpath, fname = path.split(program)
     if fpath:
         if is_exe(program):
             return program
     else:
         for path in os.environ["PATH"].split(os.pathsep):
             path = path.strip('"')
-            exe_file = os.path.join(path, program)
+            exe_file = path.join(path, program)
             if is_exe(exe_file):
                 return exe_file
 
@@ -128,7 +129,7 @@ class Quantum(object):
         try:
             submitProcess(cmd, *args)
         except subprocess.CalledProcessError:
-            if os.path.isfile(self.logfile):
+            if path.isfile(self.logfile):
                 with open(self.logfile, 'r') as f:
                     f.seek(0, 2)
                     fsize = f.tell()
@@ -326,12 +327,12 @@ class Gaussian(Quantum):
 
         # Create Gaussian input file
         try:
-            input_file = os.path.join(output_dir, name + '.com')
+            input_file = path.join(output_dir, name + '.com')
             with open(input_file, 'w') as f:
                 fc = 'calcfc'
                 if self.chkfile is not None:
                     f.write('%chk=' + self.chkfile + '\n')
-                    if os.path.exists(self.chkfile):
+                    if path.exists(self.chkfile):
                         fc = 'rcfc'
                 f.write('%mem=' + mem + '\n')
                 f.write('%nprocshared=' + str(int(nproc)) + '\n')
@@ -390,7 +391,7 @@ class Gaussian(Quantum):
                 node, name=name, output_dir=output_dir, **kwargs)
 
         # Run job (try Gaussian 09 first and then resort to Gaussian 03)
-        self.logfile = os.path.join(output_dir, name + '.log')
+        self.logfile = path.join(output_dir, name + '.log')
         try:
             self.submitProcessAndCheck('g09', self.input_file, self.logfile)
         except OSError as e:
@@ -572,7 +573,7 @@ class QChem(Quantum):
 
         # Create Q-Chem input file
         try:
-            input_file = os.path.join(output_dir, name + '.in')
+            input_file = path.join(output_dir, name + '.in')
             with open(input_file, 'w') as f:
                 f.write('$comment\n')
                 f.write(name + '\n')
@@ -641,10 +642,10 @@ class QChem(Quantum):
                 node, name=name, output_dir=output_dir, **kwargs)
 
         # Run job
-        self.logfile = os.path.join(output_dir, name + '.log')
+        self.logfile = path.join(output_dir, name + '.log')
         self.submitProcessAndCheck(
             'qchem', '-nt', nproc, self.input_file, self.logfile, 'save')
-        os.remove(os.path.join(output_dir, 'pathtable'))
+        os.remove(path.join(output_dir, 'pathtable'))
 
         # Read output
         self.read()
@@ -827,7 +828,7 @@ class NWChem(Quantum):
 
         # Create NWChem input file
         try:
-            input_file = os.path.join(output_dir, name + '.nw')
+            input_file = path.join(output_dir, name + '.nw')
             with open(input_file, 'w') as f:
                 f.write('title "' + name + '"\n')
                 if jobtype == 'mepgs':
@@ -894,7 +895,7 @@ class NWChem(Quantum):
                 node, name=name, output_dir=output_dir, **kwargs)
 
         # Run job (try `srun` for SLURM and `mpiexec` for other systems)
-        self.logfile = os.path.join(output_dir, name + '.log')
+        self.logfile = path.join(output_dir, name + '.log')
         try:
             self.submitProcessAndCheck(
                 'srun', '-n', nproc, 'nwchem', self.input_file, self.logfile)
@@ -911,7 +912,7 @@ class NWChem(Quantum):
                         '.zmat', '.drv.hess', '.t2')
         for e in file_endings:
             try:
-                os.remove(os.path.join(output_dir, name + e))
+                os.remove(path.join(output_dir, name + e))
             except OSError:
                 pass
 

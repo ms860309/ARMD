@@ -134,7 +134,7 @@ def check_ssm_content(target_path:str, thershold:float = 200.0) -> str:
         # delta_e_guess = q.get_delta_e()
         if ts_energy_guess > thershold:
             return "ts_guess high energy"
-        elif os.path.exists(ts_node_path):
+        elif path.exists(ts_node_path):
             return job_status
         else:
             return "job_fail"
@@ -193,7 +193,7 @@ def check_ts_refine_content(target_path:str, threshold:float=-50.0) -> str:
     ts_dir_path = path.join(target_path, 'TS')
     ts_refine_out_path = path.join(ts_dir_path, 'ts_refine.out')
 
-    if os.path.exists(ts_refine_out_path):
+    if path.exists(ts_refine_out_path):
         try:
             q = ORCA(outputfile=ts_refine_out_path)
             freqs = q.get_frequencies()
@@ -253,7 +253,7 @@ def check_ts_content(target_path:str, threshold:float = -50.0) -> Union[str, flo
     qchem_ts_out_path = path.join(ts_dir_path, 'ts.out')
     orca_ts_out_path = path.join(ts_dir_path, 'ts_geo.out')
     # Which means the ts is running with orca
-    if not os.path.exists(qchem_ts_out_path):
+    if not path.exists(qchem_ts_out_path):
         level_of_theory = 'ORCA'
     ts_geo_path = path.join(ts_dir_path, 'ts_geo.xyz')
 
@@ -278,7 +278,7 @@ def check_ts_content(target_path:str, threshold:float = -50.0) -> Union[str, flo
         except:
             return "job_fail", 0.0
     elif level_of_theory == 'ORCA':
-        if os.path.exists(ts_geo_path):
+        if path.exists(ts_geo_path):
             try:
                 q = ORCA(outputfile=orca_ts_out_path)
                 freqs = q.get_frequencies()
@@ -342,15 +342,15 @@ IRC check.
 """
 
 def check_irc_content(target_path:str) -> str:
-    irc_dir_path = os.path.join(target_path, 'IRC')
-    first_output = os.path.join(irc_dir_path, 'finished_first.xyz')
-    last_output = os.path.join(irc_dir_path, 'finished_last.xyz')
-    forward_end_output = os.path.join(irc_dir_path, 'forward_end_opt.xyz')
-    backward_end_output = os.path.join(irc_dir_path, 'backward_end_opt.xyz')
-    if os.path.exists(forward_end_output) and os.path.exists(backward_end_output):
+    irc_dir_path = path.join(target_path, 'IRC')
+    first_output = path.join(irc_dir_path, 'finished_first.xyz')
+    last_output = path.join(irc_dir_path, 'finished_last.xyz')
+    forward_end_output = path.join(irc_dir_path, 'forward_end_opt.xyz')
+    backward_end_output = path.join(irc_dir_path, 'backward_end_opt.xyz')
+    if path.exists(forward_end_output) and path.exists(backward_end_output):
         return 'job_success'
     # The last two is to make sure not in the crash
-    elif os.path.exists(first_output) and os.path.exists(last_output) and not os.path.exists(forward_end_output) and not os.path.exists(backward_end_output):
+    elif path.exists(first_output) and path.exists(last_output) and not path.exists(forward_end_output) and not path.exists(backward_end_output):
         return 'job_success'
     else:
         return 'job_fail'
@@ -442,8 +442,8 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
     threshold_ratio: the distance between qm atoms and mm atoms can be ratio * vdw_ratio
     """
     irc_path = path.join(target['path'], 'IRC')
-    forward_end_output = os.path.join(irc_path, 'irc_forward.xyz')
-    backward_end_output = os.path.join(irc_path, 'irc_backward.xyz')
+    forward_end_output = path.join(irc_path, 'irc_forward.xyz')
+    backward_end_output = path.join(irc_path, 'irc_backward.xyz')
     irc_reactant_path = path.join(target['path'], 'irc_reactant.xyz')  # for next generation
     pyMol_3 = xyz_to_pyMol(forward_end_output, cluster_bond_path=cluster_bond_path)
     pyMol_4 = xyz_to_pyMol(backward_end_output, cluster_bond_path=cluster_bond_path)
@@ -1994,8 +1994,8 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
 
     if cluster_bond_path:
         # use the checker.py path as the reference
-        checker_path = os.path.realpath(sys.argv[0])
-        ard_path = os.path.dirname(os.path.dirname(checker_path))
+        checker_path = path.realpath(sys.argv[0])
+        ard_path = path.dirname(path.dirname(checker_path))
         cluster_bond_path = path.join(ard_path, 'script/bonds.txt')
         fixed_atom_path = path.join(ard_path, 'script/fixed_atom.txt')
     

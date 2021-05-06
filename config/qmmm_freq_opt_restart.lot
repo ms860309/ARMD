@@ -1618,6 +1618,10 @@ qm_mm                       TRUE
 mem_total                   3600
 mem_static                  450
 AIMD_FIXED_ATOMS            675
+geom_opt_dmax               80
+GEOM_OPT_TOL_GRADIENT       100
+GEOM_OPT_TOL_DISPLACEMENT   400
+GEOM_OPT_TOL_ENERGY         33
 pop_mulliken                FALSE
 $end
 

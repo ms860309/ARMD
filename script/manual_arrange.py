@@ -8,12 +8,9 @@ import shutil
 import sys
 import os
 from os import path
-sys.path.append(path.join(path.dirname(
-    path.dirname(path.abspath(__file__))), 'code/ard'))
-sys.path.append(path.join(path.dirname(
-    path.dirname(path.abspath(__file__))), 'code/mol_graph'))
-sys.path.append(path.join(path.dirname(
-    path.dirname(path.abspath(__file__))), 'database'))
+sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'code/ard'))
+sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'code/mol_graph'))
+sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'database'))
 
 # local application imports
 from gen3D import Molecule
@@ -77,7 +74,7 @@ def getE(tmpdir, target='reactant.xyz'):
     """
     Here the energy is Eh (hartree)
     """
-    input_path = os.path.join(tmpdir, target)
+    input_path = path.join(tmpdir, target)
     with open(input_path, 'r') as f:
         lines = f.readlines()
     HeatofFormation = lines[1].strip().split()[1]
@@ -110,13 +107,13 @@ def xtb_get_H298(reactant_mol, product_mol, constraint, fixed_atom, reactant_pat
     Create a input file called "input.mop" for mopac calculation
     """
 
-    tmpdir = os.path.join(reactant_path, 'tmp')
-    reactant_path = os.path.join(tmpdir, 'reactant.xyz')
-    product_path = os.path.join(tmpdir, 'product.xyz')
+    tmpdir = path.join(reactant_path, 'tmp')
+    reactant_path = path.join(tmpdir, 'reactant.xyz')
+    product_path = path.join(tmpdir, 'product.xyz')
 
     reac_geo, prod_geo = gen_geometry(reactant_mol, product_mol, constraint, fixed_atom)
 
-    if os.path.exists(tmpdir):
+    if path.exists(tmpdir):
         shutil.rmtree(tmpdir)
     os.mkdir(tmpdir)
     os.chdir(tmpdir)
@@ -138,15 +135,15 @@ def xtb_get_H298(reactant_mol, product_mol, constraint, fixed_atom, reactant_pat
 
 
 def runXTB(tmpdir, target='reactant.xyz'):
-    input_path = os.path.join(tmpdir, target)
+    input_path = path.join(tmpdir, target)
     outname = '{}.xyz'.format(target.split('.')[0])
-    output_path = os.path.join(tmpdir, 'xtbopt.xyz')
-    config_path = os.path.join(os.path.dirname(os.path.dirname(tmpdir)), 'config')
-    constraint_path = os.path.join(config_path, 'xtb_constraint.inp')
-    if not os.path.exists(constraint_path):
-        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(tmpdir))), 'config')
-        constraint_path = os.path.join(config_path, 'xtb_constraint.inp')
-    new_output_path = os.path.join(tmpdir, outname)
+    output_path = path.join(tmpdir, 'xtbopt.xyz')
+    config_path = path.join(path.dirname(path.dirname(tmpdir)), 'config')
+    constraint_path = path.join(config_path, 'xtb_constraint.inp')
+    if not path.exists(constraint_path):
+        config_path = path.join(path.dirname(path.dirname(path.dirname(tmpdir))), 'config')
+        constraint_path = path.join(config_path, 'xtb_constraint.inp')
+    new_output_path = path.join(tmpdir, outname)
     if constraint == None:
         p = Popen(['xtb', input_path, '--opt', 'tight'])
         p.wait()

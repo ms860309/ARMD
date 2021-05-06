@@ -216,7 +216,6 @@ class Generate(object):
 
                 bond_can_form = sorted(bond_can_form, key = itemgetter(0))
                 bond_can_break = sorted(bond_can_break, key = itemgetter(0))
-
             elif self.catalyst in ['HZSM5']:
                 bond_can_form = [bonds for bonds in bonds_form_all if bonds[0] not in self.fixed_atom and bonds[1] not in self.fixed_atom]
                 # index start from 0
@@ -288,7 +287,6 @@ class Generate(object):
 
                 bond_can_form = sorted(bond_can_form, key = itemgetter(0))
                 bond_can_break = sorted(bond_can_break, key = itemgetter(0))
-
         else:
             bond_can_form = bonds_form_all[:]
             # Remove the original C-H bond
@@ -483,6 +481,7 @@ class Generate(object):
                             energy += props.bond_dissociation_energy[first_atom, second_atom, bond_type]
                         except:
                             energy += props.bond_dissociation_energy[second_atom, first_atom, bond_type]
+                            
             if energy / _constants.CAL2J > self.bond_dissociation_cutoff:
                 return False
             else:
@@ -496,12 +495,15 @@ class Generate(object):
                 return True
         return False
 
+    @property
     def get_prods(self):
         return self.prod_mols
 
+    @property
     def get_add_bonds(self):
         return self.add_bonds
 
+    @property
     def get_break_bonds(self):
         return self.break_bonds
 

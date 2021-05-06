@@ -7,6 +7,7 @@ Provides utility functions and classes.
 
 # standard library imports
 import os
+from os import path
 import shutil
 import time
 
@@ -43,7 +44,7 @@ def initializeLog(level, logfile, logname=None):
     formatter = logging.Formatter('%(levelname)s%(message)s')
 
     # Create file handler
-    if os.path.exists(logfile):
+    if path.exists(logfile):
         os.remove(logfile)
 
     fh = logging.FileHandler(filename=logfile)
@@ -96,8 +97,8 @@ def makeOutputSubdirectory(output_dir, folder):
     already exists, its contents are deleted. Returns the path to the
     subdirectory.
     """
-    subdir = os.path.join(output_dir, folder)
-    if os.path.exists(subdir):
+    subdir = path.join(output_dir, folder)
+    if path.exists(subdir):
         shutil.rmtree(subdir)
     os.mkdir(subdir)
     return subdir
@@ -204,28 +205,28 @@ def rotationMatrix(angles, axis=None):
         )
         return Rx.dot(Ry).dot(Rz)
     else:
-        # axis = axis/np.sqrt(axis.dot(axis))
-        # x, y, z = axis[0], axis[1], axis[2]
-        # angle = angles
-        # R = np.array(
-        #     [[np.cos(angle) + x ** 2 * (1 - np.cos(angle)),
-        #       x * y * (1 - np.cos(angle)) - z * np.sin(angle),
-        #       x * z * (1 - np.cos(angle))+y * np.sin(angle)],
-        #      [y * x * (1 - np.cos(angle))+z * np.sin(angle),
-        #       np.cos(angle) + y ** 2 * (1 - np.cos(angle)),
-        #       y * z * (1 - np.cos(angle)) - x * np.sin(angle)],
-        #      [z * x * (1 - np.cos(angle)) - y * np.sin(angle),
-        #       z * y * (1 - np.cos(angle)) + x * np.sin(angle),
-        #       np.cos(angle) + z ** 2 * (1 - np.cos(angle))]]
-        # )
-        # return R
-        axis = np.asarray(axis)
-        axis /= np.linalg.norm(axis)
-        a = np.cos(angles / 2.0)
-        b, c, d = -axis * np.sin(angles / 2.0)
-        aa, bb, cc, dd = a * a, b * b, c * c, d * d
-        bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
-        return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
-                        [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
-                        [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+        axis = axis/np.sqrt(axis.dot(axis))
+        x, y, z = axis[0], axis[1], axis[2]
+        angle = angles
+        R = np.array(
+            [[np.cos(angle) + x ** 2 * (1 - np.cos(angle)),
+              x * y * (1 - np.cos(angle)) - z * np.sin(angle),
+              x * z * (1 - np.cos(angle))+y * np.sin(angle)],
+             [y * x * (1 - np.cos(angle))+z * np.sin(angle),
+              np.cos(angle) + y ** 2 * (1 - np.cos(angle)),
+              y * z * (1 - np.cos(angle)) - x * np.sin(angle)],
+             [z * x * (1 - np.cos(angle)) - y * np.sin(angle),
+              z * y * (1 - np.cos(angle)) + x * np.sin(angle),
+              np.cos(angle) + z ** 2 * (1 - np.cos(angle))]]
+        )
+        return R
+        # axis = np.asarray(axis)
+        # axis /= np.linalg.norm(axis)
+        # a = np.cos(angles / 2.0)
+        # b, c, d = -axis * np.sin(angles / 2.0)
+        # aa, bb, cc, dd = a * a, b * b, c * c, d * d
+        # bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+        # return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+        #                 [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+        #                 [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
         

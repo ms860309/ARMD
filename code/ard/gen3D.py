@@ -9,6 +9,7 @@ RMG database values.
 
 # standard library imports
 import os
+from os import path
 from operator import itemgetter
 
 # third party
@@ -328,8 +329,7 @@ class Molecule(pybel.Molecule):
         # Load thermo database
         if thermo_db is None:
             thermo_db = ThermoDatabase()
-            thermo_db.load(os.path.join(
-                settings['database.directory'], 'thermo'))
+            thermo_db.load(path.join(settings['database.directory'], 'thermo'))
 
         # Compute enthalpy for each molecule and add together
         H298 = 0.0

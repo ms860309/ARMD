@@ -1,8 +1,8 @@
 # standard library imports
 import os
+from os import path
 import shutil
 import time
-import copy
 
 # third party
 from subprocess import Popen, PIPE
@@ -47,9 +47,9 @@ class Mopac(object):
         Create a input file called "input.mop" for mopac calculation
         """
 
-        tmpdir = os.path.join(tmp_path, 'tmp')
-        reactant_path = os.path.join(tmpdir, 'reactant.mop')
-        product_path = os.path.join(tmpdir, 'product.mop')
+        tmpdir = path.join(tmp_path, 'tmp')
+        reactant_path = path.join(tmpdir, 'reactant.mop')
+        product_path = path.join(tmpdir, 'product.mop')
 
         reac_geo, prod_geo = self.genInput(self.reactant_mol, self.product_mol)
 
@@ -57,7 +57,7 @@ class Mopac(object):
             self.logger.info('Mopac fail')
             return False, False
         else:
-            if os.path.exists(tmpdir):
+            if path.exists(tmpdir):
                 shutil.rmtree(tmpdir)
             os.mkdir(tmpdir)
             with open(reactant_path, 'w') as f:
@@ -207,7 +207,7 @@ def getHeatofFormation(tmpdir, target='reactant.out'):
     """
     if Error return False, which HF may be 0.0
     """
-    input_path = os.path.join(tmpdir, target)
+    input_path = path.join(tmpdir, target)
     with open(input_path, 'r') as f:
         lines = f.readlines()
     for idx, line in enumerate(lines):
@@ -222,6 +222,6 @@ def getHeatofFormation(tmpdir, target='reactant.out'):
 
 
 def runMopac(tmpdir, target='reactant.mop'):
-    input_path = os.path.join(tmpdir, target)
+    input_path = path.join(tmpdir, target)
     p = Popen(['mopac', input_path])
     p.wait()
