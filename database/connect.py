@@ -159,3 +159,19 @@ for i in b:
     except:
         pass
 """
+"""
+qm_collection = db['qm_calculate_center']
+reactions_collection = db['reactions']
+reactions = list(reactions_collection.find({'qmmm':'Already insert'}))
+
+for reaction in reactions:
+    qmmm_reactant_path = os.path.join(reaction['path'], 'QMMM_REACTANT')
+    qmmm_product_path = os.path.join(reaction['path'], 'QMMM_PRODUCT')
+    qmmm_ts_path = os.path.join(reaction['path'], 'QMMM_TS')
+    shutil.rmtree(qmmm_reactant_path)
+    shutil.rmtree(qmmm_product_path)
+    shutil.rmtree(qmmm_ts_path)
+    # qm_target = list(qm_collection.find({'path':reaction['path']}))[0]
+    # reactions_collection.update_one(reaction, {"$unset": {'qmmm_ts_freq_status':"", 'qmmm_freq_reactant_status':"", 'qmmm_freq_product_status':"", 'qmmm_ts_energy':"", 'qmmm_freq_reactant_energy':'', 'qmmm_freq_product_energy':""}}, True)
+    # qm_collection.update_one(qm_target, {"$unset": {'qmmm_freq_ts_jobid':'', 'qmmm_freq_opt_status':'', 'qmmm_freq_product_jobid':'', 'qmmm_freq_product_status':'', 'qmmm_freq_reactant_jobid':'', 'qmmm_freq_reactant_status':'', 'qmmm_ts_freq_status':'', 'qmmm_ts_freq_jobid':'', 'qmmm_freq_opt_product_status':'', 'qmmm_freq_opt_reactant_status':'', 'qmmm_freq_opt_reactant_jobid':"", 'qmmm_freq_opt_product_jobid':''}, "$set": {'qmmm_freq_ts_status':'job_unrun', 'qmmm_freq_opt_product_restart_times':0, 'qmmm_freq_opt_reactant_restart_times':0, 'qmmm_freq_ts_restart_times':0, 'qmmm_opt_status':'job_unrun'}}, True)
+"""

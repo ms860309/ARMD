@@ -13,8 +13,7 @@ class FILTER(object):
     def __init__(self, reactant_file, cluster_bond_file = None, fixed_atom = None):
         self.reactant_file = reactant_file
         self.cluster_bond_file = cluster_bond_file
-        self.fixed_atom = fixed_atom
-        if self.fixed_atom:
+        if fixed_atom:
             with open(self.fixed_atom, 'r') as f:
                 lines = f.read()
             self.fixed_atom = eval(lines)

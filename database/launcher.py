@@ -50,8 +50,8 @@ def launch_ssm_jobs(qm_collection:object, config_path:str, num:int=100, level_of
         elif level_of_theory.upper() == 'ORCA':
             subfile = create_orca_ssm_sub_file(target['path'], SSM_dir_path, config_path, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
         
-        commands = ['qsub', subfile]
-        process = subprocess.Popen(commands,
+        commands = f'qsub {subfile}'
+        process = subprocess.Popen([commands],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -167,8 +167,8 @@ def launch_ts_refine_jobs(qm_collection:object, config_path:str, num:int=100, nc
 
         SSM_dir_path = path.join(target['path'], 'SSM')
         subfile = create_ts_refine_sub_file(SSM_dir_path, TS_dir_path, config_path, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
-        commands = ['qsub', subfile]
-        process = subprocess.Popen(commands,
+        commands = f'qsub {subfile}'
+        process = subprocess.Popen([commands],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -247,8 +247,8 @@ def launch_ts_jobs(qm_collection:object, config_path:str, num:int=100, level_of_
             subfile = create_orca_ts_sub_file(SSM_dir_path, TS_dir_path, config_path, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads, Hcap=Hcap)
         else:
             raise LaunchError('Unsupported level of theory')
-        commands = ['qsub', subfile]
-        process = subprocess.Popen(commands,
+        commands = f'qsub {subfile}'
+        process = subprocess.Popen([commands],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -368,8 +368,8 @@ def launch_irc_jobs(qm_collection:object, config_path:str, num:int=100, ncpus:in
 
         TS_dir_path = path.join(target['path'], 'TS')
         subfile = create_irc_sub_file(TS_dir_path, IRC_dir_path, config_path, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
-        commands = ['qsub', subfile]
-        process = subprocess.Popen(commands,
+        commands = f'qsub {subfile}'
+        process = subprocess.Popen([commands],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -436,16 +436,16 @@ def launch_irc_opt_jobs(qm_collection:object, config_path:str, num:int=100, leve
         elif level_of_theory == 'ORCA':
             subfile_1, subfile_2 = create_orca_irc_opt_sub_file(IRC_dir_path, config_path, forward_end_output, backward_end_output, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads, Hcap=Hcap)
 
-        commands_1 = ['qsub', subfile_1]
-        process = subprocess.Popen(commands_1,
+        commands_1 = f'qsub {subfile_1}'
+        process = subprocess.Popen([commands_1],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
         # get job id from stdout, e.g., "106849.h81"
         job_id_1 = stdout.decode().replace("\n", "")
 
-        commands_2 = ['qsub', subfile_2]
-        process = subprocess.Popen(commands_2,
+        commands_2 = f'qsub {subfile_2}'
+        process = subprocess.Popen([commands_2],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -626,9 +626,9 @@ def launch_qmmm_opt_jobs(qm_collection:object, config_path:str, num:int=10, ncpu
             os.mkdir(qmmm_reactant_dir)
             os.chdir(qmmm_reactant_dir)
         subfile_1 = create_qmmm_opt(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
-        
-        commands_1 = ['qsub', subfile_1]
-        process = subprocess.Popen(commands_1,
+
+        commands_1 = f'qsub {subfile_1}'
+        process = subprocess.Popen([commands_1],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -642,8 +642,8 @@ def launch_qmmm_opt_jobs(qm_collection:object, config_path:str, num:int=10, ncpu
             os.mkdir(qmmm_product_dir)
             os.chdir(qmmm_product_dir)
         subfile_2 = create_qmmm_opt(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
-        commands_2 = ['qsub', subfile_2]
-        process = subprocess.Popen(commands_2,
+        commands_2 = f'qsub {subfile_2}'
+        process = subprocess.Popen([commands_2],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -744,8 +744,8 @@ def launch_qmmm_freq_opt_jobs(qm_collection:object, config_path:str, num:int=10,
             os.chdir(qmmm_reactant_dir)
         subfile_1 = create_qmmm_freq_opt(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
         
-        commands_1 = ['qsub', subfile_1]
-        process = subprocess.Popen(commands_1,
+        commands_1 = f'qsub {subfile_1}'
+        process = subprocess.Popen([commands_1],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -760,8 +760,9 @@ def launch_qmmm_freq_opt_jobs(qm_collection:object, config_path:str, num:int=10,
             os.mkdir(qmmm_product_dir)
             os.chdir(qmmm_product_dir)
         subfile_2 = create_qmmm_freq_opt(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
-        commands_2 = ['qsub', subfile_2]
-        process = subprocess.Popen(commands_2,
+
+        commands_2 = f'qsub {subfile_2}'
+        process = subprocess.Popen([commands_2],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -786,8 +787,9 @@ def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num
                 os.mkdir(qmmm_reactant_dir)
                 os.chdir(qmmm_reactant_dir)
             subfile_1 = create_qmmm_freq_opt(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads, restart=True)
-            commands_1 = ['qsub', subfile_1]
-            process = subprocess.Popen(commands_1,
+
+            commands_1 = f'qsub {subfile_1}'
+            process = subprocess.Popen([commands_1],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, shell=True)
             stdout, stderr = process.communicate()
@@ -808,8 +810,9 @@ def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num
                 os.mkdir(qmmm_product_dir)
                 os.chdir(qmmm_product_dir)
             subfile_2 = create_qmmm_freq_opt(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads, restart=True)
-            commands_2 = ['qsub', subfile_2]
-            process = subprocess.Popen(commands_2,
+
+            commands_2 = f'qsub {subfile_2}'
+            process = subprocess.Popen([commands_2],
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, shell=True)
             stdout, stderr = process.communicate()
@@ -932,8 +935,8 @@ def launch_qmmm_freq_ts_jobs(qm_collection:object, config_path:str, num:int=10, 
             os.chdir(qmmm_ts_dir)
 
         subfile = create_qmmm_freq_ts(qmmm_ts_dir, config_path, ts, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
-        commands = ['qsub', subfile]
-        process = subprocess.Popen(commands,
+        commands = f'qsub {subfile}'
+        process = subprocess.Popen([commands],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -1045,8 +1048,8 @@ def launch_qmmm_freq_jobs(qm_collection:object, config_path:str, num:int=10, ncp
 
         subfile_1 = create_qmmm_freq(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
         
-        commands_1 = ['qsub', subfile_1]
-        process = subprocess.Popen(commands_1,
+        commands_1 = f'qsub {subfile_1}'
+        process = subprocess.Popen([commands_1],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -1061,8 +1064,9 @@ def launch_qmmm_freq_jobs(qm_collection:object, config_path:str, num:int=10, ncp
             os.mkdir(qmmm_product_dir)
             os.chdir(qmmm_product_dir)
         subfile_2 = create_qmmm_freq(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
-        commands_2 = ['qsub', subfile_2]
-        process = subprocess.Popen(commands_2,
+
+        commands_2 = f'qsub {subfile_2}'
+        process = subprocess.Popen([commands_2],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -1166,8 +1170,8 @@ def launch_qmmm_ts_freq_jobs(qm_collection:object, config_path:str, num:int=10, 
         
         subfile = create_qmmm_freq(qmmm_ts_dir, config_path, ts, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
         
-        commands = ['qsub', subfile]
-        process = subprocess.Popen(commands,
+        commands = f'qsub {subfile}'
+        process = subprocess.Popen([commands],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -1208,8 +1212,8 @@ def launch_qmmm_refine_jobs(qm_collection:object, config_path:str, num:int=10, n
             os.chdir(qmmm_reactant_dir)
         subfile_1 = create_qmmm_sp(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
         
-        commands_1 = ['qsub', subfile_1]
-        process = subprocess.Popen(commands_1,
+        commands_1 = f'qsub {subfile_1}'
+        process = subprocess.Popen([commands_1],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -1224,8 +1228,9 @@ def launch_qmmm_refine_jobs(qm_collection:object, config_path:str, num:int=10, n
             os.mkdir(qmmm_product_dir)
             os.chdir(qmmm_product_dir)
         subfile_2 = create_qmmm_sp(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
-        commands_2 = ['qsub', subfile_2]
-        process = subprocess.Popen(commands_2,
+
+        commands_2 = f'qsub {subfile_2}'
+        process = subprocess.Popen([commands_2],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
@@ -1240,8 +1245,9 @@ def launch_qmmm_refine_jobs(qm_collection:object, config_path:str, num:int=10, n
             os.mkdir(qmmm_ts_dir)
             os.chdir(qmmm_ts_dir)
         subfile_3 = create_qmmm_sp(qmmm_ts_dir, config_path, ts, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
-        commands_3 = ['qsub', subfile_3]
-        process = subprocess.Popen(commands_3,
+
+        commands_3 = f'qsub {subfile_3}'
+        process = subprocess.Popen([commands_3],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()

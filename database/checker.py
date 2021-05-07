@@ -1047,14 +1047,14 @@ def insert_qmmm(qm_collection:object, reactions_collection:object):
             ]))
 
     for i in reactions:
-        dir_path = list(reactions_collection.find({'reaction': i['_id'], 'barrier': i['barrier']}))[0]
+        target = list(reactions_collection.find({'reaction': i['_id'], 'barrier': i['barrier']}))[0]
         try:
-            qmmm = dir_path['qmmm']
+            qmmm = target['qmmm']
             if qmmm == 'Already insert':
                 continue
         except:
             pass
-        ard_qm_target = list(qm_collection.find({'path': dir_path['path']}))[0]
+        ard_qm_target = list(qm_collection.find({'path': target['path']}))[0]
         # Prevent reactant equal to product but with different active site (maybe proton at the different oxygen)
         reactant_smiles = ard_qm_target['reactant_smiles'].split('.')
         product_smiles = ard_qm_target['product_smiles'].split('.')
@@ -1062,7 +1062,7 @@ def insert_qmmm(qm_collection:object, reactions_collection:object):
             reactant_part_smiles = []
             for rs in reactant_smiles:
                 for metal in ['Sn', 'W', 'Mo', 'Al']:
-                    if metal not in rs and 'C' in ps:
+                    if metal not in rs and 'C' in rs:
                         reactant_part_smiles.append(rs)
             reactant_part_smiles = set(reactant_part_smiles)
 
@@ -1083,7 +1083,7 @@ def insert_qmmm(qm_collection:object, reactions_collection:object):
             continue
 
         qm_collection.update_one(ard_qm_target, {"$set": {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun", 'qmmm_freq_opt_reactant_restart_times':0, 'qmmm_freq_opt_product_restart_times':0, 'qmmm_freq_ts_restart_times':0}}, True)
-        reactions_collection.update_one(dir_path, {"$set": {'qmmm': 'Already insert'}}, True)
+        reactions_collection.update_one(target, {"$set": {'qmmm': 'Already insert'}}, True)
 
 """
 Check barrier which do not have reactant energy
@@ -1990,7 +1990,10 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     config_collection = db['config']
     targets = list(config_collection.find({'generations': 1}))
     qmmm_path = path.join(targets[0]['config_path'], 'qmmm.xyz')
-    qmmm = next(pybel.readfile('xyz', qmmm_path))
+    try:
+        qmmm_mol = next(pybel.readfile('xyz', qmmm_path))
+    except:
+        qmmm_mol=None
 
     if cluster_bond_path:
         # use the checker.py path as the reference
@@ -2006,7 +2009,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_irc_jobs(qm_collection)
     check_irc_opt_jobs(qm_collection, level_of_theory=level_of_theory)
     check_irc_opt_side_fail_jobs(qm_collection)
-    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False, check_mm_overlap=True, qmmm=qmmm, qm_atoms=23, threshold_ratio=0.6)
+    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False, check_mm_overlap=True, qmmm=qmmm_mol, qm_atoms=23, threshold_ratio=0.6)
     check_barrier(qm_collection)
     insert_reaction(qm_collection, reactions_collection)
     insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=60.0, qmmm=True)
