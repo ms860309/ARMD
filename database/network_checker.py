@@ -855,7 +855,7 @@ def print_information(generations):
     print('{} nodes are failed in IRC OPT job'.format(len(irc_opt_targets_3)))
     print('{} nodes are failed in QMMM OPT job'.format(len(qmmm_opt_targets_3)))
     print('{} nodes are failed in QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_3)))
-    print('{} nodes are qmmm ts failed QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_8)))
+    print('{} nodes are failed in one side'.format(len(qmmm_freq_opt_targets_8)))
     print('{} nodes are failed in QMMM TS'.format(len(qmmm_freq_ts_targets_3)))
     print('{} nodes are failed in QMMM FREQ'.format(len(qmmm_freq_targets_3)))
     print('{} nodes are failed in QMMM TS FREQ'.format(len(qmmm_ts_freq_targets_3)))
@@ -987,20 +987,18 @@ def update_network_status():
                               ["job_launched", "job_running", "job_queueing"]}},
                          {'qmmm_refine_ts_status':
                              {'$in':
-                              ["job_launched", "job_running", "job_queueing"]}},
-                     ]
-                     }
+                              ["job_launched", "job_running", "job_queueing"]}}
+                     ]}
     not_finished_number = len(list(qm_collection.find({'$or':
-                                            [energy_query, ssm_query, low_opt_query, opt_query, ts_query, insert_reaction_query, ts_refine_query, irc_query, irc_equal_query, irc_opt_query, ard_query, qmmm_query]
+                                            [energy_query, ssm_query, low_opt_query, opt_query, ts_query, insert_reaction_query, ts_refine_query, 
+                                            irc_query, irc_equal_query, irc_opt_query, ard_query, qmmm_query]
                                             })))
                                             
     if ard_had_add_number - 1 == ard_should_add_number and not_finished_number == 0:
         print('Network converged')
 
         target = list(status_collection.find({}))
-        update_field = {
-            'status': 'Network converged'
-        }
+        update_field = {'status': 'Network converged'}
         status_collection.update_one(target[0], {"$set": update_field}, True)
 
 print_header()

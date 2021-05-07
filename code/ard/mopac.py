@@ -65,8 +65,8 @@ class Mopac(object):
                 f.write("\n{}".format(reac_geo))
             start_time = time.time()
             try:
-                runMopac(tmpdir, 'reactant.mop')
-                reactant = getHeatofFormation(tmpdir, 'reactant.out')
+                self.runMopac(tmpdir, 'reactant.mop')
+                reactant = self.getHeatofFormation(tmpdir, 'reactant.out')
             except:
                 self.logger.info('Mopac reactant fail')
                 return False, False
@@ -75,8 +75,8 @@ class Mopac(object):
                 f.write("NOSYM CHARGE={} {} {}\n\n".format(charge, multiplicity, self.mopac_method))
                 f.write("\n{}".format(prod_geo))
             try:
-                runMopac(tmpdir, 'product.mop')
-                product = getHeatofFormation(tmpdir, 'product.out')
+                self.runMopac(tmpdir, 'product.mop')
+                product = self.getHeatofFormation(tmpdir, 'product.out')
             except:
                 self.logger.info('Mopac product fail')
                 return False, False
@@ -135,41 +135,9 @@ class Mopac(object):
             self.logger.info('Structure:\n{}'.format(str(reactant_mol.toNode())))
             self.logger.info('Structure:\n{}\n'.format(str(product_mol.toNode())))
             self.logger.info('Form bonds: {}\nBreak bonds: {}\nForm bond distance: {}'.format(self.form_bonds, self.break_bonds, dist))
-            prod_geo = str(product_mol.toNode()).splitlines()
-            product_geometry = []
-            for idx, i in enumerate(prod_geo):
-                i_list = i.split()
-                atom = i_list[0] + " "
-                k = i_list[1:] + [""]
-                if not self.constraint:
-                    l = " 1 ".join(k)
-                else:
-                    if idx in self.constraint:
-                        l = " 0 ".join(k)
-                    else:
-                        l = " 1 ".join(k)
-                out = atom + l
-                product_geometry.append(out)
-            product_geometry = "\n".join(product_geometry)
-
-            reac_geo = str(reactant_mol.toNode()).splitlines()
-            reactant_geometry = []
-            for idx, i in enumerate(reac_geo):
-                i_list = i.split()
-                atom = i_list[0] + " "
-                k = i_list[1:] + [""]
-                if not self.constraint:
-                    l = " 1 ".join(k)
-                else:
-                    if idx in self.constraint:
-                        l = " 0 ".join(k)
-                    else:
-                        l = " 1 ".join(k)
-                out = atom + l
-                reactant_geometry.append(out)
-            reactant_geometry = "\n".join(reactant_geometry)
-
-            # reactant_mol.setCoordsFromMol(reac_mol_copy)
+            
+            reactant_geometry = self.gen_geo_inp(reactant_mol, constraint=self.constraint)
+            product_geometry = self.gen_geo_inp(product_mol, constraint=self.constraint)
 
             self.finalize(start_time, 'arrange')
             return reactant_geometry, product_geometry
@@ -178,8 +146,27 @@ class Mopac(object):
         """
         Finalize the job.
         """
-        self.logger.info('Total {} run time: {:.1f} s'.format(
-            jobname, time.time() - start_time))
+        self.logger.info('Total {} run time: {:.1f} s'.format(jobname, time.time() - start_time))
+
+    @staticmethod
+    def gen_geo_inp(mol_object, constraint=None):
+        geometry = str(mol_object.toNode()).splitlines()
+        product_geometry = []
+        for idx, i in enumerate(geometry):
+            i_list = i.split()
+            atom = i_list[0] + " "
+            k = i_list[1:] + [""]
+            if not constraint:
+                l = " 1 ".join(k)
+            else:
+                if idx in constraint:
+                    l = " 0 ".join(k)
+                else:
+                    l = " 1 ".join(k)
+            out = atom + l
+            product_geometry.append(out)
+        product_geometry = "\n".join(product_geometry)
+        return product_geometry
 
     @staticmethod
     def check_bond_length(product, add_bonds):
@@ -202,26 +189,26 @@ class Mopac(object):
             dist = [0]
         return float(max(dist))
 
+    @staticmethod
+    def getHeatofFormation(tmpdir, target='reactant.out'):
+        """
+        if Error return False, which HF may be 0.0
+        """
+        input_path = path.join(tmpdir, target)
+        with open(input_path, 'r') as f:
+            lines = f.readlines()
+        for idx, line in enumerate(lines):
+            if line.strip().startswith('FINAL HEAT OF FORMATION'):
+                break
+        string = lines[idx].split()
+        if string[0] == 'FINAL':
+            HeatofFormation = string[5]
+        else:
+            HeatofFormation = False
+        return HeatofFormation
 
-def getHeatofFormation(tmpdir, target='reactant.out'):
-    """
-    if Error return False, which HF may be 0.0
-    """
-    input_path = path.join(tmpdir, target)
-    with open(input_path, 'r') as f:
-        lines = f.readlines()
-    for idx, line in enumerate(lines):
-        if line.strip().startswith('FINAL HEAT OF FORMATION'):
-            break
-    string = lines[idx].split()
-    if string[0] == 'FINAL':
-        HeatofFormation = string[5]
-    else:
-        HeatofFormation = False
-    return HeatofFormation
-
-
-def runMopac(tmpdir, target='reactant.mop'):
-    input_path = path.join(tmpdir, target)
-    p = Popen(['mopac', input_path])
-    p.wait()
+    @staticmethod
+    def runMopac(tmpdir, target='reactant.mop'):
+        input_path = path.join(tmpdir, target)
+        p = Popen(['mopac', input_path])
+        p.wait()

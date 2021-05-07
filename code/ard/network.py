@@ -22,7 +22,6 @@ from quantum import QuantumError
 from node import Node
 from pgen import Generate
 from mopac import Mopac
-import mopac
 from _xtb import XTB
 
 # database
@@ -137,8 +136,7 @@ class Network(object):
                 reac_mol_copy = mol_object.copy()
                 dir_path = self.gen_geometry(mol_object, mol, reac_mol_copy, add_bonds[index], break_bonds[index])
                 product_inchi_key = mol.write('inchiKey').strip()
-                self.logger.info('\nReactant inchi key: {}\nProduct inchi key: {}\nReactant smiles: {}\nProduct smiles: {}\nDirectory path: {}\n'.format(
-                                    reactant_inchi_key, product_inchi_key, mol_object.write('can').split(), mol.write('can').split(), dir_path))
+                self.logger.info(f"\nReactant inchi key: {reactant_inchi_key}\nProduct inchi key: {product_inchi_key}\nReactant smiles: {mol_object.write('can').split()}\nProduct smiles: {mol.write('can').split()}\nDirectory path: {dir_path}\n")
 
                 qm_collection.insert_one({
                     'reaction': [reactant_inchi_key, product_inchi_key],
@@ -235,22 +233,23 @@ class Network(object):
             dH = (H298_prod - H298_reac) * 627.5095
 
         if dH < self.dh_cutoff:
-            self.logger.info('Delta H is {}, smaller than threshold'.format(dH))
+            self.logger.info(f'Delta H is {dH}, smaller than threshold')
             reactant_output = path.join(self.reactant_path, 'tmp/reactant.xyz')
             product_output = path.join(self.reactant_path, 'tmp/product.xyz')
 
             dir_path = self.xtb_output(reactant_output, product_output, form_bonds, break_bonds, prod_mol)
             reactant_inchi_key = reac_obj.write('inchiKey').strip()
+            reactant_smiles = reac_obj.write('can').split()
             product_inchi_key = prod_mol.write('inchiKey').strip()
-            self.logger.info('\nReactant inchi key: {}\nProduct inchi key: {}\nReactant smiles: {}\nProduct smiles: {}\nDirectory path: {}\n'.format(
-                            reactant_inchi_key, product_inchi_key, reac_obj.write('can').split(), prod_mol.write('can').split(), dir_path))
+            product_smiles = prod_mol.write('can').split()
+            self.logger.info(f'\nReactant inchi key: {reactant_inchi_key}\nProduct inchi key: {product_inchi_key}\nReactant smiles: {reactant_smiles}\nProduct smiles: {product_smiles}\nDirectory path: {dir_path}\n')
 
             qm_collection.insert_one({
                 'reaction': [reactant_inchi_key, product_inchi_key],
-                'reactant_smiles': reac_obj.write('can').split()[0],
+                'reactant_smiles': reactant_smiles,
                 'reactant_inchi_key': reactant_inchi_key,
                 'product_inchi_key': product_inchi_key,
-                'product_smiles': prod_mol.write('can').split()[0],
+                'product_smiles': product_smiles,
                 'reactant_xtb_hf': H298_reac,
                 'product_xtb_hf': H298_prod,
                 'path': dir_path,
@@ -258,11 +257,11 @@ class Network(object):
                 'generations': self.generations,
                 'use_irc': self.use_irc
             })
-            self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
+            self.logger.info(f'Finished {self.count}/{total_prod_num}\n')
             return 1
         else:
-            self.logger.info('Delta H is {}, greater than threshold'.format(dH))
-            self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
+            self.logger.info(f'Delta H is {dH}, greater than threshold')
+            self.logger.info(f'Finished {self.count}/{total_prod_num}\n')
             return 0
 
     def get_mopac_H298(self, mol_object, charge=0, multiplicity='SINGLET'):
@@ -272,29 +271,14 @@ class Network(object):
             shutil.rmtree(tmpdir)
         os.mkdir(tmpdir)
 
-        reac_geo = str(mol_object.toNode()).splitlines()
-        reactant_geometry = []
-        for idx, i in enumerate(reac_geo):
-            i_list = i.split()
-            atom = i_list[0] + " "
-            k = i_list[1:] + [""]
-            if not self.constraint:
-                l = " 1 ".join(k)
-            else:
-                if idx in self.constraint:
-                    l = " 0 ".join(k)
-                else:
-                    l = " 1 ".join(k)
-            out = atom + l
-            reactant_geometry.append(out)
-        reactant_geometry = "\n".join(reactant_geometry)
+        reactant_geometry = Mopac().gen_geo_inp(mol_object, constraint=self.constraint)
 
         with open(reactant_path, 'w') as f:
-            f.write("NOSYM CHARGE={} {} {}\n\n".format(
-                charge, multiplicity, self.mopac_method))
+            f.write("NOSYM CHARGE={} {} {}\n\n".format(charge, multiplicity, self.mopac_method))
             f.write("\n{}".format(reactant_geometry))
-        mopac.runMopac(tmpdir, 'reactant.mop')
-        mol_hf = mopac.getHeatofFormation(tmpdir, 'reactant.out')
+
+        Mopac().runMopac(tmpdir, 'reactant.mop')
+        mol_hf = Mopac().getHeatofFormation(tmpdir, 'reactant.out')
         return float(mol_hf)
 
     def get_xtb_H298(self, config_path):
@@ -307,7 +291,8 @@ class Network(object):
 
         shutil.copyfile(path.join(self.ard_path, 'reactant.xyz'), reactant_path)
         try:
-            mol_hf = self.runXTB(tmpdir, config_path, 'reactant.xyz')
+            XTB().runXTB(tmpdir, config_path, constraint=self.constraint, target='reactant.xyz')
+            mol_hf = XTB().getE(tmpdir, target='reactant.xyz')
         except:
             raise Exception('The initial reactant energy calculation by xtb is fail.')
         return float(mol_hf)
@@ -403,34 +388,13 @@ class Network(object):
         return output_dir
 
     @staticmethod
-    def prepare_mol(reactant_mol):
-        """
-        Covert xyz to mol.
-        """
-        atom_symbol = []
-        coords = []
-        for mol in reactant_mol.mols:
-            atoms = tuple(atom.atomicnum for atom in mol)
-            for atom in atoms:
-                atom_symbol.append(openbabel.GetSymbol(atom))
-            coords.append(mol.toNode().coords)
-        coords = np.concatenate(coords)
-        coords = coords.reshape(-1, 3)
-        coords = "\n".join(
-                ["{} {} {} {}".format(a, *c) for a, c in zip(atom_symbol, coords)]
-        )
-        xyz = f"{len(atom_symbol)}\n\n{coords}"
-        mol = pybel.readstring("xyz", xyz)
-        return gen3D.Molecule(mol.OBMol)
-
-    @staticmethod
     def dir_check(subdir, b_dirname, num = 1):
         """
         When parallely run job, the dir is constructed but data is not on database yet
         """
         check = True
         while check:
-            new_name = '{}_{}'.format(b_dirname, num)
+            new_name = f'{b_dirname}_{num}'
             if path.exists(path.join(subdir, new_name)):
                 num += 1
             else:
@@ -447,8 +411,7 @@ class Network(object):
         nproduct_atoms = len(product.getListOfAtoms())
 
         with open(output, 'w') as f:
-            f.write('{}\n\n{}\n{}\n\n{}\n'.format(
-                nreac_atoms, reactant, nproduct_atoms, product))
+            f.write(f'{nreac_atoms}\n\n{reactant}\n{nproduct_atoms}\n\n{product}\n')
         return output
 
     @staticmethod
@@ -459,17 +422,12 @@ class Network(object):
         output = path.join(kwargs['output_dir'], filename)
 
         if symbol is not None and geometry is not None:
-            natoms = len(symbol)
+            coords = "\n".join(["{} {:10.08f} {:10.08f} {:10.08f}".format(a, *c) for a, c in zip(symbol, geometry)])
             with open(output, 'w') as f:
-                f.write(str(natoms))
-                f.write('\n\n')
-                for atom, xyz in zip(symbol, geometry):
-                    f.write('{}  {}  {}  {}\n'.format(
-                        atom, xyz[0], xyz[1], xyz[2]))
+                f.write(f"{len(symbol)}\n\n{coords}")
         else:
-            natoms = len(_input.getListOfAtoms())
             with open(output, 'w') as f:
-                f.write('{}\n\n{}'.format(natoms, _input))
+                f.write(f'{len(_input.getListOfAtoms())}\n\n{_input}')
 
     @staticmethod
     def makeisomerFile(add_bonds, break_bonds, **kwargs):
@@ -482,13 +440,13 @@ class Network(object):
         with open(output, 'w') as f:
             if len(add_bonds) != 0:
                 for i in add_bonds:
-                    f.write('ADD {} {}\n'.format(i[0]+1, i[1]+1))
+                    f.write(f'ADD {i[0]+1} {i[1]+1}\n')
             if len(break_bonds) != 0:
                 for i in break_bonds:
-                    f.write('BREAK {} {}\n'.format(i[0]+1, i[1]+1))
+                    f.write(f'BREAK {i[0]+1} {i[1]+1}\n')
 
     @staticmethod
-    def get_mopac_opt_geometry(output, **kwargs):
+    def get_mopac_opt_geometry(output):
         with open(output, 'r') as f:
             log = f.read().splitlines()
 
@@ -504,24 +462,3 @@ class Network(object):
                         coords.append([float(c) for c in data[2:]])
                     else:
                         return symbols, np.array(coords)
-
-    def runXTB(self, tmpdir, config_path, target='reactant.xyz'):
-        input_path = path.join(tmpdir, target)
-        outname = '{}.xyz'.format(target.split('.')[0])
-        output_path = path.join(tmpdir, 'xtbopt.xyz')
-        new_output_path = path.join(tmpdir, outname)
-        constraint_path = path.join(config_path, 'xtb_constraint.inp')
-
-        if self.constraint == None:
-            p = Popen(['xtb', input_path, '--opt', 'tight'])
-            p.wait()
-            os.rename(output_path, new_output_path)
-        else:
-            p = Popen(['xtb', '--opt', 'tight', '--input', constraint_path, input_path])
-            p.wait()
-            os.rename(output_path, new_output_path)
-
-        with open(input_path, 'r') as f:
-            lines = f.readlines()
-        HeatofFormation = lines[1].strip().split()[1]
-        return HeatofFormation

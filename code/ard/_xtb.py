@@ -64,7 +64,7 @@ class XTB(object):
                 f.write(reac_geo)
             start_time = time.time()
             try:
-                self.runXTB(tmpdir, config_path, 'reactant.xyz')
+                self.runXTB(tmpdir, config_path, constraint=self.constraint, target='reactant.xyz')
                 reactant_energy = self.getE(tmpdir, 'reactant.xyz')
             except:
                 self.logger.info('xTB reactant fail')
@@ -73,7 +73,7 @@ class XTB(object):
             with open(product_path, 'w') as f:
                 f.write(prod_geo)
             try:
-                self.runXTB(tmpdir, config_path, 'product.xyz')
+                self.runXTB(tmpdir, config_path, constraint=self.constraint, target='product.xyz')
                 product_energy = self.getE(tmpdir, 'product.xyz')
             except:
                 self.logger.info('xTB product fail')
@@ -166,7 +166,8 @@ class XTB(object):
             dist = [0]
         return float(max(dist))
 
-    def getE(self, tmpdir, target='reactant.xyz'):
+    @staticmethod
+    def getE(tmpdir, target='reactant.xyz'):
         """
         Here the energy is Eh (hartree)
         """
@@ -176,14 +177,15 @@ class XTB(object):
         HeatofFormation = lines[1].strip().split()[1]
         return HeatofFormation
 
-    def runXTB(self, tmpdir, config_path, target='reactant.xyz'):
+    @staticmethod
+    def runXTB(tmpdir, config_path, constraint=True, target='reactant.xyz'):
         input_path = path.join(tmpdir, target)
         outname = '{}.xyz'.format(target.split('.')[0])
         output_path = path.join(tmpdir, 'xtbopt.xyz')
         constraint_path = path.join(config_path, 'xtb_constraint.inp')
 
         new_output_path = path.join(tmpdir, outname)
-        if self.constraint == None:
+        if constraint == None:
             p = Popen(['xtb', input_path, '--opt', 'tight'])
             p.wait()
             os.rename(output_path, new_output_path)
