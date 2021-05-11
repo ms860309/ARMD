@@ -27,9 +27,6 @@ from _xtb import XTB
 # database
 from connect import db
 
-info = psutil.virtual_memory()
-
-
 class Network(object):
     def __init__(self, logger, **kwargs):
         self.logger = logger
@@ -64,9 +61,9 @@ class Network(object):
         gen = Generate(mol_object, **kwargs)
         self.logger.info('Generating all possible products...')
         gen.generateProducts()
-        prod_mols = gen.get_prods()
-        add_bonds = gen.get_add_bonds()
-        break_bonds = gen.get_break_bonds()
+        prod_mols = Generate.get_prods()
+        add_bonds = Generate.get_add_bonds()
+        break_bonds = Generate.get_break_bonds()
         prod_mols_filtered = []
         self.logger.info(f'{len(prod_mols)} possible products are generated\n')
 
@@ -271,14 +268,14 @@ class Network(object):
             shutil.rmtree(tmpdir)
         os.mkdir(tmpdir)
 
-        reactant_geometry = Mopac().gen_geo_inp(mol_object, constraint=self.constraint)
+        reactant_geometry = Mopac.gen_geo_inp(mol_object, constraint=self.constraint)
 
         with open(reactant_path, 'w') as f:
             f.write("NOSYM CHARGE={} {} {}\n\n".format(charge, multiplicity, self.mopac_method))
             f.write("\n{}".format(reactant_geometry))
 
-        Mopac().runMopac(tmpdir, 'reactant.mop')
-        mol_hf = Mopac().getHeatofFormation(tmpdir, 'reactant.out')
+        Mopac.runMopac(tmpdir, 'reactant.mop')
+        mol_hf = Mopac.getHeatofFormation(tmpdir, 'reactant.out')
         return float(mol_hf)
 
     def get_xtb_H298(self, config_path):
@@ -291,8 +288,8 @@ class Network(object):
 
         shutil.copyfile(path.join(self.ard_path, 'reactant.xyz'), reactant_path)
         try:
-            XTB().runXTB(tmpdir, config_path, constraint=self.constraint, target='reactant.xyz')
-            mol_hf = XTB().getE(tmpdir, target='reactant.xyz')
+            XTB.runXTB(tmpdir, config_path, constraint=self.constraint, target='reactant.xyz')
+            mol_hf = XTB.getE(tmpdir, target='reactant.xyz')
         except:
             raise Exception('The initial reactant energy calculation by xtb is fail.')
         return float(mol_hf)

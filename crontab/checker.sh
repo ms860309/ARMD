@@ -1,4 +1,4 @@
-export BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../AutomaticReactionDiscovery" && pwd )"
+export BASE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../AutomatedReactionMechanismDiscovery" && pwd )"
 export PYTHONPATH=$PYTHONPATH:$BASE_DIR
 export PATH=$HOME/anaconda3/bin:$PATH
 

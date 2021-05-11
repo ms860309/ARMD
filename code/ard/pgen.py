@@ -66,8 +66,8 @@ class Generate(object):
         self.reactant_inchikey = [reac_mol.write('inchiKey').strip()]
         self.reac_mol_graph = kwargs['graph']
         self.bond_dissociation_cutoff = float(kwargs['bond_dissociation_cutoff'])
-        self.nform = kwargs['nform']
-        self.nbreak = kwargs['nbreak']
+        self.nform = int(kwargs['nform'])
+        self.nbreak = int(kwargs['nbreak'])
         self.atoms = None
         self.prod_mols, self.add_bonds, self.break_bonds = [], [], []
         if kwargs['use_inchi_key'] == '1':
@@ -495,15 +495,12 @@ class Generate(object):
                 return True
         return False
 
-    @property
     def get_prods(self):
         return self.prod_mols
 
-    @property
     def get_add_bonds(self):
         return self.add_bonds
 
-    @property
     def get_break_bonds(self):
         return self.break_bonds
 

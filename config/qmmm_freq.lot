@@ -8,7 +8,7 @@ max_scf_cycles     250
 QM_MM_INTERFACE    Zeolite
 force_field        charmm27
 user_connect       TRUE
-symmetry           off
+symmetry           FALSE
 sym_ignore         TRUE
 print_input        TRUE
 qmmm_print         FALSE
