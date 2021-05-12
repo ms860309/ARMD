@@ -954,15 +954,14 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
         acceptable_condition = ['forward equal to reactant',
                                 'backward equal to reactant']
 
-        finished_reactant_list = []
-        finished_reactant_smiles_part_list = []
+        reactant_part_smiles, finished_reactant_list, finished_reactant_smiles_part_list = [], [], []
         for i in should_adds:
             finished_reactant_list.append(i['reactant_inchi_key'])
             reactant_smiles = i['reactant_smiles'].split('.')
             if len(reactant_smiles) > 1:
                 for rs in reactant_smiles:
                     for metal in ['Sn', 'W', 'Mo', 'Al']:
-                        if metal not in rs and 'C' in ps:
+                        if metal not in rs and 'C' in rs:
                             reactant_part_smiles.append(rs)
                 reactant_part_smiles = set(reactant_part_smiles)
             finished_reactant_smiles_part_list.append(reactant_part_smiles)
