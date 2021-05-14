@@ -396,6 +396,7 @@ def create_irc_sub_file(TS_dir_path:str, IRC_dir_path:str, config_path:str, ncpu
                     f"start=$(date +\'%s\')\n")
     target_path = f'cd {IRC_dir_path}\n'
     initialization = 'source ~/.bashrc\n'
+    calculator = 'module load orca\n'
     env = 'conda activate ard\n'
     scratch = ('export TMPDIR=/tmp/$PBS_JOBID\n'
                 'mkdir -p $TMPDIR\n')
@@ -405,7 +406,7 @@ def create_irc_sub_file(TS_dir_path:str, IRC_dir_path:str, config_path:str, ncpu
             f"echo \"It took $(($(date +\'%s\') - $start)) seconds\"")
 
     with open(subfile, 'w') as f:
-        f.write(f'{shell}{pbs_setting}{target_path}{initialization}{env}{scratch}{command}{clean}')
+        f.write(f'{shell}{pbs_setting}{target_path}{initialization}{calculator}{env}{scratch}{command}{clean}')
 
     return subfile
 
