@@ -787,7 +787,7 @@ def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num
             else:
                 os.mkdir(qmmm_reactant_dir)
                 os.chdir(qmmm_reactant_dir)
-            subfile_1 = create_qmmm_freq_opt(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads, restart=True)
+            subfile_1 = create_qmmm_freq_opt(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads, restart=restart)
 
             commands_1 = f'qsub {subfile_1}'
             process = subprocess.Popen([commands_1],
@@ -810,7 +810,7 @@ def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num
             else:
                 os.mkdir(qmmm_product_dir)
                 os.chdir(qmmm_product_dir)
-            subfile_2 = create_qmmm_freq_opt(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads, restart=True)
+            subfile_2 = create_qmmm_freq_opt(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads, restart=restart)
 
             commands_2 = f'qsub {subfile_2}'
             process = subprocess.Popen([commands_2],

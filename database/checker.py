@@ -2014,8 +2014,8 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=70.0, qmmm=True)
 
     check_qmmm_opt_jobs(qm_collection)
-    check_qmmm_freq_opt_jobs(qm_collection, restart_times = 5)
-    check_qmmm_freq_ts_jobs(qm_collection, restart_times = 6)
+    check_qmmm_freq_opt_jobs(qm_collection, restart_times = 2)
+    check_qmmm_freq_ts_jobs(qm_collection, restart_times = 3)
     check_qmmm_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_ts_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_refine_jobs(qm_collection, reactions_collection)
