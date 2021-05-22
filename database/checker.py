@@ -524,7 +524,10 @@ def select_irc_opt_finished_target(qm_collection:object) -> list:
                    ['job_success']}},
                  {'irc_backward_opt_status':
                   {'$in':
-                   ['job_success']}}
+                   ['job_success']}},
+                 {'irc_equal':
+                  {'$nin':
+                   ['waiting for checking']}}
              ]
              }
     targets = list(qm_collection.find(query))
@@ -1138,7 +1141,10 @@ def select_qmmm_opt_finished_target(qm_collection:object) -> list:
                    ['job_success']}},
                  {'qmmm_opt_product_status':
                   {'$in':
-                   ['job_success']}}
+                   ['job_success']}},
+                 {'qmmm_freq_opt_status':
+                  {'$in':
+                   ['job_unrun']}}
              ]}
     targets = list(qm_collection.find(query))
     return targets
@@ -1244,6 +1250,7 @@ def select_qmmm_freq_opt_finished_target(qm_collection:object) -> list:
     1. status is job_launched or job_running
     Returns a list of targe
     """
+
     query = {'$and':
              [
                  {"qmmm_freq_opt_reactant_status":
@@ -1251,7 +1258,10 @@ def select_qmmm_freq_opt_finished_target(qm_collection:object) -> list:
                    ['job_success']}},
                  {'qmmm_freq_opt_product_status':
                   {'$in':
-                   ['job_success']}}
+                   ['job_success']}},
+                 {'qmmm_freq_status':
+                  {'$nin':
+                   ['job_unrun']}}
              ]}
     targets = list(qm_collection.find(query))
     return targets
@@ -1365,7 +1375,7 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, restart_times:int = 2):
 QMMM FREQ
 """
 
-def select_qmmm_freq_finished_target() -> list:
+def select_qmmm_freq_finished_target(qm_collection:object) -> list:
     """
     This method is to inform job checker which targets 
     to check, which need meet one requirement:
@@ -1373,7 +1383,6 @@ def select_qmmm_freq_finished_target() -> list:
     Returns a list of targe
     """
 
-    qm_collection = db['qm_calculate_center']
     query = {'$and':
              [
                  {"qmmm_freq_reactant_status":
@@ -1381,7 +1390,10 @@ def select_qmmm_freq_finished_target() -> list:
                    ['job_success']}},
                  {'qmmm_freq_product_status':
                   {'$in':
-                   ['job_success']}}
+                   ['job_success']}},
+                 {'qmmm_refine_status':
+                  {'$nin':
+                   ['job_unrun']}}
              ]
              }
     targets = list(qm_collection.find(query))
@@ -1498,15 +1510,11 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
             reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
-    finished_targets = select_qmmm_freq_finished_target()
+    finished_targets = select_qmmm_freq_finished_target(qm_collection)
     for target in finished_targets:
-        reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
         update_field = {
             'qmmm_freq_status': 'job_success', 'qmmm_refine_status':'job_unrun'
             }
-        # qmmm_delta_H = target['qmmm_freq_product_energy'] - target['qmmm_freq_reactant_energy']
-        # update_field_reaction = {'qmmm_delta_H':qmmm_delta_H}
-        # reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
         qm_collection.update_one(target, {"$unset": {'qmmm_freq_reactant_status': '', 'qmmm_freq_product_status': '',
                                                      'qmmm_freq_reactant_jobid': '', 'qmmm_freq_product_jobid': ''}, "$set": update_field}, True)
 
@@ -1662,6 +1670,9 @@ def select_qmmm_refine_finished_target(qm_collection:object) -> list:
                    ['job_success']}},
                  {"qmmm_refine_ts_status":
                   {"$in":
+                   ['job_success']}},
+                 {"qmmm_refine_status":
+                  {"$nin":
                    ['job_success']}}
              ]}
     targets = list(qm_collection.find(query))
@@ -1728,6 +1739,8 @@ def check_qmmm_refine_jobs(qm_collection:object, reactions_collection:object):
                 update_field_reaction = {
                     'qmmm_refine_reactant_status': new_status
                     }
+            reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
+            reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
     targets = select_targets(qm_collection, job_name='qmmm_refine_product')
@@ -1804,11 +1817,8 @@ def check_qmmm_refine_jobs(qm_collection:object, reactions_collection:object):
         update_field = {
             'qmmm_refine_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier
             }
-        update_field_reaction = {
-            'qmmm_refine_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier
-            }
         reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
-        reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
+        reactions_collection.update_one(reaction_target, {"$set": update_field}, True)
         qm_collection.update_one(target, {"$unset": {'qmmm_refine_reactant_status': '', 'qmmm_refine_reactant_jobid': '',
                                                      'qmmm_refine_product_status': '', 'qmmm_refine_product_jobid': '',
                                                      'qmmm_refine_ts_status': '', 'qmmm_refine_ts_jobid': ''}, 
