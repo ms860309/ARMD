@@ -1825,7 +1825,7 @@ def check_qmmm_refine_jobs(qm_collection:object, reactions_collection:object):
         delta_H = (target['qmmm_sp_product'] - target['qmmm_sp_reactant']) * 627.5095
         barrier = (target['qmmm_sp_ts'] - target['qmmm_sp_reactant']) * 627.5095
         update_field = {
-            'qmmm_refine_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier, 'qmmm_sp_ts':target['qmmm_sp_ts'], 'qmmm_sp_product':target['qmmm_sp_product'], 'qmmm_sp_reactant':target['qmmm_sp_reactant']
+            'qmmm_refine_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier
             }
         reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
         reactions_collection.update_one(reaction_target, {"$set": update_field}, True)
