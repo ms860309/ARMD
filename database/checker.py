@@ -1679,14 +1679,14 @@ def select_qmmm_refine_finished_target(qm_collection:object) -> list:
     return targets
 
 def check_qmmm_refine_content(dir_path:str, direction:str='reactant') -> Union[str, float]:
-    qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
-    qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT/')
-    qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
     if direction == 'reactant':
+        qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
         output_path = path.join(qmmm_reactant_dir, 'qmmm_sp.out')
     elif direction == 'product':
+        qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT/')
         output_path = path.join(qmmm_product_dir, 'qmmm_sp.out')
-    else:
+    elif direction == 'ts':
+        qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
         output_path = path.join(qmmm_ts_dir, 'qmmm_sp.out')
 
     try:
@@ -1798,14 +1798,24 @@ def check_qmmm_refine_jobs(qm_collection:object, reactions_collection:object):
                 update_field = {
                     'qmmm_refine_ts_status': new_status, 'qmmm_sp_ts':energy
                     }
+                update_field_reaction = {
+                    'qmmm_refine_ts_status': new_status, 'qmmm_sp_ts':energy
+                    }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
+                    'qmmm_refine_ts_status': new_status
+                    }
+                update_field_reaction = {
                     'qmmm_refine_ts_status': new_status
                     }
             else:
                 update_field = {
                     'qmmm_refine_ts_status': new_status
                     }
+                update_field_reaction = {
+                    'qmmm_refine_ts_status': new_status
+                    }
+
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
@@ -1815,7 +1825,7 @@ def check_qmmm_refine_jobs(qm_collection:object, reactions_collection:object):
         delta_H = (target['qmmm_sp_product'] - target['qmmm_sp_reactant']) * 627.5095
         barrier = (target['qmmm_sp_ts'] - target['qmmm_sp_reactant']) * 627.5095
         update_field = {
-            'qmmm_refine_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier
+            'qmmm_refine_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier, 'qmmm_sp_ts':target['qmmm_sp_ts'], 'qmmm_sp_product':target['qmmm_sp_product'], 'qmmm_sp_reactant':target['qmmm_sp_reactant']
             }
         reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
         reactions_collection.update_one(reaction_target, {"$set": update_field}, True)
