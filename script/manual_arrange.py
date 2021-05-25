@@ -145,11 +145,11 @@ def runXTB(tmpdir, target='reactant.xyz'):
         constraint_path = path.join(config_path, 'xtb_constraint.inp')
     new_output_path = path.join(tmpdir, outname)
     if constraint == None:
-        p = Popen(['xtb', input_path, '--opt', 'tight'])
+        p = Popen(['xtb', input_path, '--gfn', '1', '--opt', 'tight'])
         p.wait()
         os.rename(output_path, new_output_path)
     else:
-        p = Popen(['xtb', '--opt', 'tight', '--input', constraint_path, input_path])
+        p = Popen(['xtb', '--opt', 'tight', '--gfn', '1', '--input', constraint_path, input_path])
         p.wait()
         os.rename(output_path, new_output_path)
 
@@ -200,8 +200,8 @@ rb = [(22, 27, 1), (20, 26, 1), (16, 18, 1), (22, 29, 1), (20, 28, 1), (16, 22, 
 
 # Isomerization Hydroxyacetone --> 2-Hydroxypropanal (Acetol)
 product_bonds = [(22, 27, 1), (20, 26, 1), (16, 18, 1), (22, 29, 1), (20, 28, 1), (16, 22, 1), (22, 34, 1), (15, 22, 1), (20, 30, 1), (14, 20, 1), 
-                (0, 7, 1), (21, 32, 1), (21, 33, 1), (0, 6, 1), (0, 1, 1), (0, 5, 1), (11, 12, 1), (12, 21, 1), (11, 14, 1), (15, 17, 1), (3, 8, 1), (1, 2, 2), 
-                (11, 13, 1), (21, 31, 1), (1, 3, 1), (3, 9, 1), (3, 4, 1), (13, 19, 1), (19, 24, 1), (19, 23, 1), (19, 25, 1), (11, 15, 1), (11, 16, 1), (4, 11, 1), (10, 14, 1)]
+(0, 7, 1), (21, 32, 1), (21, 33, 1), (0, 6, 1), (0, 1, 1), (2, 5, 1), (11, 12, 1), (12, 21, 1), (11, 14, 1), (15, 17, 1), (3, 8, 1), (1, 2, 1), 
+(11, 13, 1), (21, 31, 1), (1, 3, 1), (3, 9, 1), (0, 4, 1), (4, 10, 1), (13, 19, 1), (19, 24, 1), (19, 23, 1), (19, 25, 1), (11, 15, 1), (11, 16, 1)]
 
 """
 

@@ -62,9 +62,9 @@ class Network(object):
         gen = Generate(mol_object, **kwargs)
         self.logger.info('Generating all possible products...')
         gen.generateProducts()
-        prod_mols = Generate.get_prods()
-        add_bonds = Generate.get_add_bonds()
-        break_bonds = Generate.get_break_bonds()
+        prod_mols = gen.get_prods()
+        add_bonds = gen.get_add_bonds()
+        break_bonds = gen.get_break_bonds()
         prod_mols_filtered = []
         self.logger.info(f'{len(prod_mols)} possible products are generated\n')
 
@@ -99,7 +99,7 @@ class Network(object):
                 config_collection.update_one(targets[0], {"$set": {'reactant_energy': H298_reac, 'use_irc': self.use_irc}}, True)
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
-                    if self.filter_dh_xtb(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
+                    if self.filter_dh_xtb(mol_object, prod_mol, self.cluster_bond, add_bonds[prod_mols.index(prod_mol)], 
                                             break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, config_path = kwargs['config_path'], refH=H298_reac):
                         prod_mols_filtered.append(prod_mol)
                     mol_object.setCoordsFromMol(mol_object_copy)
@@ -107,7 +107,7 @@ class Network(object):
                 H298_reac = targets[0]['reactant_energy']
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
-                    if self.filter_dh_xtb(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
+                    if self.filter_dh_xtb(mol_object, prod_mol,self.cluster_bond, add_bonds[prod_mols.index(prod_mol)], 
                                             break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, config_path = kwargs['config_path'], refH=H298_reac):
                         prod_mols_filtered.append(prod_mol)
                     mol_object.setCoordsFromMol(mol_object_copy)
@@ -215,11 +215,11 @@ class Network(object):
             self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
             return 0
 
-    def filter_dh_xtb(self, reac_obj, cluster_bond, prod_mol, form_bonds, break_bonds, total_prod_num, qm_collection, config_path, refH=None):
+    def filter_dh_xtb(self, reac_mol, prod_mol, cluster_bond, form_bonds, break_bonds, total_prod_num, qm_collection, config_path, refH=None):
         self.count += 1
-        xtb_object = XTB(reac_obj, prod_mol, self.forcefield, self.constraintff_alg, form_bonds, break_bonds,
+        xtb_object = XTB(self.forcefield, self.constraintff_alg, form_bonds, break_bonds,
                          self.logger, total_prod_num, self.count, self.constraint, self.fixed_atom, cluster_bond, self.xtb_method)
-        H298_reac, H298_prod = xtb_object.xtb_get_H298(self.reactant_path, config_path)
+        H298_reac, H298_prod = xtb_object.xtb_get_H298(reac_mol, prod_mol, self.reactant_path, config_path)
 
         if H298_prod == False or H298_reac == False:
             return 0
@@ -236,8 +236,8 @@ class Network(object):
             product_output = path.join(self.reactant_path, 'tmp/product.xyz')
 
             dir_path = self.xtb_output(reactant_output, product_output, form_bonds, break_bonds, prod_mol)
-            reactant_inchi_key = reac_obj.write('inchiKey').strip()
-            reactant_smiles = reac_obj.write('can').split()
+            reactant_inchi_key = reac_mol.write('inchiKey').strip()
+            reactant_smiles = reac_mol.write('can').split()
             product_inchi_key = prod_mol.write('inchiKey').strip()
             product_smiles = prod_mol.write('can').split()
             self.logger.info(f'\nReactant inchi key: {reactant_inchi_key}\nProduct inchi key: {product_inchi_key}\nReactant smiles: {reactant_smiles}\nProduct smiles: {product_smiles}\nDirectory path: {dir_path}\n')

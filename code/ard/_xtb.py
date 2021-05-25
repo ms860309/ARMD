@@ -25,9 +25,7 @@ class XTBError(Exception):
 
 class XTB(object):
 
-    def __init__(self, reactant_mol, product_mol, forcefield, constraintff_alg, form_bonds, break_bonds, logger, count, num, constraint=None, fixed_atom=None, cluster_bond = None, xtb_method = 'gfn2'):
-        self.reactant_mol = reactant_mol
-        self.product_mol = product_mol
+    def __init__(self, forcefield, constraintff_alg, form_bonds, break_bonds, logger, count, num, constraint=None, fixed_atom=None, cluster_bond = None, xtb_method = 'gfn2'):
         self.forcefield = forcefield
         self.constraintff_alg = constraintff_alg
         self.form_bonds = form_bonds
@@ -40,7 +38,7 @@ class XTB(object):
         self.cluster_bond = cluster_bond
         self.xtb_method = xtb_method
 
-    def xtb_get_H298(self, _reactant_path, config_path):
+    def xtb_get_H298(self, reactant_mol, product_mol, _reactant_path, config_path):
         """
         Create a directory folder called "tmp" for mopac calculation
         Create a input file called "input.mop" for mopac calculation
@@ -50,7 +48,7 @@ class XTB(object):
         reactant_path = path.join(tmpdir, 'reactant.xyz')
         product_path = path.join(tmpdir, 'product.xyz')
 
-        reac_geo, prod_geo = self.genInput(self.reactant_mol, self.product_mol)
+        reac_geo, prod_geo = self.genInput(reactant_mol, product_mol)
 
         if reac_geo == False and prod_geo == False:
             return False, False
