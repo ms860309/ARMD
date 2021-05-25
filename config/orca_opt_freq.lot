@@ -1,8 +1,8 @@
-! PBE0 D3BJ def2-SVP rijcosx def2/J TIGHTSCF TightOpt Freq Grid4 GridX4 NoFinalGrid noautostart miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
+! PBE0 D3BJ def2-SVP rijcosx def2/J TIGHTSCF TightOpt Freq noautostart miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
 
 %geom
 Recalc_Hess 150
-maxiter 298
+maxiter 300
 MaxStep 0.10  # 0.10 a.u.
 Constraints  # The atom you want to constraint, index from 0.
 	{C 23 C}
@@ -20,7 +20,7 @@ Constraints  # The atom you want to constraint, index from 0.
 	end
 end
 
-%maxcore 3000 # memory per core
+%maxcore 4000 # memory per core
 
 %scf
 maxiter 300  # SCF interations.

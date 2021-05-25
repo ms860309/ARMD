@@ -175,3 +175,13 @@ for reaction in reactions:
     # reactions_collection.update_one(reaction, {"$unset": {'qmmm_ts_freq_status':"", 'qmmm_freq_reactant_status':"", 'qmmm_freq_product_status':"", 'qmmm_ts_energy':"", 'qmmm_freq_reactant_energy':'', 'qmmm_freq_product_energy':""}}, True)
     # qm_collection.update_one(qm_target, {"$unset": {'qmmm_freq_ts_jobid':'', 'qmmm_freq_opt_status':'', 'qmmm_freq_product_jobid':'', 'qmmm_freq_product_status':'', 'qmmm_freq_reactant_jobid':'', 'qmmm_freq_reactant_status':'', 'qmmm_ts_freq_status':'', 'qmmm_ts_freq_jobid':'', 'qmmm_freq_opt_product_status':'', 'qmmm_freq_opt_reactant_status':'', 'qmmm_freq_opt_reactant_jobid':"", 'qmmm_freq_opt_product_jobid':''}, "$set": {'qmmm_freq_ts_status':'job_unrun', 'qmmm_freq_opt_product_restart_times':0, 'qmmm_freq_opt_reactant_restart_times':0, 'qmmm_freq_ts_restart_times':0, 'qmmm_opt_status':'job_unrun'}}, True)
 """
+"""
+reactions_collection = db['reactions']
+reactions = list(reactions_collection.find({}))
+for reaction in reactions:
+    try:
+        qmmm_barrier = reaction['qmmm_delta_H']
+    except:
+        continue
+    print(f"{qmmm_barrier}   {reaction['delta_H']}")
+"""

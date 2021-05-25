@@ -18,10 +18,10 @@ def extract_data(barrier_threshold=200.0):
     treactions = list(reaction_collection.aggregate([{
                 '$group': {
                     '_id': "$reaction",
-                    'barrier': {'$min': "$barrier"}
+                    'qmmm_barrier': {'$min': "$qmmm_barrier"}
                 }}
             ]))
-    reactions = [list(reaction_collection.find({'reaction': i['_id'], 'barrier': i['barrier']}))[0] for i in treactions]
+    reactions = [list(reaction_collection.find({'reaction': i['_id'], 'qmmm_barrier': i['qmmm_barrier']}))[0] for i in treactions]
     # Remove the reactant equal to product but with the different active site.
     # e.g. The Proton is at the different oxygen
     reactions_copy = reactions[:]
@@ -31,8 +31,11 @@ def extract_data(barrier_threshold=200.0):
 
     reactant_smi, product_smi, barrier, generations, er_smi, ep_smi = [], [], [], [], [], []
     for target in reactions:
-        
-        if round(target['barrier'], 2) > 65.0:
+        try:
+            a= target['qmmm_barrier']
+        except:
+            continue
+        if round(target['qmmm_barrier'], 2) > 70.0:
             continue
         reactant_smiles = target['reactant_smiles'].split('.')
         product_smiles = target['product_smiles'].split('.')
@@ -53,7 +56,7 @@ def extract_data(barrier_threshold=200.0):
         er_smi.append(target['reactant_smiles'])
         ep_smi.append(target['product_smiles'])
         generations.append(target['generations'])
-        barrier.append(round(target['barrier'], 2))
+        barrier.append(round(target['qmmm_barrier'], 2))
         test_target = list(qm_collection.find({'path': target['path']}))[0]
         # dH = (test_target['product_xtb_hf'] - test_target['reactant_xtb_hf']) * 627.5095
     zipped = zip(reactant_smi, product_smi, generations, barrier, er_smi, ep_smi)
@@ -132,8 +135,8 @@ def draw(target_product = None):
     nx.draw_networkx_labels(G,pos,labels,font_size=10,font_color='r')
     root_to_leaf_paths(eG, target_product = target_product)
     
-    # plt.savefig("simple_path_3.png", dpi=1500) # save as png
-    # plt.show()
+    plt.savefig("simple_path_3.png", dpi=1500) # save as png
+    plt.show()
 
 
 def root_to_leaf_paths(G, target_product = None):
@@ -166,18 +169,18 @@ def root_to_leaf_paths(G, target_product = None):
                                                                 }},{
                                                                 '$group':{
                                                                         '_id': "$reaction",
-                                                                        'barrier': {'$min': "$barrier"}
+                                                                        'qmmm_barrier': {'$min': "$qmmm_barrier"}
                                                                         }}
                                                                 ]))[0]
                     except:
                         continue
-                    target = list(reaction_collection.find({'reaction':reactions['_id'], 'barrier':reactions['barrier']}))[0]
+                    target = list(reaction_collection.find({'reaction':reactions['_id'], 'qmmm_barrier':reactions['qmmm_barrier']}))[0]
                     if i == 0:
-                        energy_profile.append(round(target['barrier'], 2))
-                        energy_profile.append(round(target['delta_H'], 2))
+                        energy_profile.append(round(target['qmmm_barrier'], 2))
+                        energy_profile.append(round(target['qmmm_delta_H'], 2))
                     else:
-                        energy_profile.append(round(energy_profile[-1]+target['barrier'], 2))
-                        energy_profile.append(round(energy_profile[-2]+target['delta_H'], 2))
+                        energy_profile.append(round(energy_profile[-1]+target['qmmm_barrier'], 2))
+                        energy_profile.append(round(energy_profile[-2]+target['qmmm_delta_H'], 2))
                 energy_profiles.append(energy_profile)
             if energy_profiles == []:
                 continue

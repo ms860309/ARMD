@@ -10,7 +10,7 @@ endopt:
   freeze_atoms: [23,24,25,26,27,28,29,30,31,32,33,34]
 calc:
  type: orca
- keywords: PBE0 D3BJ def2-SVP rijcosx def2/J TightSCF Grid4 GridX4 NoFinalGrid miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
+ keywords: PBE0 D3BJ def2-SVP rijcosx def2/J TightSCF miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
  pal: 8
  charge: 0
  mult: 1

@@ -34,6 +34,7 @@ class Network(object):
         self.forcefield = kwargs['forcefield']
         self.constraintff_alg = kwargs['constraintff_alg']
         self.mopac_method = kwargs['mopac_method']
+        self.xtb_method = kwargs['xtb_method']
         self.dh_cutoff = float(kwargs['dh_cutoff'])
         self.ard_path = kwargs['ard_path']
         self.generations = kwargs['generations']
@@ -77,7 +78,7 @@ class Network(object):
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_mopac(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
-                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, refH=None):
+                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, refH=H298_reac):
                         prod_mols_filtered.append(prod_mol)
                     # Recovery
                     mol_object_copy = mol_object.copy()
@@ -99,7 +100,7 @@ class Network(object):
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_xtb(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
-                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, config_path = kwargs['config_path'], refH=None):
+                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, config_path = kwargs['config_path'], refH=H298_reac):
                         prod_mols_filtered.append(prod_mol)
                     mol_object.setCoordsFromMol(mol_object_copy)
             else:
@@ -217,7 +218,7 @@ class Network(object):
     def filter_dh_xtb(self, reac_obj, cluster_bond, prod_mol, form_bonds, break_bonds, total_prod_num, qm_collection, config_path, refH=None):
         self.count += 1
         xtb_object = XTB(reac_obj, prod_mol, self.forcefield, self.constraintff_alg, form_bonds, break_bonds,
-                         self.logger, total_prod_num, self.count, self.constraint, self.fixed_atom, cluster_bond)
+                         self.logger, total_prod_num, self.count, self.constraint, self.fixed_atom, cluster_bond, self.xtb_method)
         H298_reac, H298_prod = xtb_object.xtb_get_H298(self.reactant_path, config_path)
 
         if H298_prod == False or H298_reac == False:
@@ -288,7 +289,7 @@ class Network(object):
 
         shutil.copyfile(path.join(self.ard_path, 'reactant.xyz'), reactant_path)
         try:
-            XTB.runXTB(tmpdir, config_path, constraint=self.constraint, target='reactant.xyz')
+            XTB.runXTB(tmpdir, config_path, constraint=self.constraint, target='reactant.xyz', method = self.xtb_method)
             mol_hf = XTB.getE(tmpdir, target='reactant.xyz')
         except:
             raise Exception('The initial reactant energy calculation by xtb is fail.')

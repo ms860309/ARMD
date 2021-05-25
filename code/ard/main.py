@@ -101,7 +101,7 @@ class ARD(object):
 def readInput(input_file):
     # Allowed keywords
     keys = ('nbreak', 'nform', 'forcefield', 'constraintff_alg', 'mopac_method', 'dh_cutoff', 'dh_cutoff_method', 'catalyst',
-            'manual_bonds', 'bond_dissociation_cutoff', 'constraint', 'use_inchi_key', 'manual_cluster_bond', 'fixed_atom', 'use_irc')
+            'manual_bonds', 'bond_dissociation_cutoff', 'constraint', 'use_inchi_key', 'manual_cluster_bond', 'fixed_atom', 'use_irc', 'xtb_method')
     # Read all data from file
     with open(input_file, 'r') as f:
         input_data = f.read().splitlines()

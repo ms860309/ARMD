@@ -25,7 +25,7 @@ class XTBError(Exception):
 
 class XTB(object):
 
-    def __init__(self, reactant_mol, product_mol, forcefield, constraintff_alg, form_bonds, break_bonds, logger, count, num, constraint=None, fixed_atom=None, cluster_bond = None):
+    def __init__(self, reactant_mol, product_mol, forcefield, constraintff_alg, form_bonds, break_bonds, logger, count, num, constraint=None, fixed_atom=None, cluster_bond = None, xtb_method = 'gfn2'):
         self.reactant_mol = reactant_mol
         self.product_mol = product_mol
         self.forcefield = forcefield
@@ -38,6 +38,7 @@ class XTB(object):
         self.constraint = constraint
         self.fixed_atom = fixed_atom
         self.cluster_bond = cluster_bond
+        self.xtb_method = xtb_method
 
     def xtb_get_H298(self, _reactant_path, config_path):
         """
@@ -64,7 +65,7 @@ class XTB(object):
                 f.write(reac_geo)
             start_time = time.time()
             try:
-                self.runXTB(tmpdir, config_path, constraint=self.constraint, target='reactant.xyz')
+                self.runXTB(tmpdir, config_path, constraint=self.constraint, target='reactant.xyz', method = 'gfn2')
                 reactant_energy = self.getE(tmpdir, 'reactant.xyz')
             except:
                 self.logger.info('xTB reactant fail')
@@ -73,7 +74,7 @@ class XTB(object):
             with open(product_path, 'w') as f:
                 f.write(prod_geo)
             try:
-                self.runXTB(tmpdir, config_path, constraint=self.constraint, target='product.xyz')
+                self.runXTB(tmpdir, config_path, constraint=self.constraint, target='product.xyz', method = 'gfn2')
                 product_energy = self.getE(tmpdir, 'product.xyz')
             except:
                 self.logger.info('xTB product fail')
@@ -178,7 +179,7 @@ class XTB(object):
         return HeatofFormation
 
     @staticmethod
-    def runXTB(tmpdir, config_path, constraint=True, target='reactant.xyz'):
+    def runXTB(tmpdir, config_path, constraint=True, target='reactant.xyz', method = 'gfn2'):
         input_path = path.join(tmpdir, target)
         outname = '{}.xyz'.format(target.split('.')[0])
         output_path = path.join(tmpdir, 'xtbopt.xyz')
@@ -186,10 +187,20 @@ class XTB(object):
 
         new_output_path = path.join(tmpdir, outname)
         if constraint == None:
-            p = Popen(['xtb', input_path, '--opt', 'tight'])
+            if method == 'gfn2':
+                p = Popen(['xtb', input_path, '--gfn', '2', '--opt', 'tight'])
+            elif method == 'gfn1':
+                p = Popen(['xtb', input_path, '--gfn', '1', '--opt', 'tight'])
+            else:
+                raise XTBError('Unsupported xtb method')
             p.wait()
             os.rename(output_path, new_output_path)
         else:
-            p = Popen(['xtb', '--opt', 'tight', '--input', constraint_path, input_path])
+            if method == 'gfn2':
+                p = Popen(['xtb', '--opt', 'tight', '--gfn', '2', '--input', constraint_path, input_path])
+            elif method == 'gfn1':
+                p = Popen(['xtb', '--opt', 'tight', '--gfn', '1', '--input', constraint_path, input_path])
+            else:
+                raise XTBError('Unsupported xtb method')
             p.wait()
             os.rename(output_path, new_output_path)

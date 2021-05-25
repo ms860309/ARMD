@@ -1,4 +1,4 @@
-! XTB2 OptTS numFreq TIGHTSCF miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
+! XTB1 OptTS numFreq TIGHTSCF miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
 
 %geom
 Calc_Hess true # Calculate Hessian in the beginning
@@ -23,7 +23,7 @@ Constraints # The atom you want to constraint, index from 0.
 	end
 end
 
-%maxcore 1000 # memory per core
+%maxcore 2000 # memory per core
 
 %scf
 maxiter 300  # SCF interations.

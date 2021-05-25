@@ -1,4 +1,4 @@
-! PBE0 D3BJ def2-SVP OptTS rijcosx def2/J Freq TIGHTSCF Grid4 GridX4 NoFinalGrid miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
+! PBE0 D3BJ def2-SVP OptTS rijcosx def2/J Freq TIGHTSCF miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
 
 %geom
 Calc_Hess true # Calculate Hessian in the beginning
@@ -27,7 +27,7 @@ maxiter 300  # SCF interations.
 ConvForced 1 # Make sure the scf is converge during calculation.
 end
 
-%maxcore 3000 # memory per core
+%maxcore 4000 # memory per core
 
 %method
 Z_MaxIter 50 # The CPSCF interations while calculate actual hessian
