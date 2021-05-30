@@ -34,6 +34,6 @@ end
 # partial is frozen atom for mm system, hybrid is calculate the exact atom hessian
 # e.g. C-H-H-H-H, frozen the H --> partial is {1 2 3 4} or hybrid is {0}. Both of them are numerical(slow)
 PARTIAL_Hess 
-	{23 24 25 26 27 28 29 30 31 32 33 34}
+	{26 27 28 29 30 31 32 33 34 35 36 37}
 	end
 end
