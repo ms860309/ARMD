@@ -237,9 +237,9 @@ class Network(object):
 
             dir_path = self.xtb_output(reactant_output, product_output, form_bonds, break_bonds, prod_mol)
             reactant_inchi_key = reac_mol.write('inchiKey').strip()
-            reactant_smiles = reac_mol.write('can').split()
+            reactant_smiles = reac_mol.write('can').split()[0]
             product_inchi_key = prod_mol.write('inchiKey').strip()
-            product_smiles = prod_mol.write('can').split()
+            product_smiles = prod_mol.write('can').split()[0]
             self.logger.info(f'\nReactant inchi key: {reactant_inchi_key}\nProduct inchi key: {product_inchi_key}\nReactant smiles: {reactant_smiles}\nProduct smiles: {product_smiles}\nDirectory path: {dir_path}\n')
 
             qm_collection.insert_one({

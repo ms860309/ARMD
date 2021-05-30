@@ -60,8 +60,9 @@ def launch_ssm_jobs(qm_collection:object, config_path:str, num:int=100, level_of
         # update status job_launched
         update_status(qm_collection, target, job_name = 'ssm', job_id = job_id)
         count += 1
-    print(highlight_text('SSM'))
-    print('\nSSM launced {} jobs\n'.format(count))
+    if count != 0:
+        print(highlight_text('SSM'))
+        print('\nSSM launced {} jobs\n'.format(count))
 
 def create_qchem_ssm_sub_file(dir_path:str, SSM_dir_path:str, config_path:str, ncpus:int=1, mpiprocs:int=1, ompthreads:int=1) -> str:
     subfile = path.join(SSM_dir_path, 'ssm.job')
@@ -177,8 +178,9 @@ def launch_ts_refine_jobs(qm_collection:object, config_path:str, num:int=100, nc
         # update status job_launched
         update_status(qm_collection, target, job_name = 'ts_refine', job_id = job_id)
         count += 1
-    print(highlight_text('TS refine'))
-    print('\nTS refine launced {} jobs\n'.format(count))
+    if count != 0:
+        print(highlight_text('TS refine'))
+        print('\nTS refine launced {} jobs\n'.format(count))
 
 def create_ts_refine_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str, ncpus:int=1, mpiprocs:int=1, ompthreads:int=1, mem:int=1) -> str:
     tsnode_path = path.join(SSM_dir_path, 'TSnode.xyz')
@@ -257,8 +259,9 @@ def launch_ts_jobs(qm_collection:object, config_path:str, num:int=100, level_of_
         # update status job_launched
         update_status(qm_collection, target, job_name = 'ts', job_id = job_id)
         count += 1
-    print(highlight_text('TS'))
-    print('\nTS launced {} jobs\n'.format(count))
+    if count != 0:
+        print(highlight_text('TS'))
+        print('\nTS launced {} jobs\n'.format(count))
 
 def create_qchem_ts_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str, ncpus:int=4, mpiprocs:int=1, ompthreads:int=4) -> str:
     refine_path = path.join(TS_dir_path, 'ts_refine.xyz')
@@ -378,8 +381,9 @@ def launch_irc_jobs(qm_collection:object, config_path:str, num:int=100, ncpus:in
         # update status job_launched
         update_status(qm_collection, target, job_name = 'irc', job_id = job_id)
         count += 1
-    print(highlight_text('IRC'))
-    print('\nIRC launced {} jobs\n'.format(count))
+    if count != 0:
+        print(highlight_text('IRC'))
+        print('\nIRC launced {} jobs\n'.format(count))
 
 def create_irc_sub_file(TS_dir_path:str, IRC_dir_path:str, config_path:str, ncpus:int=8, mpiprocs:int=8, ompthreads:int=1) -> str:
     ts_geo_path = path.join(TS_dir_path, 'ts_geo.xyz')
@@ -455,8 +459,9 @@ def launch_irc_opt_jobs(qm_collection:object, config_path:str, num:int=100, leve
         # update status job_launched
         update_irc_opt_status(qm_collection, target, job_id_1, job_id_2)
         count += 1
-    print(highlight_text('IRC OPT'))
-    print('\nIRC opt launced {} jobs (forward + backward)\n'.format(count * 2))
+    if count != 0:
+        print(highlight_text('IRC OPT'))
+        print('\nIRC opt launced {} jobs (forward + backward)\n'.format(count * 2))
 
 def create_qchem_irc_opt_sub_file(irc_path:str, config_path:str, forward:str, backward:str, ncpus:int=4, mpiprocs:int=1, ompthreads:int=4) -> str:
     irc_opt_lot = path.join(config_path, 'qchem_opt_freq.lot')
@@ -653,8 +658,9 @@ def launch_qmmm_opt_jobs(qm_collection:object, config_path:str, num:int=10, ncpu
         # update status job_launched
         update_qmmm_opt_status(qm_collection, target, job_id_1, job_id_2)
         count += 1
-    print(highlight_text('QMMM OPT'))
-    print('\nQMMM opt launced {} jobs (forward + backward)\n'.format(count * 2))
+    if count != 0:
+        print(highlight_text('QMMM OPT'))
+        print('\nQMMM opt launced {} jobs (forward + backward)\n'.format(count * 2))
 
 def create_qmmm_opt(qmmm_dir:str, config_path:str, target_geometry:str, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16) -> str:
     qmmm_opt_config = path.join(config_path, 'qmmm_opt.lot')
@@ -772,8 +778,9 @@ def launch_qmmm_freq_opt_jobs(qm_collection:object, config_path:str, num:int=10,
         # update status job_launched
         update_qmmm_freq_opt_status(qm_collection, target, job_id_1, job_id_2)
         count += 1
-    print(highlight_text('QMMM FREQ OPT'))
-    print('\nQMMM freq opt launced {} jobs (forward + backward)\n'.format(count * 2))
+    if count != 0:
+        print(highlight_text('QMMM FREQ OPT'))
+        print('\nQMMM freq opt launced {} jobs (forward + backward)\n'.format(count * 2))
 
 def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num:int=10, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16, restart:bool=True):
     targets = select_targets(qm_collection, job_name='qmmm_freq_opt_reactant')
@@ -821,9 +828,9 @@ def launch_qmmm_freq_opt_restart_jobs(qm_collection:object, config_path:str, num
             job_id_2 = stdout.decode().replace("\n", "")
             update_status(qm_collection, target, job_name='qmmm_freq_opt_product', job_id=job_id_2)
             count += 1
-
-    print(highlight_text('QMMM FREQ OPT RESTART'))
-    print('\nQMMM freq opt restart launced {} jobs\n'.format(count))
+    if count != 0:
+        print(highlight_text('QMMM FREQ OPT RESTART'))
+        print('\nQMMM freq opt restart launced {} jobs\n'.format(count))
 
 def create_qmmm_freq_opt(qmmm_dir:str, config_path:str, target_geometry:str, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16, restart:bool=False) -> str:
     if restart:
@@ -945,8 +952,9 @@ def launch_qmmm_freq_ts_jobs(qm_collection:object, config_path:str, num:int=10, 
         job_id = stdout.decode().replace("\n", "")
         update_status(qm_collection, target, job_name = 'qmmm_freq_ts', job_id = job_id)
         count += 1
-    print(highlight_text('QMMM TS'))
-    print('\nQMMM ts launced {} jobs\n'.format(count))
+    if count != 0:
+        print(highlight_text('QMMM TS'))
+        print('\nQMMM ts launced {} jobs\n'.format(count))
 
 def create_qmmm_freq_ts(qmmm_dir:str, config_path:str, target_geometry:str, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16) -> str:
     qmmm_opt_config = path.join(config_path, 'qmmm_freq_ts.lot')
@@ -1076,8 +1084,9 @@ def launch_qmmm_freq_jobs(qm_collection:object, config_path:str, num:int=10, ncp
         # update status job_launched
         update_qmmm_freq_status(qm_collection, target, job_id_1, job_id_2)
         count += 1
-    print(highlight_text('QMMM FREQ'))
-    print('\nQMMM freq launced {} jobs (forward + backward)\n'.format(count * 2))
+    if count != 0:
+        print(highlight_text('QMMM FREQ'))
+        print('\nQMMM freq launced {} jobs (forward + backward)\n'.format(count * 2))
 
 def create_qmmm_freq(qmmm_dir:str, config_path:str, target_geometry:str, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16) -> str:
     qmmm_freq_config = path.join(config_path, 'qmmm_freq.lot')
@@ -1180,8 +1189,9 @@ def launch_qmmm_ts_freq_jobs(qm_collection:object, config_path:str, num:int=10, 
         job_id = stdout.decode().replace("\n", "")
         update_status(qm_collection, target, job_name = 'qmmm_ts_freq', job_id = job_id)
         count += 1
-    print(highlight_text('QMMM TS FREQ'))
-    print('\nQMMM ts freq launced {} jobs\n'.format(count))
+    if count != 0:
+        print(highlight_text('QMMM TS FREQ'))
+        print('\nQMMM ts freq launced {} jobs\n'.format(count))
 
 """
 QMMM REFINE
@@ -1258,8 +1268,9 @@ def launch_qmmm_refine_jobs(qm_collection:object, config_path:str, num:int=10, n
         # update status job_launched
         update_qmmm_refine_status(qm_collection, target, job_id_1, job_id_2, job_id_3)
         count += 1
-    print(highlight_text('QMMM SP'))
-    print('\nQMMM sp launced {} jobs (reactant + product + ts)\n'.format(count * 3))
+    if count != 0:
+        print(highlight_text('QMMM SP'))
+        print('\nQMMM sp launced {} jobs (reactant + product + ts)\n'.format(count * 3))
 
 def create_qmmm_sp(qmmm_dir:str, config_path:str, target_geometry:str, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16) -> str:
     qmmm_sp_config = path.join(config_path, 'qmmm_sp.lot')
@@ -1343,7 +1354,7 @@ def launch_jobs(num=30, level_of_theory='ORCA', ncpus=4, mpiprocs=1, ompthreads=
     config_path = targets[0]['config_path']
     launch_ssm_jobs(qm_collection, config_path, num=50, level_of_theory='ORCA',ncpus=1, mpiprocs=1, ompthreads=1)
     launch_ts_refine_jobs(qm_collection, config_path, num=50, ncpus=1, mpiprocs=1, ompthreads=1)
-    launch_ts_jobs(qm_collection, config_path, num=10, level_of_theory=level_of_theory, ncpus=4, mpiprocs=4, ompthreads=1, Hcap=12)
+    launch_ts_jobs(qm_collection, config_path, num=10, level_of_theory=level_of_theory, ncpus=8, mpiprocs=8, ompthreads=1, Hcap=12)
     launch_irc_jobs(qm_collection, config_path, num=10, ncpus=8, mpiprocs=8, ompthreads=1)
     launch_irc_opt_jobs(qm_collection, config_path, num=10, level_of_theory=level_of_theory,ncpus=8, mpiprocs=8, ompthreads=1, Hcap=12)
 

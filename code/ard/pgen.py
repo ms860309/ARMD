@@ -96,7 +96,7 @@ class Generate(object):
             self.reactant_oxygen = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atom and reactant_atoms == 8]
             self.reactant_carbon = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atom and reactant_atoms == 6]
             # The zeolite usually reactant with its faced active site oxygen
-            self.active_site_oxygen.remove(12)
+            self.active_site_oxygen.remove(15)
             # Extract bonds as an unmutable sequence (indices are made compatible with atom list)
             # self.reactant_hydrogen is -OH self.reactant_hydrogen_2 is C-H
             reactant_hydrogen_1 =[bond[0] for bond in self.reactant_bonds 
@@ -413,11 +413,13 @@ class Generate(object):
                     if idx not in self.fixed_atom:
                         if i == 6 and bond_type[idx] != 4:
                             return False
-                        elif i == 8 and bond_type[idx] < 2:
+                        elif i == 8 and bond_type[idx] != 2:
                             return False
-                        elif i == 8 and bond_type[idx] > 2:
-                            if (idx, self.active_site_metal[0], 1) not in bonds and (self.active_site_metal[0], idx, 1) not in bonds:
-                                return False
+                        # elif i == 8 and bond_type[idx] < 2:
+                        #     return False
+                        # elif i == 8 and bond_type[idx] > 2:
+                        #     if (idx, self.active_site_metal[0], 1) not in bonds and (self.active_site_metal[0], idx, 1) not in bonds:
+                        #         return False
                         elif i == 14 and bond_type[idx] != 4:
                             return False
                     else:

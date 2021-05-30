@@ -807,64 +807,116 @@ def print_information(generations):
         print(smiles)
     print('Nodes: {}'.format(len(gen_targets)))
     print(highlight_text('Unrun jobs'))
-    print('\n{} nodes should run ARD'.format(len(ard_targets_0)))
-    print('{} nodes should run SSM'.format(len(ssm_targets_0)))
-    print('{} nodes should run TS REFINE'.format(len(ts_refine_targets_0)))
-    print('{} nodes should run TS'.format(len(ts_targets_0)))
-    print('{} nodes should run IRC'.format(len(irc_targets_0)))
-    print('{} nodes should run IRC OPT job'.format(len(irc_opt_targets_0)))
-    print('{} nodes are waiting for checking IRC EQUAL'.format(len(irc_targets_6)))
-    print('{} nodes should run QMMM OPT job'.format(len(qmmm_opt_targets_0)))
-    print('{} nodes should run QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_0)))
-    print('{} nodes should restart QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_6)))
-    print('{} nodes should run QMMM TS job'.format(len(qmmm_freq_ts_targets_0)))
-    print('{} nodes should run QMMM FREQ job'.format(len(qmmm_freq_targets_0)))
-    print('{} nodes should run QMMM TS FERQ job'.format(len(qmmm_ts_freq_targets_0)))
-    print('{} nodes should run QMMM REFINE job\n'.format(len(qmmm_refine_targets_0)))
+    if len(ard_targets_0) != 0:
+        print('\n{} nodes should run ARD'.format(len(ard_targets_0)))
+    if len(ssm_targets_0) != 0:
+        print('{} nodes should run SSM'.format(len(ssm_targets_0)))
+    if len(ts_refine_targets_0) != 0:
+        print('{} nodes should run TS REFINE'.format(len(ts_refine_targets_0)))
+    if len(ts_targets_0) != 0:
+        print('{} nodes should run TS'.format(len(ts_targets_0)))
+    if len(irc_targets_0) != 0:
+        print('{} nodes should run IRC'.format(len(irc_targets_0)))
+    if len(irc_opt_targets_0) != 0:
+        print('{} nodes should run IRC OPT job'.format(len(irc_opt_targets_0)))
+    if len(irc_targets_6) != 0:
+        print('{} nodes are waiting for checking IRC EQUAL'.format(len(irc_targets_6)))
+    if len(qmmm_opt_targets_0) != 0:
+        print('{} nodes should run QMMM OPT job'.format(len(qmmm_opt_targets_0)))
+    if len(qmmm_freq_opt_targets_0) != 0:
+        print('{} nodes should run QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_0)))
+    if len(qmmm_freq_opt_targets_6) != 0:
+        print('{} nodes should restart QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_6)))
+    if len(qmmm_freq_ts_targets_0) != 0:
+        print('{} nodes should run QMMM TS job'.format(len(qmmm_freq_ts_targets_0)))
+    if len(qmmm_freq_targets_0) != 0:
+        print('{} nodes should run QMMM FREQ job'.format(len(qmmm_freq_targets_0)))
+    if len(qmmm_ts_freq_targets_0) != 0:
+        print('{} nodes should run QMMM TS FERQ job'.format(len(qmmm_ts_freq_targets_0)))
+    if len(qmmm_refine_targets_0) != 0:
+        print('{} nodes should run QMMM REFINE job\n'.format(len(qmmm_refine_targets_0)))
     print(highlight_text('Running jobs'))
-    print('\n{} nodes are running or queueing ARD'.format(len(ard_targets_1)))
-    print('{} nodes are running or queueing SSM'.format(len(ssm_targets_1)))
-    print('{} nodes are running or queueing TS REFINE'.format(len(ts_refine_targets_1)))
-    print('{} nodes are running or queueing TS'.format(len(ts_targets_1)))
-    print('{} nodes are running or queueing IRC'.format(len(irc_targets_1)))
-    print('{} nodes are running or queueing in IRC OPT job'.format(len(irc_opt_targets_1)))
-    print('{} nodes are running or queueing in QMMM OPT job'.format(len(qmmm_opt_targets_1)))
-    print('{} nodes are running, queueing in QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_1)))
-    print('{} nodes are running or queueing QMMM TS'.format(len(qmmm_freq_ts_targets_1)))
-    print('{} nodes are running or queueing QMMM FREQ'.format(len(qmmm_freq_targets_1)))
-    print('{} nodes are running or queueing QMMM TS FREQ'.format(len(qmmm_ts_freq_targets_1)))
-    print('{} nodes are running or queueing in QMMM REFINE job\n'.format(len(qmmm_refine_targets_1)))
+    if len(ard_targets_1) != 0:
+        print('\n{} nodes are running or queueing ARD'.format(len(ard_targets_1)))
+    if len(ssm_targets_1) != 0:
+        print('{} nodes are running or queueing SSM'.format(len(ssm_targets_1)))
+    if len(ts_refine_targets_1) != 0:
+        print('{} nodes are running or queueing TS REFINE'.format(len(ts_refine_targets_1)))
+    if len(ts_targets_1) != 0:
+        print('{} nodes are running or queueing TS'.format(len(ts_targets_1)))
+    if len(irc_targets_1) != 0:
+        print('{} nodes are running or queueing IRC'.format(len(irc_targets_1)))
+    if len(irc_opt_targets_1) != 0:
+        print('{} nodes are running or queueing in IRC OPT job'.format(len(irc_opt_targets_1)))
+    if len(qmmm_opt_targets_1) != 0:
+        print('{} nodes are running or queueing in QMMM OPT job'.format(len(qmmm_opt_targets_1)))
+    if len(qmmm_freq_opt_targets_1) != 0:
+        print('{} nodes are running, queueing in QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_1)))
+    if len(qmmm_freq_ts_targets_1) != 0:
+        print('{} nodes are running or queueing QMMM TS'.format(len(qmmm_freq_ts_targets_1)))
+    if len(qmmm_freq_targets_1) != 0:
+        print('{} nodes are running or queueing QMMM FREQ'.format(len(qmmm_freq_targets_1)))
+    if len(qmmm_ts_freq_targets_1) != 0:
+        print('{} nodes are running or queueing QMMM TS FREQ'.format(len(qmmm_ts_freq_targets_1)))
+    if len(qmmm_refine_targets_1) != 0:
+        print('{} nodes are running or queueing in QMMM REFINE job\n'.format(len(qmmm_refine_targets_1)))
     print(highlight_text('Success jobs'))
-    print('\n{} nodes are success in ARD'.format(len(ard_targets_2)))
-    print('{} nodes are success in SSM'.format(len(ssm_targets_2)))
-    print('{} nodes are success in TS REFINE'.format(len(ts_refine_targets_2)))
-    print('{} nodes are success in TS'.format(len(ts_targets_2)))
-    print('{} nodes are success in IRC'.format(len(irc_targets_2)))
-    print('{} nodes are success in IRC OPT job'.format(len(irc_opt_targets_2)))
-    print('{} nodes are success in QMMM OPT job'.format(len(qmmm_opt_targets_2)))
-    print('{} nodes are success in QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_2)))
-    print('{} nodes are success in QMMM TS job'.format(len(qmmm_freq_ts_targets_2)))
-    print('{} nodes are success in QMMM FREQ job'.format(len(qmmm_freq_targets_2)))
-    print('{} nodes are success in QMMM TS FREQ job'.format(len(qmmm_ts_freq_targets_2)))
-    print('{} nodes are success in QMMM REFINE job\n'.format(len(qmmm_refine_targets_2)))
+    if len(ard_targets_2) != 0:
+        print('\n{} nodes are success in ARD'.format(len(ard_targets_2)))
+    if len(ssm_targets_2) != 0:
+        print('{} nodes are success in SSM'.format(len(ssm_targets_2)))
+    if len(ts_refine_targets_2) != 0:
+        print('{} nodes are success in TS REFINE'.format(len(ts_refine_targets_2)))
+    if len(ts_targets_2) != 0:
+        print('{} nodes are success in TS'.format(len(ts_targets_2)))
+    if len(irc_targets_2) != 0:
+        print('{} nodes are success in IRC'.format(len(irc_targets_2)))
+    if len(irc_opt_targets_2) != 0:
+        print('{} nodes are success in IRC OPT job'.format(len(irc_opt_targets_2)))
+    if len(qmmm_opt_targets_2) != 0:
+        print('{} nodes are success in QMMM OPT job'.format(len(qmmm_opt_targets_2)))
+    if len(qmmm_freq_opt_targets_2) != 0:
+        print('{} nodes are success in QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_2)))
+    if len(qmmm_freq_ts_targets_2) != 0:
+        print('{} nodes are success in QMMM TS job'.format(len(qmmm_freq_ts_targets_2)))
+    if len(qmmm_freq_targets_2) != 0:
+        print('{} nodes are success in QMMM FREQ job'.format(len(qmmm_freq_targets_2)))
+    if len(qmmm_ts_freq_targets_2) != 0:
+        print('{} nodes are success in QMMM TS FREQ job'.format(len(qmmm_ts_freq_targets_2)))
+    if len(qmmm_refine_targets_2) != 0:
+        print('{} nodes are success in QMMM REFINE job\n'.format(len(qmmm_refine_targets_2)))
     print(highlight_text('Failed jobs'))
-    print('\n{} nodes are failed in SSM'.format(len(ssm_targets_3)))
-    print('{} nodes are failed in TS REFINE'.format(len(ts_refine_targets_3)))
-    print('{} nodes are failed in TS'.format(len(ts_targets_3)))
-    print('{} nodes are failed in IRC'.format(len(irc_targets_3)))
-    print('{} nodes are failed in IRC OPT job'.format(len(irc_opt_targets_3)))
-    print('{} nodes are failed in QMMM OPT job'.format(len(qmmm_opt_targets_3)))
-    print('{} nodes are failed in QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_3)))
-    print('{} nodes are failed in one side'.format(len(qmmm_freq_opt_targets_8)))
-    print('{} nodes are failed in QMMM TS'.format(len(qmmm_freq_ts_targets_3)))
-    print('{} nodes are failed in QMMM FREQ'.format(len(qmmm_freq_targets_3)))
-    print('{} nodes are failed in QMMM TS FREQ'.format(len(qmmm_ts_freq_targets_3)))
-    print('{} nodes are failed in QMMM REFINE job\n'.format(len(qmmm_refine_targets_3)))
+    if len(ssm_targets_3) != 0:
+        print('\n{} nodes are failed in SSM'.format(len(ssm_targets_3)))
+    if len(ts_refine_targets_3) != 0:
+        print('{} nodes are failed in TS REFINE'.format(len(ts_refine_targets_3)))
+    if len(ts_targets_3) != 0:
+        print('{} nodes are failed in TS'.format(len(ts_targets_3)))
+    if len(irc_targets_3) != 0:    
+        print('{} nodes are failed in IRC'.format(len(irc_targets_3)))
+    if len(irc_opt_targets_3) != 0:
+        print('{} nodes are failed in IRC OPT job'.format(len(irc_opt_targets_3)))
+    if len(qmmm_opt_targets_3) != 0:
+        print('{} nodes are failed in QMMM OPT job'.format(len(qmmm_opt_targets_3)))
+    if len(qmmm_freq_opt_targets_3) != 0:
+        print('{} nodes are failed in QMMM FREQ OPT job'.format(len(qmmm_freq_opt_targets_3)))
+    if len(qmmm_freq_opt_targets_8) != 0:
+        print('{} nodes are failed in one side'.format(len(qmmm_freq_opt_targets_8)))
+    if len(qmmm_freq_ts_targets_3) != 0:
+        print('{} nodes are failed in QMMM TS'.format(len(qmmm_freq_ts_targets_3)))
+    if len(qmmm_freq_targets_3) != 0:
+        print('{} nodes are failed in QMMM FREQ'.format(len(qmmm_freq_targets_3)))
+    if len(qmmm_ts_freq_targets_3) != 0:
+        print('{} nodes are failed in QMMM TS FREQ'.format(len(qmmm_ts_freq_targets_3)))
+    if len(qmmm_refine_targets_3) != 0:
+        print('{} nodes are failed in QMMM REFINE job\n'.format(len(qmmm_refine_targets_3)))
     print(highlight_text('IRC intended products'))
-    print('\n{} nodes are intended'.format(len(irc_targets_4)))
-    print('{} nodes are unintended'.format(len(irc_targets_5)))
-    print('{} products are invalid'.format(len(invalid_product_target)))
-    print('\n')
+    if len(irc_targets_4) != 0:
+        print('\n{} nodes are intended'.format(len(irc_targets_4)))
+    if len(irc_targets_5) != 0:
+        print('{} nodes are unintended'.format(len(irc_targets_5)))
+    if len(invalid_product_target) != 0:
+        print('{} products are invalid\n'.format(len(invalid_product_target)))
 
 def update_network_status():
     status_collection = db['status']

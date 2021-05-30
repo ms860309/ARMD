@@ -1,16 +1,13 @@
-! XTB1 OptTS numFreq TIGHTSCF miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
+! XTB2 OptTS numFreq TIGHTSCF miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
 
 %geom
 Calc_Hess true # Calculate Hessian in the beginning
 NumHess true # Request numerical Hessian (analytical not available)
 Recalc_Hess 10  # Recalculate the Hessian every 10 steps
+MaxStep 0.10  # 0.10 a.u.
 maxiter 100    # Maximum optimize iterations
 Convergence tight  # Same convergence criteria with tightopt
-MaxStep 0.08  # 0.08 a.u.
 Constraints # The atom you want to constraint, index from 0.
-	{C 23 C}
-	{C 24 C}
-	{C 25 C}
 	{C 26 C}
 	{C 27 C}
 	{C 28 C}
@@ -20,6 +17,9 @@ Constraints # The atom you want to constraint, index from 0.
 	{C 32 C}
 	{C 33 C}
 	{C 34 C}
+	{C 35 C}
+	{C 36 C}
+	{C 37 C}
 	end
 end
 

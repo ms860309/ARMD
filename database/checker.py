@@ -493,9 +493,9 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
         else:
             return msg, pyMol_3, pyMol_4
     elif pyMol_4.write('inchiKey').strip() == reactant_inchi_key:
-        f = FILTER(reactant_file=forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
+        f = FILTER(forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
         status, msg = f.check_feasible_rxn(check_mm_overlap=check_mm_overlap, qmmm = qmmm, qm_atoms = qm_atoms, threshold_ratio = threshold_ratio)
-        f2 = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
+        f2 = FILTER(backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
         status2, msg2 = f2.check_feasible_rxn(check_mm_overlap=check_mm_overlap, qmmm = qmmm, qm_atoms = qm_atoms, threshold_ratio = threshold_ratio)
         if status == 'job_success' and status2 == 'job_success':
             shutil.copyfile(forward_end_output, irc_reactant_path)
@@ -835,11 +835,7 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
                   ["job_unrun", "job_launched", "job_running", "job_queueing"]
                   }
                  }
-    energy_query = {"energy_status":
-                    {"$in":
-                        ["job_unrun", "job_launched", "job_running", "job_queueing"]
-                     }
-                    }
+
     ssm_query = {"ssm_status":
                  {"$in":
                   ["job_unrun", "job_launched", "job_running", "job_queueing"]
@@ -928,31 +924,37 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
                               ["job_launched", "job_running", "job_queueing"]}},
                          {'qmmm_refine_ts_status':
                              {'$in':
-                              ["job_launched", "job_running", "job_queueing"]}},
+                              ["job_launched", "job_running", "job_queueing"]}}
                      ]
                      }
 
     if use_irc == '0':
         not_finished_number = len(list(qm_collection.find({'$or':
-                                                [energy_query, ssm_query, ts_query, insert_reaction_query, ts_refine_query, ard_query]
+                                                [ssm_query, ts_refine_query, ts_query, insert_reaction_query, ard_query]
                                                 })))
     else:
         if qmmm:
             not_finished_number = len(list(qm_collection.find({'$or':
-                                                    [energy_query, ssm_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ts_refine_query, ard_query, qmmm_query]
+                                                    [ssm_query, ts_refine_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ard_query, qmmm_query]
                                                     })))
         else:
             not_finished_number = len(list(qm_collection.find({'$or':
-                                                    [energy_query, ssm_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ts_refine_query, ard_query]
+                                                    [ssm_query, ts_refine_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ard_query]
                                                     })))
 
     ard_had_add_number = qm_collection.count_documents({})
-    ard_should_add_number = 0
     should_adds = list(statistics_collection.find({}))
     ard_should_add_number = sum([i['add how many products'] for i in should_adds])
 
     if int(not_finished_number) == 0 and int(ard_had_add_number) == int(ard_should_add_number):
-        insert_qmmm(qm_collection, reactions_collection)
+        if qmmm:
+            insert_qmmm(qm_collection, reactions_collection)
+            not_finished_number = len(list(qm_collection.find({'$or':
+                                                    [ssm_query, ts_refine_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ard_query, qmmm_query]
+                                                    })))
+            if not_finished_number != 0:
+                print('Insert QMMM jobs, while the QMMM job finished then restart insert ard')
+                return
 
         acceptable_condition = ['forward equal to reactant',
                                 'backward equal to reactant']
@@ -1143,7 +1145,7 @@ def select_qmmm_opt_finished_target(qm_collection:object) -> list:
                   {'$in':
                    ['job_success']}},
                  {'qmmm_freq_opt_status':
-                  {'$in':
+                  {'$nin':
                    ['job_unrun']}}
              ]}
     targets = list(qm_collection.find(query))
@@ -1276,19 +1278,31 @@ def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:
     try:
         q = QChem(outputfile=output_path)
         if direction == 'reactant':
-            reactant = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz')
-            q.create_qmmm_geomtry(file_path = reactant)
             if restart:
                 return 'job_success'
             else:
-                return 'restart'
+                freqs = q.get_frequencies()
+                nnegfreq = sum(1 for freq in freqs if freq < 0.0)
+                if nnegfreq > 0:
+                    return 'restart'
+                else:
+                    reactant = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz')
+                    if not os.path.exists(reactant):
+                        q.create_qmmm_geomtry(file_path = reactant)
+                    return 'job_success'
         else:
-            product = path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz')
-            q.create_qmmm_geomtry(file_path = product)
             if restart:
                 return 'job_success'
             else:
-                return 'restart'
+                freqs = q.get_frequencies()
+                nnegfreq = sum(1 for freq in freqs if freq < 0.0)
+                if nnegfreq > 0:
+                    return 'restart'
+                else:
+                    product = path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz')
+                    if not os.path.exists(product):
+                        q.create_qmmm_geomtry(file_path = product)
+                    return 'job_success'
     except:
         return 'job_fail'
 
@@ -1399,7 +1413,7 @@ def select_qmmm_freq_finished_target(qm_collection:object) -> list:
     targets = list(qm_collection.find(query))
     return targets
 
-def check_qmmm_freq_content(dir_path:str, direction:str='reactant') -> Union[str, float]:
+def check_qmmm_freq_content(dir_path:str, direction:str='reactant', threshold:float=-50.0) -> Union[str, float]:
     qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
     qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT')
 
@@ -1414,18 +1428,24 @@ def check_qmmm_freq_content(dir_path:str, direction:str='reactant') -> Union[str
         q = QChem(outputfile=output_path)
         freqs = q.get_frequencies()
         nnegfreq = sum(1 for freq in freqs if freq < 0.0)
-        if nnegfreq > 0:
-            return 'Have negative frequency', 0.0
-        else:
-            q.create_qmmm_geomtry(reactant_path)
-            energy = q.get_energy()
-            zpe = q.get_zpe()
-            energy += zpe
-            return 'job_success', energy
-    except:
-        return 'job_fail', 0.0
 
-def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
+        if nnegfreq > 1:
+            return "Have more than one imaginary frequency", 0.0
+        elif nnegfreq == 0:
+            return "All positive frequency", 0.0
+        else:
+            if min(freqs) < threshold:
+                q.create_qmmm_geomtry(reactant_path)
+                energy = q.get_energy()
+                zpe = q.get_zpe()
+                energy += zpe
+                return "job_success", energy
+            else:
+                return f"Imaginary frequency greater than {threshold} cm-1", 0.0
+    except:
+        return "job_fail", 0.0
+
+def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object, threshold:float=-50.0):
     """
     This method checks job with following steps:
     1. select jobs to check
@@ -1441,7 +1461,7 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, energy = check_qmmm_freq_content(target['path'], direction='reactant')
+            new_status, energy = check_qmmm_freq_content(target['path'], direction='reactant', threshold = threshold)
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1479,7 +1499,7 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, energy = check_qmmm_freq_content(target['path'], direction='product')
+            new_status, energy = check_qmmm_freq_content(target['path'], direction='product', threshold = threshold)
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1522,17 +1542,26 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
 QMMM FREQ TS
 """
 
-def check_qmmm_freq_ts_content(dir_path:str, restart:bool=False) -> str:
+def check_qmmm_freq_ts_content(dir_path:str, restart:bool=False, times:int=0) -> str:
     qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
     output_path = path.join(qmmm_ts_dir, 'qmmm_freq_ts.out')
-    ts = path.join(qmmm_ts_dir, 'qmmm_ts.xyz')
     try:
         q = QChem(outputfile=output_path)
-        q.create_qmmm_geomtry(file_path = ts)
         if restart:
             return 'job_success'
         else:
-            return 'restart'
+            freqs = q.get_frequencies()
+            nnegfreq = sum(1 for freq in freqs if freq < 0.0)
+            if nnegfreq != 1:
+                return 'restart'
+            else:
+                if times > 1:
+                    ts = path.join(qmmm_ts_dir, 'qmmm_ts.xyz')
+                    if not os.path.exists(ts):
+                        q.create_qmmm_geomtry(file_path = ts)
+                    return 'job_success'
+                else:
+                    return 'restart'
     except:
         return 'job_fail'
 
@@ -1556,7 +1585,7 @@ def check_qmmm_freq_ts_jobs(qm_collection:object, restart_times:int = 2):
             if times >= restart_times:
                 new_status = check_qmmm_freq_ts_content(target['path'], restart=True)
             else:
-                new_status = check_qmmm_freq_ts_content(target['path'])
+                new_status = check_qmmm_freq_ts_content(target['path'], times = times)
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1580,7 +1609,7 @@ def check_qmmm_freq_ts_jobs(qm_collection:object, restart_times:int = 2):
 QMMM TS FREQ
 """
 
-def check_qmmm_ts_freq_content(dir_path:str) -> Union[str, float]:
+def check_qmmm_ts_freq_content(dir_path:str, threshold:float=-50.0) -> Union[str, float]:
     qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
     output_path = path.join(qmmm_ts_dir, 'qmmm_freq.out')
     ts_path = path.join(qmmm_ts_dir, 'qmmm_final.xyz')
@@ -1594,15 +1623,18 @@ def check_qmmm_ts_freq_content(dir_path:str) -> Union[str, float]:
         elif nnegfreq == 0:
             return "All positive frequency", 0.0
         else:
-            q.create_qmmm_geomtry(ts_path)
-            energy = q.get_energy()
-            zpe = q.get_zpe()
-            energy += zpe
-            return 'job_success', energy
+            if min(freqs) < threshold:
+                q.create_qmmm_geomtry(ts_path)
+                energy = q.get_energy()
+                zpe = q.get_zpe()
+                energy += zpe
+                return 'job_success', energy
+            else:
+                return f"Imaginary frequency greater than {threshold} cm-1", 0.0
     except:
-        return 'job_fail', 0.0
+        return "job_fail", 0.0
 
-def check_qmmm_ts_freq_jobs(qm_collection:object, reactions_collection:object):
+def check_qmmm_ts_freq_jobs(qm_collection:object, reactions_collection:object, threshold:float=-50.0):
     """
     This method checks job with following steps:
     1. select jobs to check
@@ -1618,7 +1650,7 @@ def check_qmmm_ts_freq_jobs(qm_collection:object, reactions_collection:object):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, energy = check_qmmm_ts_freq_content(target['path'])
+            new_status, energy = check_qmmm_ts_freq_content(target['path'], threshold = threshold)
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -2031,14 +2063,15 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False, check_mm_overlap=True, qmmm=qmmm_mol, qm_atoms=23, threshold_ratio=0.6)
     check_barrier(qm_collection)
     insert_reaction(qm_collection, reactions_collection)
-    insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=70.0, qmmm=True)
+    insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=80.0, qmmm=True)
 
     check_qmmm_opt_jobs(qm_collection)
     check_qmmm_freq_opt_jobs(qm_collection, restart_times = 2)
     check_qmmm_freq_ts_jobs(qm_collection, restart_times = 3)
-    check_qmmm_freq_jobs(qm_collection, reactions_collection)
-    check_qmmm_ts_freq_jobs(qm_collection, reactions_collection)
+    check_qmmm_freq_jobs(qm_collection, reactions_collection, threshold = -50.0)
+    check_qmmm_ts_freq_jobs(qm_collection, reactions_collection, threshold = -50.0)
     check_qmmm_refine_jobs(qm_collection, reactions_collection)
+
     # check_qmmm_freq_ts_side_fail_jobs(qm_collection)
 
 check_jobs(refine=True, cluster_bond_path=True, level_of_theory='ORCA')
