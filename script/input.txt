@@ -2,7 +2,7 @@ nbreak                         3                    # Maximum number of bonds to
 nform                          3                    # Maximum number of bonds to be formed
 forcefield                     uff                  # The force field method
 constraintff_alg               ConjugateGradients   # The force field algorithm  can use 'SteepestDescent' or 'ConjugateGradients'
-dH_cutoff                      35                   # Heat of reaction cutoff in kcal/mol
+dH_cutoff                      40                   # Heat of reaction cutoff in kcal/mol
 dH_cutoff_method               xtb                  # rmg group additivity method or mopac and xtb could be choose
 mopac_method                   PM7                  # The mopac calculation level of theory (PM6, PM7, etc..)    BTW, If you choose xtb, do not delete this line, the key is hard code :D
 xtb_method                     gfn2                 #  gfn2 or gfn1
@@ -13,4 +13,4 @@ use_inchi_key                  1                    # Use inchi key as a filter
 constraint                     1                    # The index of constraint atom index (start from 0). eg. constraint forcefield
 fixed_atom                     1                    # fix some atom that can't be break or form(bond_can_break: one of the atom should not in fixed_atom, )
 use_irc                        1                    # Use irc check or not (QChem irc is not robust, maybe ts job success and have only one imaginary frequency is enough)
-catalyst                       SnBEA                    # Type of cluster use SnBEA or HZSM5
+catalyst                       SnBEA                # Type of cluster use SnBEA or HZSM5

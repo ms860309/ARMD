@@ -1,12 +1,14 @@
-! PBE0 D3BJ def2-SVP OptTS rijcosx def2/J Freq TIGHTSCF miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
+! PBE0 D3BJ def2-SVP OptTS rijcosx def2/J Freq TIGHTSCF Grid4 GridX4 miniprint nopop
 
 %geom
 Calc_Hess true # Calculate Hessian in the beginning
 Recalc_Hess 50  # Recalculate the Hessian every 50 steps
 MaxStep 0.10  # 0.10 a.u.
-maxiter 100    # Maximum optimize iterations
 Convergence tight  # Same convergence criteria with tightopt
 Constraints # The atom you want to constraint, index from 0.
+	{C 23 C}
+	{C 24 C}
+	{C 25 C}
 	{C 26 C}
 	{C 27 C}
 	{C 28 C}
@@ -16,9 +18,6 @@ Constraints # The atom you want to constraint, index from 0.
 	{C 32 C}
 	{C 33 C}
 	{C 34 C}
-	{C 35 C}
-	{C 36 C}
-	{C 37 C}
 	end
 end
 

@@ -23,7 +23,7 @@ More complicate command example:
  `I will put more detailed guidelines on the wiki.`
 ## Config
 
-* `orca_opt_freq.lot` = Use for optimization of the irc geometry after downhill or optimization of the reactant.
+* `orca_freq_opt_freq.lot` = Use for optimization of the irc geometry after downhill or optimization of the reactant.
 Why optimize reactant? Because ARD code will have a small change of reactant during arranging the reactant/product while generating product geometry.
 Calculate `Hessian` in the begining or not can be tune in here.
 PAL if not necessary to be setted. Change nprocs in the database/launcher.py

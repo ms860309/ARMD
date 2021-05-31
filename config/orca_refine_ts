@@ -1,13 +1,14 @@
-! XTB2 OptTS numFreq TIGHTSCF miniprint nopop NOMULLIKEN NOMAYER NOLOEWDIN
+! XTB2 OptTS numFreq TIGHTSCF miniprint nopop
 
 %geom
 Calc_Hess true # Calculate Hessian in the beginning
 NumHess true # Request numerical Hessian (analytical not available)
 Recalc_Hess 10  # Recalculate the Hessian every 10 steps
-MaxStep 0.10  # 0.10 a.u.
-maxiter 100    # Maximum optimize iterations
 Convergence tight  # Same convergence criteria with tightopt
 Constraints # The atom you want to constraint, index from 0.
+	{C 23 C}
+	{C 24 C}
+	{C 25 C}
 	{C 26 C}
 	{C 27 C}
 	{C 28 C}
@@ -17,9 +18,6 @@ Constraints # The atom you want to constraint, index from 0.
 	{C 32 C}
 	{C 33 C}
 	{C 34 C}
-	{C 35 C}
-	{C 36 C}
-	{C 37 C}
 	end
 end
 
@@ -34,6 +32,6 @@ end
 # partial is frozen atom for mm system, hybrid is calculate the exact atom hessian
 # e.g. C-H-H-H-H, frozen the H --> partial is {1 2 3 4} or hybrid is {0}. Both of them are numerical(slow)
 PARTIAL_Hess 
-	{26 27 28 29 30 31 32 33 34 35 36 37}
+	{23 24 25 26 27 28 29 30 31 32 33 34}
 	end
 end

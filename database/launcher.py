@@ -517,7 +517,7 @@ def create_qchem_irc_opt_sub_file(irc_path:str, config_path:str, forward:str, ba
     return subfile_1, subfile_2
 
 def create_orca_irc_opt_sub_file(irc_path:str, config_path:str, forward:str, backward:str, ncpus:int=4, mpiprocs:int=4, ompthreads:int=1, Hcap:int=None) -> None:
-    irc_opt_lot = path.join(config_path, 'orca_opt_freq.lot')
+    irc_opt_lot = path.join(config_path, 'orca_freq_opt_freq.lot')
     irc_opt_forward_input = path.join(irc_path, 'irc_forward.in')
     subfile_1 = path.join(irc_path, 'irc_forward_opt.job')
     irc_opt_backward_input = path.join(irc_path, 'irc_backward.in')

@@ -1,4 +1,1 @@
 -coordinate_type  TRIC
--DQMAG_MAX  0.6
--ADD_NODE_TOL 0.005
--linesearch    backtrack
