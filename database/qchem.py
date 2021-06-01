@@ -139,17 +139,40 @@ class QChem(object):
                     qm_atoms.append(int(qm_atom))
                 except:
                     continue
-        symobol, geometry = self.get_geometry()
-        natoms = len(qm_atoms)
+        symobol, geometry = self.qmmm_get_geo()
+        natoms = len(qm_atoms) + 12
         with open(file_path, 'w') as f:
             f.write(str(natoms))
             f.write('\n\n')
             for atom, xyz in zip(symobol[:natoms], geometry[:natoms]):
                 f.write('{}  {}  {}  {}\n'.format(atom, xyz[0], xyz[1], xyz[2]))
 
+    def qmmm_get_geo(self, first=False):
+        if first:
+            iterable = range(len(self.log))
+        else:
+            iterable = reversed(range(len(self.log)))
+        count = 0
+        for i in iterable:
+            line = self.log[i]
+            if 'Standard Nuclear Orientation' in line:
+                count += 1
+                if count == 2:
+                    symbols, coords = [], []
+                    for line in self.log[(i+3):]:
+                        if '----------' not in line:
+                            data = line.split()
+                            symbols.append(data[1])
+                            coords.append([float(c) for c in data[2:]])
+                        else:
+                            return symbols, np.array(coords)
+        else:
+            raise QChemError(f'Geometry not found in {self.logfile}')
 
-# logfile='/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/database/qmmm_freq_ts.out'
+# logfile='/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/testfile/qmmm_sp.out'
+# reactant_path = '/mnt/d/Lab/QMproject/AutomatedReactionMechanismDiscovery/testfile/qmmm.xyz'
 # try:
 #     q = QChem(outputfile=logfile)
+#     q.create_qmmm_geomtry(reactant_path)
 # except:
 #     print('error')

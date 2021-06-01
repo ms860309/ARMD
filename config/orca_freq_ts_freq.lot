@@ -1,4 +1,4 @@
-! PBE0 D3BJ def2-SVP OptTS rijcosx def2/J Freq TIGHTSCF Grid4 GridX4 miniprint nopop
+! PBE0 D3BJ def2-SVP OptTS rijcosx def2/J Freq TIGHTSCF Grid4 GridX4 NoFinalGrid miniprint nopop
 
 %geom
 Calc_Hess true # Calculate Hessian in the beginning

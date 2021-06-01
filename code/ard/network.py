@@ -78,7 +78,7 @@ class Network(object):
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_mopac(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
-                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, refH=H298_reac):
+                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, refH=None):
                         prod_mols_filtered.append(prod_mol)
                     # Recovery
                     mol_object_copy = mol_object.copy()
@@ -100,7 +100,7 @@ class Network(object):
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_xtb(mol_object, prod_mol, self.cluster_bond, add_bonds[prod_mols.index(prod_mol)], 
-                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, config_path = kwargs['config_path'], refH=H298_reac):
+                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, config_path = kwargs['config_path'], refH=None):
                         prod_mols_filtered.append(prod_mol)
                     mol_object.setCoordsFromMol(mol_object_copy)
             else:
@@ -108,7 +108,7 @@ class Network(object):
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_xtb(mol_object, prod_mol,self.cluster_bond, add_bonds[prod_mols.index(prod_mol)], 
-                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, config_path = kwargs['config_path'], refH=H298_reac):
+                                            break_bonds[prod_mols.index(prod_mol)], len(prod_mols), qm_collection, config_path = kwargs['config_path'], refH=None):
                         prod_mols_filtered.append(prod_mol)
                     mol_object.setCoordsFromMol(mol_object_copy)
         else:

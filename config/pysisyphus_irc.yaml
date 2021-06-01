@@ -5,16 +5,16 @@ irc:
 endopt:
  fragments: False            # Detect fragments at the end of the IRC and optimize them separately.
  thresh: gau_tight
- coord_type: redund
  geom: 
-  freeze_atoms: [26,27,28,29,30,31,32,33,34,35,36,37]
+  type: redund
+  freeze_atoms: [23,24,25,26,27,28,29,30,31,32,33,34]
 calc:
  type: orca
- keywords: PBE0 D3BJ def2-SVP rijcosx def2/J TightSCF Grid4 GridX4 miniprint nopop
+ keywords: PBE0 D3BJ def2-SVP rijcosx def2/J TightSCF Grid4 GridX4 NoFinalGrid miniprint nopop
  pal: 8
  charge: 0
  mult: 1
 geom:
  type: cart
- isotopes: [[26, 1000000000000000.0], [27, 1000000000000000.0], [28, 1000000000000000.0], [29, 1000000000000000.0], [30, 1000000000000000.0], [31, 1000000000000000.0], [32, 1000000000000000.0], [33, 1000000000000000.0], [34, 1000000000000000.0], [35, 1000000000000000.0], [36, 1000000000000000.0], [37, 1000000000000000.0]]
+ isotopes: [[23, 1000000000000000.0], [24, 1000000000000000.0], [25, 1000000000000000.0], [26, 1000000000000000.0], [27, 1000000000000000.0], [28, 1000000000000000.0], [29, 1000000000000000.0], [30, 1000000000000000.0], [31, 1000000000000000.0], [32, 1000000000000000.0], [33, 1000000000000000.0], [34, 1000000000000000.0]]
  fn: ts_geo.xyz

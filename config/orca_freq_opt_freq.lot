@@ -1,4 +1,4 @@
-! PBE0 D3BJ def2-SVP rijcosx def2/J TIGHTSCF TightOpt Freq Grid4 GridX4 noautostart miniprint nopop
+! PBE0 D3BJ def2-SVP rijcosx def2/J TIGHTSCF TightOpt Freq Grid4 GridX4 NoFinalGrid noautostart miniprint nopop
 
 %geom
 Recalc_Hess 150  # Recalculate the Hessian every 50 steps
