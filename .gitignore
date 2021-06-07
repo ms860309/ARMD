@@ -17,3 +17,7 @@ tmp/
 reactions/
 __pycache__/
 .vscode/
+
+#Test folder
+testfile/
+sometest/
