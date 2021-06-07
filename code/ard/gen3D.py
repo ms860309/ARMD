@@ -685,7 +685,7 @@ class Arrange3D(object):
             self.cluster_bond = cluster_bond
         self.initializeVars(mol_1, mol_2)
 
-    def initializeVars(self, mol_1, mol_2, d_intermol=1.0, d_intramol=1.5):
+    def initializeVars(self, mol_1, mol_2, d_intermol=1.0, d_intramol=2.0):
         """
         Set up class variables and determine the bonds and torsions to be
         matched between reactant and product.
@@ -829,7 +829,7 @@ class Arrange3D(object):
                                                     {'type': 'ineq', 'fun': self.third_constraintFunction}
                                                     ],
                                         method='SLSQP',
-                                        options={'disp': False, 'maxiter':200, 'ftol':0.01})  # , callback = callbackF, 'eps':1e-10
+                                        options={'disp': False, 'maxiter':200, 'ftol':0.001})  # , callback = callbackF, 'eps':1e-10
                 # if not s_result.success:
                 #     result = result
                 # else:
@@ -1174,7 +1174,7 @@ class Arrange3D(object):
 
         # with open ('./visual_arrange.xyz', 'a') as f:
         #     coords = "\n".join(["{} {:10.08f} {:10.08f} {:10.08f}".format(a, *c) for a, c in zip(atom_symbol_1, np.concatenate(coords_1))])
-        #     f.write(f"{len(atom_symbol_2)}\n\n{coords}\n")
+        #     f.write(f"{len(atom_symbol_1)}\n\n{coords}\n")
 
         val_b, val_d = 0.0, 0.0
         for i in range(len(b1)):

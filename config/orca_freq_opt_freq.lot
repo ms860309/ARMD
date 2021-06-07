@@ -1,8 +1,7 @@
 ! PBE0 D3BJ def2-SVP rijcosx def2/J TIGHTSCF TightOpt Freq Grid4 GridX4 NoFinalGrid noautostart miniprint nopop
 
 %geom
-Recalc_Hess 150  # Recalculate the Hessian every 50 steps
-maxiter 300    # Maximum optimize iterations
+maxiter 150    # Maximum optimize iterations
 Constraints  # The atom you want to constraint, index from 0.
 	{C 23 C}
 	{C 24 C}

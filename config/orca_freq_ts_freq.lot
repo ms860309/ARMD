@@ -2,7 +2,6 @@
 
 %geom
 Calc_Hess true # Calculate Hessian in the beginning
-Recalc_Hess 50  # Recalculate the Hessian every 50 steps
 MaxStep 0.10  # 0.10 a.u.
 Convergence tight  # Same convergence criteria with tightopt
 Constraints # The atom you want to constraint, index from 0.
