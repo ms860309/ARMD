@@ -1043,24 +1043,17 @@ QMMM
 
 def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:float=70.0):
 
-    reactions = list(reactions_collection.aggregate([{
-                '$group': {
-                    '_id': "$reaction",
-                    'barrier': {'$min': "$barrier"}
-                }}
-            ]))
-
+    reactions = list(reactions_collection.find({}))
     for i in reactions:
-        target = list(reactions_collection.find({'reaction': i['_id'], 'barrier': i['barrier']}))[0]
         try:
-            qmmm = target['qmmm']
+            qmmm = i['qmmm']
             if qmmm == 'Already insert':
                 continue
         except:
             pass
-        ard_qm_target = list(qm_collection.find({'path': target['path']}))[0]
+        ard_qm_target = list(qm_collection.find({'path': i['path']}))[0]
         # cluster model barrier filter
-        if target['barrier'] > threshold:
+        if i['barrier'] > threshold:
             continue
         # Prevent reactant equal to product but with different active site (maybe proton at the different oxygen)
         reactant_smiles = ard_qm_target['reactant_smiles'].split('.')
@@ -1072,7 +1065,6 @@ def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:flo
                     if metal not in rs and 'C' in rs:
                         reactant_part_smiles.append(rs)
             reactant_part_smiles = set(reactant_part_smiles)
-
         else:
             reactant_part_smiles = set(reactant_smiles)
             
@@ -1090,7 +1082,7 @@ def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:flo
             continue
 
         qm_collection.update_one(ard_qm_target, {"$set": {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun", 'qmmm_freq_opt_reactant_restart_times':0, 'qmmm_freq_opt_product_restart_times':0, 'qmmm_freq_ts_restart_times':0}}, True)
-        reactions_collection.update_one(target, {"$set": {'qmmm': 'Already insert'}}, True)
+        reactions_collection.update_one(i, {"$set": {'qmmm': 'Already insert'}}, True)
 
 """
 Check barrier which do not have reactant energy
@@ -2074,7 +2066,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_qmmm_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_ts_freq_jobs(qm_collection, reactions_collection, threshold = -50.0)
     check_qmmm_refine_jobs(qm_collection, reactions_collection)
-
+    
     # check_qmmm_freq_ts_side_fail_jobs(qm_collection)
 
 check_jobs(refine=True, cluster_bond_path=True, level_of_theory='ORCA')

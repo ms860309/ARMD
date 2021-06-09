@@ -829,7 +829,7 @@ class Arrange3D(object):
                                                     {'type': 'ineq', 'fun': self.third_constraintFunction}
                                                     ],
                                         method='SLSQP',
-                                        options={'disp': False, 'maxiter':200, 'ftol':0.001})  # , callback = callbackF, 'eps':1e-10
+                                        options={'disp': False, 'maxiter':200, 'ftol':0.01})  # , callback = callbackF, 'eps':1e-10
                 # if not s_result.success:
                 #     result = result
                 # else:
