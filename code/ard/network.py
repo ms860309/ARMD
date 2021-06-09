@@ -43,6 +43,7 @@ class Network(object):
         self.count = 0
         self.fixed_atom = kwargs['fixed_atom']
         self.use_irc = kwargs['use_irc']
+        self.use_qmmm = kwargs['use_qmmm']
         self.reactant_path = path.dirname(kwargs['reactant_path'])
 
     def genNetwork(self, mol_object, **kwargs):
@@ -74,7 +75,7 @@ class Network(object):
             if self.generations == 1:
                 os.mkdir(path.join(path.dirname(self.ard_path), 'reactions'))
                 H298_reac = self.get_mopac_H298(mol_object)
-                config_collection.update_one(targets[0], {"$set": {'reactant_energy': H298_reac, 'use_irc': self.use_irc}}, True)
+                config_collection.update_one(targets[0], {"$set": {'reactant_energy': H298_reac, 'use_irc': self.use_irc, 'use_qmmm': self.use_qmmm}}, True)
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_mopac(mol_object, self.cluster_bond, prod_mol, add_bonds[prod_mols.index(prod_mol)], 
@@ -96,7 +97,7 @@ class Network(object):
             if self.generations == 1:
                 os.mkdir(path.join(path.dirname(self.ard_path), 'reactions'))
                 H298_reac = self.get_xtb_H298(config_path=kwargs['config_path'])
-                config_collection.update_one(targets[0], {"$set": {'reactant_energy': H298_reac, 'use_irc': self.use_irc}}, True)
+                config_collection.update_one(targets[0], {"$set": {'reactant_energy': H298_reac, 'use_irc': self.use_irc, 'use_qmmm': self.use_qmmm}}, True)
                 mol_object_copy = mol_object.copy()
                 for prod_mol in prod_mols:
                     if self.filter_dh_xtb(mol_object, prod_mol, self.cluster_bond, add_bonds[prod_mols.index(prod_mol)], 

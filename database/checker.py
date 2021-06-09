@@ -2063,8 +2063,13 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     reactions_collection = db['reactions']
     statistics_collection = db['statistics']
     config_collection = db['config']
-    targets = list(config_collection.find({'generations': 1}))
-    qmmm_path = path.join(targets[0]['config_path'], 'qmmm.xyz')
+    target = list(config_collection.find({'generations': 1}))[0]
+    qmmm = target['use_qmmm']
+    if qmmm == '1':
+        qmmm = True
+    else:
+        qmmm = False
+    qmmm_path = path.join(target['config_path'], 'qmmm.xyz')
     try:
         qmmm_mol = next(pybel.readfile('xyz', qmmm_path))
     except:
@@ -2087,7 +2092,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False, check_mm_overlap=True, qmmm=qmmm_mol, qm_atoms=23, threshold_ratio=0.6)
     check_barrier(qm_collection)
     insert_reaction(qm_collection, reactions_collection)
-    insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=65.0, qmmm=True)
+    insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=65.0, qmmm=qmmm)
 
     check_qmmm_opt_jobs(qm_collection, reactions_collection)
     check_qmmm_freq_opt_jobs(qm_collection, reactions_collection, restart_times = 2)

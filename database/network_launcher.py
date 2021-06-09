@@ -12,9 +12,8 @@ sys.path.append(path.join(path.dirname(
 # Manual run 0th generations
 
 
-def select_ard_target():
+def select_ard_target(qm_collection:object):
     # when lower generation finished return target else return []
-    qm_collection = db['qm_calculate_center']
     reg_query = {'ard_status':
                  {"$in":
                   ["job_unrun"]
@@ -24,19 +23,14 @@ def select_ard_target():
     return targets
 
 
-def launch_ard_jobs(ncpus=8, mpiprocs=1, ompthreads=8):
-
-    qm_collection = db['qm_calculate_center']
-    config_collection = db['config']
-    status_collection = db['status']
+def launch_ard_jobs(qm_collection:object, config_collection:object, status_collection:object, ncpus:int=1, mpiprocs:int=1, ompthreads:int=1, qmmm:bool=True):
 
     if config_collection.estimated_document_count() == 0:
         print(highlight_text('Starting ARD network exploring'))
         script_path = path.join(path.dirname(path.dirname(path.abspath(__file__))), 'script')
         if path.exists(script_path):
             os.chdir(script_path)
-        subfile = create_ard_sub_file(
-            script_path, script_path, 1, 'reactant.xyz', ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
+        subfile = create_ard_sub_file(script_path, script_path, 1, 'reactant.xyz', ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
         # first reactant need to add to config
         initial_reactant = next(pybel.readfile('xyz', path.join(script_path, 'reactant.xyz')))
         initial_reactant_inchi_key = initial_reactant.write('inchiKey').strip()
@@ -53,7 +47,7 @@ def launch_ard_jobs(ncpus=8, mpiprocs=1, ompthreads=8):
         print('jobid is {}'.format(job_id))
         status_collection.insert_one({'status': 'ARD had launched', 'jobid': job_id})
     else:
-        targets = select_ard_target()
+        targets = select_ard_target(qm_collection)
         use_irc = list(config_collection.find({'generations':1}))[0]['use_irc']
         count = 0
         for target in targets:
@@ -63,15 +57,19 @@ def launch_ard_jobs(ncpus=8, mpiprocs=1, ompthreads=8):
                     path.dirname(dir_path)), 'script')
                 if ard_ssm_equal == 'not_equal':
                     next_reactant = 'ssm_product.xyz'
-                    subfile = create_ard_sub_file(
-                        dir_path, script_path, gen_num + 1, next_reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
+                    subfile = create_ard_sub_file(dir_path, script_path, gen_num + 1, next_reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
                 else:
                     next_reactant = 'product.xyz'
-                    subfile = create_ard_sub_file(
-                        dir_path, script_path, gen_num + 1, next_reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
+                    subfile = create_ard_sub_file(dir_path, script_path, gen_num + 1, next_reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
             else:
                 dir_path, gen_num = target['path'], target['generations']
-                next_reactant = path.join(dir_path, 'irc_reactant.xyz')
+                qmmm_product_path = path.join(dir_path, 'QMMM_PRODUCT/qmmm_final.xyz')
+                next_reactant_path = path.join(dir_path, 'qmmm_reactant.xyz')
+                if qmmm:
+                    shutil.copyfile(qmmm_product_path, next_reactant_path)
+                    next_reactant = 'qmmm_reactant.xyz'
+                else:
+                    next_reactant = 'irc_reactant.xyz'
                 script_path = path.join(path.dirname(path.dirname(dir_path)), 'script')
                 subfile = create_ard_sub_file(dir_path, script_path, gen_num + 1, next_reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
 
@@ -141,4 +139,14 @@ def check_ard_job_status(job_id):
 
 
 
-launch_ard_jobs(ncpus=1, mpiprocs=1, ompthreads=1)
+qm_collection = db['qm_calculate_center']
+config_collection = db['config']
+status_collection = db['status']
+
+target = list(config_collection.find({'generations': 1}))[0]
+qmmm = target['use_qmmm']
+if qmmm == '1':
+    qmmm = True
+else:
+    qmmm = False
+launch_ard_jobs(qm_collection, config_collection, status_collection, ncpus=1, mpiprocs=1, ompthreads=1, qmmm=qmmm)
