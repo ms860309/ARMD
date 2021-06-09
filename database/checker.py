@@ -1396,11 +1396,11 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
             'qmmm_freq_opt_status': 'job_success', 'qmmm_freq_status': 'job_unrun'
             }
         update_field_reaction = {
-            'qmmm_freq_opt_reactant_status': new_status
+            'qmmm_freq_opt_status': 'job_success'
             }
         reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
         reactions_collection.update_one(reaction_target, {"$unset": {'qmmm_freq_opt_reactant_status': '', 'qmmm_freq_opt_product_status': '',
-                                                     'qmmm_freq_opt_reactant_jobid': '', 'qmmm_freq_opt_product_jobid': ''}, "$set": {'qmmm_freq_opt_reactant_status': new_status}}, True)
+                                                     'qmmm_freq_opt_reactant_jobid': '', 'qmmm_freq_opt_product_jobid': ''}, "$set": update_field_reaction}, True)
         qm_collection.update_one(target, {"$unset": {'qmmm_freq_opt_reactant_status': '', 'qmmm_freq_opt_product_status': '',
                                                      'qmmm_freq_opt_reactant_jobid': '', 'qmmm_freq_opt_product_jobid': ''}, "$set": update_field}, True)
 

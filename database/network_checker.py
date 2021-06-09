@@ -834,7 +834,7 @@ def print_information(generations):
     if len(qmmm_ts_freq_targets_0) != 0:
         print('{} nodes should run QMMM TS FERQ job'.format(len(qmmm_ts_freq_targets_0)))
     if len(qmmm_refine_targets_0) != 0:
-        print('{} nodes should run QMMM REFINE job\n'.format(len(qmmm_refine_targets_0)))
+        print('{} nodes should run QMMM SP job\n'.format(len(qmmm_refine_targets_0)))
     print(highlight_text('Running jobs'))
     if len(ard_targets_1) != 0:
         print('\n{} nodes are running or queueing ARD'.format(len(ard_targets_1)))
@@ -859,7 +859,7 @@ def print_information(generations):
     if len(qmmm_ts_freq_targets_1) != 0:
         print('{} nodes are running or queueing QMMM TS FREQ'.format(len(qmmm_ts_freq_targets_1)))
     if len(qmmm_refine_targets_1) != 0:
-        print('{} nodes are running or queueing in QMMM REFINE job\n'.format(len(qmmm_refine_targets_1)))
+        print('{} nodes are running or queueing in QMMM SP job\n'.format(len(qmmm_refine_targets_1)))
     print(highlight_text('Success jobs'))
     if len(ard_targets_2) != 0:
         print('\n{} nodes are success in ARD'.format(len(ard_targets_2)))
@@ -884,7 +884,7 @@ def print_information(generations):
     if len(qmmm_ts_freq_targets_2) != 0:
         print('{} nodes are success in QMMM TS FREQ job'.format(len(qmmm_ts_freq_targets_2)))
     if len(qmmm_refine_targets_2) != 0:
-        print('{} nodes are success in QMMM REFINE job\n'.format(len(qmmm_refine_targets_2)))
+        print('{} nodes are success in QMMM SP job\n'.format(len(qmmm_refine_targets_2)))
     print(highlight_text('Failed jobs'))
     if len(ssm_targets_3) != 0:
         print('\n{} nodes are failed in SSM'.format(len(ssm_targets_3)))
@@ -909,7 +909,7 @@ def print_information(generations):
     if len(qmmm_ts_freq_targets_3) != 0:
         print('{} nodes are failed in QMMM TS FREQ'.format(len(qmmm_ts_freq_targets_3)))
     if len(qmmm_refine_targets_3) != 0:
-        print('{} nodes are failed in QMMM REFINE job\n'.format(len(qmmm_refine_targets_3)))
+        print('{} nodes are failed in QMMM SP job\n'.format(len(qmmm_refine_targets_3)))
     print(highlight_text('IRC intended products'))
     if len(irc_targets_4) != 0:
         print('\n{} nodes are intended'.format(len(irc_targets_4)))
