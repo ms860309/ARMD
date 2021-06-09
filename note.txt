@@ -13,9 +13,23 @@ pygsm安裝:
 // 第三步直接在conda環境中 python setup install就可以了 不需要--prefix
 https://github.com/ZimmermanGroup/pyGSM
 
+2021/06/09:
+目前測試到 branch : ef70a7f25f411d792a2b00307ea2237095ace031
+我有修正fronzen atom bug
+
 pysisphus安裝:
 //注意他的numpy版本 如果不能裝改用pip
 https://pysisyphus.readthedocs.io/en/dev/installation.html
+
+2021/06/09:
+pysisyphus使用最新版本即可，我有協助Johannes debug
+請記得改.pysisyphusrc
+[orca]
+# ORCA needs the full path to its binary, so please provide the full path.
+cmd=/opt/ORCA/orca_4_2_1_linux_x86-64_openmpi314/orca
+[xtb]
+# Cmd to execute. Please ensure that xtb is on your $PATH.
+cmd=/opt/xTB/xtb-6.4.0/bin/xtb
 
 ----
 
@@ -31,6 +45,10 @@ export XTBPATH=/home/jianyi/xtb/xtb-bleed/shard/xtb
 export PATH=$PATH:/home/jianyi/ORCA/orca_4_2_1_linux_x86-64_openmpi314:/home/jianyi/xtb/xtb-bleed/bin
 export PATH=$orcadir:$PATH
 
+2021/06/09 update
+orca與xtb路徑已安裝於module，後續不需調整
+直接module load orca or module load xtb
+使用orca方式為: $orcadir/orca opt.inp >> opt.out
 ---
 注意事項:
 1.
@@ -43,12 +61,12 @@ export PATH=$orcadir:$PATH
 orca在4.2.1使用的是mpi而不是openmp
 所以在我們cluster多核心運作時應該是使用
 #PBS -l select=1:ncpus=8:mpiprocs=8:ompthreads=1
-沒記錯未來(5.0)好像會改openmp所以到時候用
+沒記錯未來(5.0)好像會改部分為openmp，假設有更改的話用
 #PBS -l select=1:ncpus=8:mpiprocs=1:ompthreads=8
 不過我和shihcheng測試ompthreads好像會使運算速度變慢
 3.
 orca計算時會使用ri, rijcosx, rijk等方法來加速運算 <-- 具體請自行查閱orca document
-這些approximation方法有時後會導致很小的imaginary frequency產生，而我目前的過濾器有嚴格限制
+這些approximation方法有時後會導致很小的imaginary frequency產生(ORCA 5.0後預設格點變高，其實不太需要改格點)，而我目前的過濾器有嚴格限制
 irc opt 之後成功的product必須沒有imaginary frequency
 解決方法: rijcosx等方法在運算時使用較高的格點 EX: grid3
 目前上面的example參數都是我測試過得
@@ -59,3 +77,19 @@ http://sobereva.com/336
 4.
 有關於transition state等相關概念，除了參考zimmerman paper也可以看看
 http://sobereva.com/44
+5.
+當ts refine計算想要用不同的core數量時(default:1)，由於是調用xtb (openmp)+ orca(openmpi)，因此job file應該使用
+#PBS -l select=1:ncpus=8:mpiprocs=1:ompthreads=8
+此設定為hybrid openmp and openmpi
+6.
+目前SnBEA + hydroxyacetone所找到的acrolein路徑其實本來並不是要找acrolein的 (ie. 不小心找到的)
+其原因為，SSM只是從你給定的driving coordinate(DC)去找ts，假設initial geometry差，調整的過程已經需要跨過小barrier，則此barrier可能會被視為TS guess
+再者，有時候SSM只是朝DC去找，其實也不保證能找到你預期的product
+最後一點hydroxyacetone-->acrolein為endothermic reaction，以DFT level計算enthalpy difference ~= 18 kcal/mol，而semi-empirical (GFN2-xTB)算出來大概是45kcal/mol
+因此會被deltaH filter過濾掉，但是假設調高deltaH threshold又會導致products過多，it's a trade off。 請後人考慮
+另外就是有時候有一些products被過濾是因為form bond distance(預計生成的bond中經過arrange與openbabel constrained optimization後最長的距離)，如果遇到也可以考慮調整(Default:6 angstrom)。
+7.
+2021/06/09 update:
+曾經遇到過qmmm (SnBEA zeolite)不論如何計算都會有imaginary frequency(其值freq+opt之後都差不多)，經過交叉比對發現是force field parameters的問題
+本來打算使用別人train的Sn metal ff parameter但是由於這個值沒有在q-chem train過因此不能直接用，所以後來解決辦法是移除active site上面所有的atom type
+也就是說 QM region = reactant + active site，只要是active site的atom type都設定為0，PS:有關lewis acid open site上面的proton也用0

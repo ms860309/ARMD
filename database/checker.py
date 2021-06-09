@@ -947,17 +947,6 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
     ard_should_add_number = sum([i['add how many products'] for i in should_adds])
 
     if int(not_finished_number) == 0 and int(ard_had_add_number) == int(ard_should_add_number):
-        if qmmm:
-            insert_qmmm(qm_collection, reactions_collection, threshold = barrier_threshold)
-            not_finished_number = len(list(qm_collection.find({'$or':
-                                                    [ssm_query, ts_refine_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ard_query, qmmm_query]
-                                                    })))
-            if not_finished_number != 0:
-                print('Insert QMMM jobs, while the QMMM job finished then restart insert ard')
-                return
-
-        acceptable_condition = ['forward equal to reactant',
-                                'backward equal to reactant']
 
         reactant_part_smiles, finished_reactant_list, finished_reactant_smiles_part_list = [], [], []
         for i in should_adds:
@@ -970,6 +959,18 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
                             reactant_part_smiles.append(rs)
                 reactant_part_smiles = set(reactant_part_smiles)
             finished_reactant_smiles_part_list.append(reactant_part_smiles)
+
+        if qmmm:
+            insert_qmmm(qm_collection, reactions_collection, threshold = barrier_threshold, finished_reactant_smiles_part_list = finished_reactant_smiles_part_list)
+            not_finished_number = len(list(qm_collection.find({'$or':
+                                                    [ssm_query, ts_refine_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ard_query, qmmm_query]
+                                                    })))
+            if not_finished_number != 0:
+                print('Insert QMMM jobs, while the QMMM job finished then restart insert ard')
+                return
+
+        acceptable_condition = ['forward equal to reactant',
+                                'backward equal to reactant']
 
         if qmmm:
             reactions = list(reactions_collection.aggregate([{
@@ -1041,7 +1042,7 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
 QMMM
 """
 
-def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:float=70.0):
+def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:float=70.0, finished_reactant_smiles_part_list:list=[]):
 
     reactions = list(reactions_collection.find({}))
     for i in reactions:
@@ -1078,9 +1079,9 @@ def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:flo
         else:
             product_part_smiles = set(product_smiles)
 
-        if reactant_part_smiles == product_part_smiles:
+        if reactant_part_smiles == product_part_smiles or reactant_part_smiles in finished_reactant_smiles_part_list:
             continue
-
+        
         qm_collection.update_one(ard_qm_target, {"$set": {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun", 'qmmm_freq_opt_reactant_restart_times':0, 'qmmm_freq_opt_product_restart_times':0, 'qmmm_freq_ts_restart_times':0}}, True)
         reactions_collection.update_one(i, {"$set": {'qmmm': 'Already insert'}}, True)
 
@@ -1165,7 +1166,7 @@ def check_qmmm_opt_content(dir_path:str, direction:str='reactant') -> str:
     except:
         return 'job_fail'
 
-def check_qmmm_opt_jobs(qm_collection:object):
+def check_qmmm_opt_jobs(qm_collection:object, reactions_collection:object):
     """
     This method checks job with following steps:
     1. select jobs to check
@@ -1199,6 +1200,8 @@ def check_qmmm_opt_jobs(qm_collection:object):
                 update_field = {
                     'qmmm_opt_reactant_status': new_status
                     }
+            reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
+            reactions_collection.update_one(reaction_target, {"$set":update_field}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
     targets = select_targets(qm_collection, job_name='qmmm_opt_product')
@@ -1226,6 +1229,8 @@ def check_qmmm_opt_jobs(qm_collection:object):
                 update_field = {
                     'qmmm_opt_product_status': new_status
                     }
+            reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
+            reactions_collection.update_one(reaction_target, {"$set":update_field}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
     finished_targets = select_qmmm_opt_finished_target(qm_collection)
@@ -1233,6 +1238,9 @@ def check_qmmm_opt_jobs(qm_collection:object):
         update_field = {
             'qmmm_opt_status': 'job_success', 'qmmm_freq_opt_status':'job_unrun'
             }
+        reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
+        reactions_collection.update_one(reaction_target, {"$unset": {'qmmm_opt_reactant_status': '', 'qmmm_opt_product_status': '',
+                                                     'qmmm_opt_reactant_jobid': '', 'qmmm_opt_product_jobid': ''}, "$set": {'qmmm_opt_status': 'job_success'}}, True)
         qm_collection.update_one(target, {"$unset": {'qmmm_opt_reactant_status': '', 'qmmm_opt_product_status': '',
                                                      'qmmm_opt_reactant_jobid': '', 'qmmm_opt_product_jobid': ''}, "$set": update_field}, True)
 
@@ -1301,7 +1309,7 @@ def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:
     except:
         return 'job_fail'
 
-def check_qmmm_freq_opt_jobs(qm_collection:object, restart_times:int = 2):
+def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, restart_times:int = 2):
     """
     This method checks job with following steps:
     1. select jobs to check
@@ -1339,6 +1347,11 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, restart_times:int = 2):
                 update_field = {
                     'qmmm_freq_opt_reactant_status': new_status, 'qmmm_freq_opt_reactant_restart_times':times + 1
                     }
+            update_field_reaction = {
+                'qmmm_freq_opt_reactant_status': new_status
+                }
+            reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
+            reactions_collection.update_one(reaction_target, {"$set":update_field_reaction}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
     targets = select_targets(qm_collection, job_name='qmmm_freq_opt_product')
@@ -1370,6 +1383,11 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, restart_times:int = 2):
                 update_field = {
                     'qmmm_freq_opt_product_status': new_status, 'qmmm_freq_opt_product_restart_times':times + 1
                     }
+            update_field_reaction = {
+                'qmmm_freq_opt_reactant_status': new_status
+                }
+            reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
+            reactions_collection.update_one(reaction_target, {"$set":update_field_reaction}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
     finished_targets = select_qmmm_freq_opt_finished_target(qm_collection)
@@ -1377,6 +1395,12 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, restart_times:int = 2):
         update_field = {
             'qmmm_freq_opt_status': 'job_success', 'qmmm_freq_status': 'job_unrun'
             }
+        update_field_reaction = {
+            'qmmm_freq_opt_reactant_status': new_status
+            }
+        reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
+        reactions_collection.update_one(reaction_target, {"$unset": {'qmmm_freq_opt_reactant_status': '', 'qmmm_freq_opt_product_status': '',
+                                                     'qmmm_freq_opt_reactant_jobid': '', 'qmmm_freq_opt_product_jobid': ''}, "$set": {'qmmm_freq_opt_reactant_status': new_status}}, True)
         qm_collection.update_one(target, {"$unset": {'qmmm_freq_opt_reactant_status': '', 'qmmm_freq_opt_product_status': '',
                                                      'qmmm_freq_opt_reactant_jobid': '', 'qmmm_freq_opt_product_jobid': ''}, "$set": update_field}, True)
 
@@ -1560,7 +1584,7 @@ def check_qmmm_freq_ts_content(dir_path:str, restart:bool=False, times:int=0) ->
     except:
         return 'job_fail'
 
-def check_qmmm_freq_ts_jobs(qm_collection:object, restart_times:int = 2):
+def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, restart_times:int = 2):
     """
     This method checks job with following steps:
     1. select jobs to check
@@ -1598,6 +1622,11 @@ def check_qmmm_freq_ts_jobs(qm_collection:object, restart_times:int = 2):
                 update_field = {
                     'qmmm_freq_ts_status': new_status, 'qmmm_freq_ts_restart_times': times + 1
                     }
+            update_field_reaction = {
+                    'qmmm_freq_ts_status': new_status
+                }
+            reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
+            reactions_collection.update_one(reaction_target, {"$set":update_field_reaction}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
 """
@@ -2060,9 +2089,9 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     insert_reaction(qm_collection, reactions_collection)
     insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=65.0, qmmm=True)
 
-    check_qmmm_opt_jobs(qm_collection)
-    check_qmmm_freq_opt_jobs(qm_collection, restart_times = 2)
-    check_qmmm_freq_ts_jobs(qm_collection, restart_times = 3)
+    check_qmmm_opt_jobs(qm_collection, reactions_collection)
+    check_qmmm_freq_opt_jobs(qm_collection, reactions_collection, restart_times = 2)
+    check_qmmm_freq_ts_jobs(qm_collection, reactions_collection, restart_times = 3)
     check_qmmm_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_ts_freq_jobs(qm_collection, reactions_collection, threshold = -50.0)
     check_qmmm_refine_jobs(qm_collection, reactions_collection)
