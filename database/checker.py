@@ -961,7 +961,7 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
             finished_reactant_smiles_part_list.append(reactant_part_smiles)
 
         if qmmm:
-            insert_qmmm(qm_collection, reactions_collection, threshold = barrier_threshold, finished_reactant_smiles_part_list = finished_reactant_smiles_part_list)
+            insert_qmmm(qm_collection, reactions_collection, threshold = barrier_threshold, finished_reactant_smiles_part_list = finished_reactant_smiles_part_list, finished_reactant_list = finished_reactant_list)
             not_finished_number = len(list(qm_collection.find({'$or':
                                                     [ssm_query, ts_refine_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ard_query, qmmm_query]
                                                     })))
@@ -1042,7 +1042,7 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
 QMMM
 """
 
-def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:float=70.0, finished_reactant_smiles_part_list:list=[]):
+def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:float=70.0, finished_reactant_smiles_part_list:list=[], finished_reactant_list:list=[]):
 
     reactions = list(reactions_collection.find({}))
     for i in reactions:
@@ -1079,7 +1079,7 @@ def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:flo
         else:
             product_part_smiles = set(product_smiles)
 
-        if reactant_part_smiles == product_part_smiles or reactant_part_smiles in finished_reactant_smiles_part_list:
+        if reactant_part_smiles == product_part_smiles or reactant_part_smiles in finished_reactant_smiles_part_list or ard_qm_target['reactant_inchi_key'] in finished_reactant_list:
             continue
         
         qm_collection.update_one(ard_qm_target, {"$set": {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun", 'qmmm_freq_opt_reactant_restart_times':0, 'qmmm_freq_opt_product_restart_times':0, 'qmmm_freq_ts_restart_times':0}}, True)
