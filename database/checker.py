@@ -133,13 +133,13 @@ def check_ssm_content(target_path:str, thershold:float = 200.0) -> str:
         ts_energy_guess = q.get_ts_energy_guess()
         # delta_e_guess = q.get_delta_e()
         if ts_energy_guess > thershold:
-            return "ts_guess high energy"
+            return "ts_guess high energy", ts_energy_guess
         elif path.exists(ts_node_path):
-            return job_status
+            return job_status, ts_energy_guess
         else:
-            return "job_fail"
+            return "job_fail", ts_energy_guess
     except:
-        return "job_fail"
+        return "job_fail", 0.0
 
 def check_ssm_jobs(qm_collection:object, refine:bool=False, thershold:float = 200.0):
     """
@@ -158,7 +158,7 @@ def check_ssm_jobs(qm_collection:object, refine:bool=False, thershold:float = 20
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status = check_ssm_content(target['path'], thershold = thershold)
+            new_status, ssm_barrier = check_ssm_content(target['path'], thershold = thershold)
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -167,15 +167,15 @@ def check_ssm_jobs(qm_collection:object, refine:bool=False, thershold:float = 20
             if new_status == 'job_success':
                 if refine:
                     update_field = {
-                        'ssm_status': new_status, "ts_refine_status": "job_unrun"
+                        'ssm_status': new_status, "ts_refine_status": "job_unrun", 'ssm_barrier':ssm_barrier
                         }
                 else:
                     update_field = {
-                        'ssm_status': new_status, "ts_status": "job_unrun"
+                        'ssm_status': new_status, "ts_status": "job_unrun", 'ssm_barrier':ssm_barrier
                         }
             else:
                 update_field = {
-                    'ssm_status': new_status
+                    'ssm_status': new_status, 'ssm_barrier':ssm_barrier
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
@@ -948,16 +948,17 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
 
     if int(not_finished_number) == 0 and int(ard_had_add_number) == int(ard_should_add_number):
 
-        reactant_part_smiles, finished_reactant_list, finished_reactant_smiles_part_list = [], [], []
+        finished_reactant_list, finished_reactant_smiles_part_list = [], []
         for i in should_adds:
             finished_reactant_list.append(i['reactant_inchi_key'])
             reactant_smiles = i['reactant_smiles'].split('.')
             if len(reactant_smiles) > 1:
+                reactant_part_smiles = []
                 for rs in reactant_smiles:
                     for metal in ['Sn', 'W', 'Mo', 'Al']:
                         if metal not in rs and 'C' in rs:
                             reactant_part_smiles.append(rs)
-                reactant_part_smiles = set(reactant_part_smiles)
+            reactant_part_smiles = set(reactant_part_smiles)
             finished_reactant_smiles_part_list.append(reactant_part_smiles)
 
         if qmmm:
