@@ -162,7 +162,7 @@ for i in b:
 """
 qm_collection = db['qm_calculate_center']
 reactions_collection = db['reactions']
-reactions = list(reactions_collection.find({'qmmm':'Already insert'}))
+reactions = list(reactions_collection.find({'qmmm':'already insert to qm'}))
 
 for reaction in reactions:
     qmmm_reactant_path = os.path.join(reaction['path'], 'QMMM_REACTANT')

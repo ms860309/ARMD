@@ -1089,7 +1089,7 @@ def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:flo
     for i in reactions:
         try:
             qmmm = i['qmmm']
-            if qmmm == 'Already insert':
+            if qmmm == 'already insert to qm':
                 continue
         except:
             pass
@@ -1124,7 +1124,7 @@ def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:flo
             continue
         
         qm_collection.update_one(ard_qm_target, {"$set": {"qmmm_opt_status": "job_unrun", "qmmm_freq_ts_status": "job_unrun", 'qmmm_freq_opt_reactant_restart_times':0, 'qmmm_freq_opt_product_restart_times':0, 'qmmm_freq_ts_restart_times':0}}, True)
-        reactions_collection.update_one(i, {"$set": {'qmmm': 'Already insert'}}, True)
+        reactions_collection.update_one(i, {"$set": {'qmmm': 'already insert to qm'}}, True)
 
 """
 Check barrier which do not have reactant energy
@@ -1586,7 +1586,7 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_run_time':job_run_time
+                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_reactant_run_time':job_run_time
                     }
                 update_field_reaction = {
                         'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_reactant_run_time':job_run_time
@@ -1624,10 +1624,10 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_run_time':job_run_time
+                    'qmmm_freq_product_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_product_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_run_time':job_run_time
+                    'qmmm_freq_product_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_product_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
@@ -1807,10 +1807,10 @@ def check_qmmm_ts_freq_jobs(qm_collection:object, reactions_collection:object, t
                     }
             else:
                 update_field = {
-                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_freq_run_time':job_run_time
+                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_energy':energy, 'qmmm_ts_freq_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_freq_run_time':job_run_time
+                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_energy':energy, 'qmmm_ts_freq_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
