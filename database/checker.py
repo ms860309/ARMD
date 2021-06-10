@@ -1309,10 +1309,10 @@ def select_qmmm_freq_opt_finished_target(qm_collection:object) -> list:
              [
                  {"qmmm_freq_opt_reactant_status":
                   {"$in":
-                   ['job_success']}},
+                   ['job_success', 'should_run_freq']}},
                  {'qmmm_freq_opt_product_status':
                   {'$in':
-                   ['job_success']}},
+                   ['job_success', 'should_run_freq']}},
                  {'qmmm_freq_status':
                   {'$nin':
                    ['job_unrun']}}
@@ -1320,7 +1320,7 @@ def select_qmmm_freq_opt_finished_target(qm_collection:object) -> list:
     targets = list(qm_collection.find(query))
     return targets
 
-def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:bool=False) -> str:
+def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:bool=False, restart_time:int=0) -> str:
     qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
     qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT')
     try:
@@ -1338,31 +1338,39 @@ def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:
     try:
         q = QChem(outputfile=output_path)
         if direction == 'reactant':
-            if restart:
-                return 'job_success', job_run_time
-            else:
-                freqs = q.get_frequencies()
-                nnegfreq = sum(1 for freq in freqs if freq < 0.0)
-                reactant = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz')
-                if not os.path.exists(reactant):
-                    q.create_qmmm_geomtry(file_path = reactant)
-                if nnegfreq > 0:
-                    return 'restart', job_run_time
+            freqs = q.get_frequencies()
+            nnegfreq = sum(1 for freq in freqs if freq < 0.0)
+            reactant = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz')
+            if not os.path.exists(reactant):
+                q.create_qmmm_geomtry(file_path = reactant)
+            if nnegfreq > 0:
+                if restart:
+                    return 'should_run_freq', job_run_time
                 else:
-                    return 'job_success', job_run_time
+                    return 'restart', job_run_time
+            else:
+                if restart_time == 0:
+                    shutil.copyfile(path.join(qmmm_reactant_dir, 'qmmm_opt.xyz'), path.join(qmmm_reactant_dir, 'qmmm_final.xyz'))
+                else:
+                    shutil.copyfile(path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz'), path.join(qmmm_reactant_dir, 'qmmm_final.xyz'))
+                return 'job_success', job_run_time
         else:
-            if restart:
-                return 'job_success', job_run_time
-            else:
-                freqs = q.get_frequencies()
-                nnegfreq = sum(1 for freq in freqs if freq < 0.0)
-                product = path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz')
-                if not os.path.exists(product):
-                    q.create_qmmm_geomtry(file_path = product)
-                if nnegfreq > 0:
-                    return 'restart', job_run_time
+            freqs = q.get_frequencies()
+            nnegfreq = sum(1 for freq in freqs if freq < 0.0)
+            product = path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz')
+            if not os.path.exists(product):
+                q.create_qmmm_geomtry(file_path = product)
+            if nnegfreq > 0:
+                if restart:
+                    return 'should_run_freq', job_run_time
                 else:
-                    return 'job_success', job_run_time
+                    return 'restart', job_run_time
+            else:
+                if restart_time == 0:
+                    shutil.copyfile(path.join(qmmm_product_dir, 'qmmm_opt.xyz'), path.join(qmmm_product_dir, 'qmmm_final.xyz'))
+                else:
+                    shutil.copyfile(path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz'), path.join(qmmm_product_dir, 'qmmm_final.xyz'))
+                return 'job_success', job_run_time
     except:
         return 'job_fail', job_run_time
 
@@ -1388,9 +1396,9 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
             else:
                 already_run_time = 0
             if times >= restart_times:
-                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='reactant', restart=True)
+                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='reactant', restart=True, restart_time = times)
             else:
-                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='reactant')
+                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='reactant', restart_time = times)
             job_run_time += already_run_time
         # 4. check with original status which
         # should be job_launched or job_running
@@ -1429,9 +1437,9 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
             else:
                 already_run_time = 0
             if times >= restart_times:
-                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='product', restart=True)
+                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='product', restart=True, restart_time = times)
             else:
-                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='product')
+                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='product', restart_time = times)
             job_run_time += already_run_time
         # 4. check with original status which
         # should be job_launched or job_running
@@ -1459,9 +1467,14 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
 
     finished_targets = select_qmmm_freq_opt_finished_target(qm_collection)
     for target in finished_targets:
-        update_field = {
-            'qmmm_freq_opt_status': 'job_success', 'qmmm_freq_status': 'job_unrun'
-            }
+        if target['qmmm_freq_opt_reactant_status'] == 'job_success' and target['qmmm_freq_opt_product_status'] == 'job_success':
+            update_field = {
+                'qmmm_freq_opt_status': 'job_success', 'qmmm_freq_status': 'job_success'
+                }
+        else:
+            update_field = {
+                'qmmm_freq_opt_status': 'job_success', 'qmmm_freq_status': 'job_unrun'
+                }
         update_field_reaction = {
             'qmmm_freq_opt_status': 'job_success'
             }
@@ -1637,7 +1650,7 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
 QMMM FREQ TS
 """
 
-def check_qmmm_freq_ts_content(dir_path:str, restart:bool=False, times:int=0) -> str:
+def check_qmmm_freq_ts_content(dir_path:str, restart:bool=False, times:int=0, threshold:float=-50.0) -> str:
     qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
     output_path = path.join(qmmm_ts_dir, 'qmmm_freq_ts.out')
     try:
@@ -1647,25 +1660,29 @@ def check_qmmm_freq_ts_content(dir_path:str, restart:bool=False, times:int=0) ->
         job_run_time = 0
     try:
         q = QChem(outputfile=output_path)
-        if restart:
-            return 'job_success', job_run_time
-        else:
-            freqs = q.get_frequencies()
-            nnegfreq = sum(1 for freq in freqs if freq < 0.0)
-            ts = path.join(qmmm_ts_dir, 'qmmm_ts.xyz')
-            if not os.path.exists(ts):
-                q.create_qmmm_geomtry(file_path = ts)
-            if nnegfreq != 1:
-                return 'restart', job_run_time
+        freqs = q.get_frequencies()
+        nnegfreq = sum(1 for freq in freqs if freq < 0.0)
+        ts = path.join(qmmm_ts_dir, 'qmmm_ts.xyz')
+        if not os.path.exists(ts):
+            q.create_qmmm_geomtry(file_path = ts)
+        if nnegfreq != 1:
+            if restart:
+                return 'should_run_freq', job_run_time
             else:
-                if times >= 1:
-                    return 'job_success', job_run_time
+                return 'restart', job_run_time
+        else:
+            if times >= 1 and min(freqs) < threshold:
+                shutil.copyfile(path.join(qmmm_ts_dir, 'qmmm_ts.xyz'), path.join(qmmm_ts_dir, 'qmmm_final.xyz'))
+                return 'job_success', job_run_time
+            else:
+                if restart:
+                    return 'should_run_freq', job_run_time
                 else:
                     return 'restart', job_run_time
     except:
         return 'job_fail', job_run_time
 
-def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, restart_times:int = 2):
+def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, restart_times:int = 2, threshold:float=-50.0):
     """
     This method checks job with following steps:
     1. select jobs to check
@@ -1687,9 +1704,9 @@ def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, r
             else:
                 already_run_time = 0
             if times >= restart_times:
-                new_status, job_run_time = check_qmmm_freq_ts_content(target['path'], restart=True)
+                new_status, job_run_time = check_qmmm_freq_ts_content(target['path'], restart=True, threshold = threshold)
             else:
-                new_status, job_run_time = check_qmmm_freq_ts_content(target['path'], times = times)
+                new_status, job_run_time = check_qmmm_freq_ts_content(target['path'], times = times, threshold = threshold)
             job_run_time += already_run_time
         # 4. check with original status which
         # should be job_launched or job_running
@@ -1698,11 +1715,15 @@ def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, r
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_freq_ts_status': new_status, "qmmm_ts_freq_status": "job_unrun", 'qmmm_freq_ts_run_time':job_run_time
+                    'qmmm_freq_ts_status': new_status, "qmmm_ts_freq_status": "job_success", 'qmmm_freq_ts_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
                     'qmmm_freq_ts_status': new_status
+                    }
+            elif new_status == 'should_run_freq':
+                update_field = {
+                    'qmmm_freq_ts_status': new_status, "qmmm_ts_freq_status": "job_unrun", 'qmmm_freq_ts_run_time':job_run_time
                     }
             else:
                 update_field = {
@@ -2203,7 +2224,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
 
     check_qmmm_opt_jobs(qm_collection, reactions_collection)
     check_qmmm_freq_opt_jobs(qm_collection, reactions_collection, restart_times = 2)
-    check_qmmm_freq_ts_jobs(qm_collection, reactions_collection, restart_times = 3)
+    check_qmmm_freq_ts_jobs(qm_collection, reactions_collection, restart_times = 3, threshold = -50.0)
     check_qmmm_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_ts_freq_jobs(qm_collection, reactions_collection, threshold = -50.0)
     check_qmmm_sp_jobs(qm_collection, reactions_collection)

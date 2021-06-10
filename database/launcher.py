@@ -1048,39 +1048,45 @@ def launch_qmmm_freq_jobs(qm_collection:object, config_path:str, num:int=10, ncp
     for target in targets[:num]:
         qmmm_reactant_dir = path.join(target['path'], 'QMMM_REACTANT')
         reactant = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz')
+        if not path.exists(path.join(qmmm_reactant_dir, 'qmmm_final.xyz')):
+            if path.exists(qmmm_reactant_dir):
+                os.chdir(qmmm_reactant_dir)
+            else:
+                os.mkdir(qmmm_reactant_dir)
+                os.chdir(qmmm_reactant_dir)
 
-        if path.exists(qmmm_reactant_dir):
-            os.chdir(qmmm_reactant_dir)
+            subfile_1 = create_qmmm_freq(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
+            
+            commands_1 = f'qsub {subfile_1}'
+            process = subprocess.Popen([commands_1],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, shell=True)
+            stdout, stderr = process.communicate()
+            # get job id from stdout, e.g., "106849.h81"
+            job_id_1 = stdout.decode().replace("\n", "")
         else:
-            os.mkdir(qmmm_reactant_dir)
-            os.chdir(qmmm_reactant_dir)
-
-        subfile_1 = create_qmmm_freq(qmmm_reactant_dir, config_path, reactant, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
-        
-        commands_1 = f'qsub {subfile_1}'
-        process = subprocess.Popen([commands_1],
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, shell=True)
-        stdout, stderr = process.communicate()
-        # get job id from stdout, e.g., "106849.h81"
-        job_id_1 = stdout.decode().replace("\n", "")
+            job_id_1 = 'None'
+            qm_collection.update_one(target, {"$set": {'qmmm_freq_reactant_status':'job_success'}}, True)
 
         qmmm_product_dir = path.join(target['path'], 'QMMM_PRODUCT')
         product = path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz')
-        if path.exists(qmmm_product_dir):
-            os.chdir(qmmm_product_dir)
-        else:
-            os.mkdir(qmmm_product_dir)
-            os.chdir(qmmm_product_dir)
-        subfile_2 = create_qmmm_freq(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
+        if not path.exists(path.join(qmmm_product_dir, 'qmmm_final.xyz')):
+            if path.exists(qmmm_product_dir):
+                os.chdir(qmmm_product_dir)
+            else:
+                os.mkdir(qmmm_product_dir)
+                os.chdir(qmmm_product_dir)
+            subfile_2 = create_qmmm_freq(qmmm_product_dir, config_path, product, ncpus=ncpus, mpiprocs=mpiprocs, ompthreads=ompthreads)
 
-        commands_2 = f'qsub {subfile_2}'
-        process = subprocess.Popen([commands_2],
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, shell=True)
-        stdout, stderr = process.communicate()
-        # get job id from stdout, e.g., "106849.h81"
-        job_id_2 = stdout.decode().replace("\n", "")
+            commands_2 = f'qsub {subfile_2}'
+            process = subprocess.Popen([commands_2],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, shell=True)
+            stdout, stderr = process.communicate()
+            # get job id from stdout, e.g., "106849.h81"
+            job_id_2 = stdout.decode().replace("\n", "")
+        else:
+            job_id_2 = 'None'
         # update status job_launched
         update_qmmm_freq_status(qm_collection, target, job_id_1, job_id_2)
         count += 1
@@ -1156,8 +1162,13 @@ def create_qmmm_freq(qmmm_dir:str, config_path:str, target_geometry:str, ncpus:i
     return subfile
 
 def update_qmmm_freq_status(qm_collection:object, target:object, job_id_1:str, job_id_2:str):
-    update_field = {'qmmm_freq_reactant_status': "job_launched", 'qmmm_freq_reactant_jobid': job_id_1,
-                    'qmmm_freq_product_status': "job_launched", 'qmmm_freq_product_jobid': job_id_2}
+    if job_id_1 == 'None' and job_id_2 != 'None':
+        update_field = {'qmmm_freq_product_status': "job_launched", 'qmmm_freq_product_jobid': job_id_2}
+    elif job_id_2 == 'None' and job_id_1 != 'None':
+        update_field = {'qmmm_freq_reactant_status': "job_launched", 'qmmm_freq_reactant_jobid': job_id_1}
+    else:
+        update_field = {'qmmm_freq_reactant_status': "job_launched", 'qmmm_freq_reactant_jobid': job_id_1,
+                        'qmmm_freq_product_status': "job_launched", 'qmmm_freq_product_jobid': job_id_2}
     qm_collection.update_one(target, {"$unset": {'qmmm_freq_status': ""}, "$set": update_field}, True)
 
 """
