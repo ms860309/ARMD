@@ -640,12 +640,12 @@ def print_information(generations):
                            {'generations': generations}
                        ]
                        }
-    qmmm_refine_query_0 = {'$and':
-                        [{"qmmm_refine_status":
+    qmmm_sp_query_0 = {'$and':
+                        [{"qmmm_sp_status":
                             {"$in":
                                 ["job_unrun"]}
                             },
-                            {"qmmm_ts_refine":
+                            {"qmmm_sp_ts":
                             {"$in":
                                 ["job_unrun"]}
                             },
@@ -653,63 +653,63 @@ def print_information(generations):
                             {"$in":
                                 [generations]}
                             }]}
-    qmmm_refine_query_1 = {'$and':
+    qmmm_sp_query_1 = {'$and':
                        [
-                           {"qmmm_refine_reactant_status":
+                           {"qmmm_sp_reactant_status":
                             {"$in":
                              ["job_running", "job_queueing", "job_launched"]}
                             },
                            {'generations': generations}
                        ]
                        }
-    qmmm_refine_query_4 = {'$and':
+    qmmm_sp_query_4 = {'$and':
                        [
-                           {"qmmm_refine_product_status":
+                           {"qmmm_sp_product_status":
                             {"$in":
                              ["job_running", "job_queueing", "job_launched"]}
                             },
                            {'generations': generations}
                        ]
                        }
-    qmmm_refine_query_2 = {'$and':
+    qmmm_sp_query_2 = {'$and':
                        [
-                           {"qmmm_refine_status":
+                           {"qmmm_sp_status":
                             {"$in":
                              ['job_success']}
                             },
                            {'generations': generations}
                        ]
                        }
-    qmmm_refine_query_3 = {'$and':
+    qmmm_sp_query_3 = {'$and':
                        [
-                           {"qmmm_refine_reactant_status":
+                           {"qmmm_sp_reactant_status":
                             {"$in":
                              ['job_fail']}
                             },
                            {'generations': generations}
                        ]
                        }
-    qmmm_refine_query_5 = {'$and':
+    qmmm_sp_query_5 = {'$and':
                        [
-                           {"qmmm_refine_product_status":
+                           {"qmmm_sp_product_status":
                             {"$in":
                              ['job_fail']}
                             },
                            {'generations': generations}
                        ]
                        }
-    qmmm_refine_query_6 = {'$and':
+    qmmm_sp_query_6 = {'$and':
                        [
-                           {"qmmm_refine_ts_status":
+                           {"qmmm_sp_ts_status":
                             {"$in":
                              ["job_running", "job_queueing", "job_launched"]}
                             },
                            {'generations': generations}
                        ]
                        }
-    qmmm_refine_query_7 = {'$and':
+    qmmm_sp_query_7 = {'$and':
                        [
-                           {"qmmm_refine_ts_status":
+                           {"qmmm_sp_ts_status":
                             {"$in":
                              ['job_fail']}
                             },
@@ -787,13 +787,13 @@ def print_information(generations):
     qmmm_freq_opt_targets_8 = list(qm_collection.find({'$or':
                                                     [qmmm_freq_opt_query_8, qmmm_freq_opt_query_9]
                                                     }))
-    qmmm_refine_targets_0 = list(qm_collection.find(qmmm_refine_query_0))
-    qmmm_refine_targets_1 = list(qm_collection.find({'$or':
-                                                    [qmmm_refine_query_1, qmmm_refine_query_4, qmmm_refine_query_6]
+    qmmm_sp_targets_0 = list(qm_collection.find(qmmm_sp_query_0))
+    qmmm_sp_targets_1 = list(qm_collection.find({'$or':
+                                                    [qmmm_sp_query_1, qmmm_sp_query_4, qmmm_sp_query_6]
                                                     }))
-    qmmm_refine_targets_2 = list(qm_collection.find(qmmm_refine_query_2))
-    qmmm_refine_targets_3 = list(qm_collection.find({'$or':
-                                                    [qmmm_refine_query_3, qmmm_refine_query_5, qmmm_refine_query_7]
+    qmmm_sp_targets_2 = list(qm_collection.find(qmmm_sp_query_2))
+    qmmm_sp_targets_3 = list(qm_collection.find({'$or':
+                                                    [qmmm_sp_query_3, qmmm_sp_query_5, qmmm_sp_query_7]
                                                     }))
     reactant_target = list(reactions_collection.find({'generations': generations}))
     smi = []
@@ -833,8 +833,8 @@ def print_information(generations):
         print('{} nodes should run QMMM FREQ job'.format(len(qmmm_freq_targets_0)))
     if len(qmmm_ts_freq_targets_0) != 0:
         print('{} nodes should run QMMM TS FERQ job'.format(len(qmmm_ts_freq_targets_0)))
-    if len(qmmm_refine_targets_0) != 0:
-        print('{} nodes should run QMMM SP job\n'.format(len(qmmm_refine_targets_0)))
+    if len(qmmm_sp_targets_0) != 0:
+        print('{} nodes should run QMMM SP job\n'.format(len(qmmm_sp_targets_0)))
     print(highlight_text('Running jobs'))
     if len(ard_targets_1) != 0:
         print('\n{} nodes are running or queueing ARD'.format(len(ard_targets_1)))
@@ -858,8 +858,8 @@ def print_information(generations):
         print('{} nodes are running or queueing QMMM FREQ'.format(len(qmmm_freq_targets_1)))
     if len(qmmm_ts_freq_targets_1) != 0:
         print('{} nodes are running or queueing QMMM TS FREQ'.format(len(qmmm_ts_freq_targets_1)))
-    if len(qmmm_refine_targets_1) != 0:
-        print('{} nodes are running or queueing in QMMM SP job\n'.format(len(qmmm_refine_targets_1)))
+    if len(qmmm_sp_targets_1) != 0:
+        print('{} nodes are running or queueing in QMMM SP job\n'.format(len(qmmm_sp_targets_1)))
     print(highlight_text('Success jobs'))
     if len(ard_targets_2) != 0:
         print('\n{} nodes are success in ARD'.format(len(ard_targets_2)))
@@ -883,8 +883,8 @@ def print_information(generations):
         print('{} nodes are success in QMMM FREQ job'.format(len(qmmm_freq_targets_2)))
     if len(qmmm_ts_freq_targets_2) != 0:
         print('{} nodes are success in QMMM TS FREQ job'.format(len(qmmm_ts_freq_targets_2)))
-    if len(qmmm_refine_targets_2) != 0:
-        print('{} nodes are success in QMMM SP job\n'.format(len(qmmm_refine_targets_2)))
+    if len(qmmm_sp_targets_2) != 0:
+        print('{} nodes are success in QMMM SP job\n'.format(len(qmmm_sp_targets_2)))
     print(highlight_text('Failed jobs'))
     if len(ssm_targets_3) != 0:
         print('\n{} nodes are failed in SSM'.format(len(ssm_targets_3)))
@@ -908,8 +908,8 @@ def print_information(generations):
         print('{} nodes are failed in QMMM FREQ'.format(len(qmmm_freq_targets_3)))
     if len(qmmm_ts_freq_targets_3) != 0:
         print('{} nodes are failed in QMMM TS FREQ'.format(len(qmmm_ts_freq_targets_3)))
-    if len(qmmm_refine_targets_3) != 0:
-        print('{} nodes are failed in QMMM SP job\n'.format(len(qmmm_refine_targets_3)))
+    if len(qmmm_sp_targets_3) != 0:
+        print('{} nodes are failed in QMMM SP job\n'.format(len(qmmm_sp_targets_3)))
     print(highlight_text('IRC intended products'))
     if len(irc_targets_4) != 0:
         print('\n{} nodes are intended'.format(len(irc_targets_4)))
@@ -1025,19 +1025,19 @@ def update_network_status():
                          {'qmmm_freq_ts_status':
                              {'$in':
                               ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
-                         {'qmmm_refine_status':
+                         {'qmmm_sp_status':
                              {'$in':
                               ["job_unrun"]}},
-                         {'qmmm_ts_refine_status':
+                         {'qmmm_sp_ts_status':
                              {'$in':
                               ["job_unrun"]}},
-                         {'qmmm_refine_reactant_status':
+                         {'qmmm_sp_reactant_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}},
-                         {'qmmm_refine_product_status':
+                         {'qmmm_sp_product_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}},
-                         {'qmmm_refine_ts_status':
+                         {'qmmm_sp_ts_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}}
                      ]}

@@ -30,7 +30,7 @@ from ssm import SSM
 sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'code/ard'))
 from _filter import FILTER
 from typing import Union
-
+from extract_time import find_job_output_file, get_job_run_time
 class CheckError(Exception):
     pass
 
@@ -128,18 +128,23 @@ def check_ssm_content(target_path:str, thershold:float = 200.0) -> str:
     status_path = path.join(target_path, 'SSM/status.log')
     ts_node_path = path.join(target_path, 'SSM/TSnode.xyz')
     try:
+        job_output = find_job_output_file('ssm.job.o*', path.join(target_path, 'SSM'))
+        job_run_time = get_job_run_time(job_output)
+    except:
+        job_run_time = 0
+    try:
         q = SSM(outputfile=status_path)
         job_status = q.check_job_status()
         ts_energy_guess = q.get_ts_energy_guess()
         # delta_e_guess = q.get_delta_e()
         if ts_energy_guess > thershold:
-            return "ts_guess high energy", ts_energy_guess
+            return "ts_guess high energy", ts_energy_guess, job_run_time
         elif path.exists(ts_node_path):
-            return job_status, ts_energy_guess
+            return job_status, ts_energy_guess, job_run_time
         else:
-            return "job_fail", ts_energy_guess
+            return "job_fail", ts_energy_guess, job_run_time
     except:
-        return "job_fail", 0.0
+        return "job_fail", 0.0, job_run_time
 
 def check_ssm_jobs(qm_collection:object, refine:bool=False, thershold:float = 200.0):
     """
@@ -158,7 +163,7 @@ def check_ssm_jobs(qm_collection:object, refine:bool=False, thershold:float = 20
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, ssm_barrier = check_ssm_content(target['path'], thershold = thershold)
+            new_status, ssm_barrier, job_run_time = check_ssm_content(target['path'], thershold = thershold)
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -167,15 +172,19 @@ def check_ssm_jobs(qm_collection:object, refine:bool=False, thershold:float = 20
             if new_status == 'job_success':
                 if refine:
                     update_field = {
-                        'ssm_status': new_status, "ts_refine_status": "job_unrun", 'ssm_barrier':ssm_barrier
+                        'ssm_status': new_status, "ts_refine_status": "job_unrun", 'ssm_barrier':ssm_barrier, 'ssm_run_time':job_run_time
                         }
                 else:
                     update_field = {
-                        'ssm_status': new_status, "ts_status": "job_unrun", 'ssm_barrier':ssm_barrier
+                        'ssm_status': new_status, "ts_status": "job_unrun", 'ssm_barrier':ssm_barrier, 'ssm_run_time':job_run_time
                         }
+            elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
+                update_field = {
+                    'ssm_status': new_status
+                    }
             else:
                 update_field = {
-                    'ssm_status': new_status, 'ssm_barrier':ssm_barrier
+                    'ssm_status': new_status, 'ssm_barrier':ssm_barrier, 'ssm_run_time':job_run_time
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
@@ -192,27 +201,31 @@ def check_ts_refine_content(target_path:str, threshold:float=-50.0) -> str:
     """
     ts_dir_path = path.join(target_path, 'TS')
     ts_refine_out_path = path.join(ts_dir_path, 'ts_refine.out')
-
+    try:
+        job_output = find_job_output_file('ts_refine.job.o*', path.join(target_path, 'TS'))
+        job_run_time = get_job_run_time(job_output)
+    except:
+        job_run_time = 0
     if path.exists(ts_refine_out_path):
         try:
             q = ORCA(outputfile=ts_refine_out_path)
             freqs = q.get_frequencies()
             nnegfreq = sum(1 for freq in freqs if freq < 0.0)
             if nnegfreq > 1:
-                return "Have more than one imaginary frequency"
+                return "Have more than one imaginary frequency", job_run_time
             elif nnegfreq == 0:
-                return "All positive frequency"
+                return "All positive frequency", job_run_time
             else:
                 if min(freqs) < threshold:
                     #ts_energy = q.get_free_energy()
                     #ts_energy = q.get_energy()
-                    return "job_success"
+                    return "job_success", job_run_time
                 else:
-                    return f"Imaginary frequency greater than {threshold} cm-1"
+                    return f"Imaginary frequency greater than {threshold} cm-1", job_run_time
         except:
-            return "job_fail"
+            return "job_fail", job_run_time
     else:
-        return "job_fail"
+        return "job_fail", job_run_time
 
 def check_ts_refine_jobs(qm_collection:object, threshold:float=-50.0):
     """
@@ -230,16 +243,20 @@ def check_ts_refine_jobs(qm_collection:object, threshold:float=-50.0):
         # 2. check the job pbs status
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
-            new_status = check_ts_refine_content(target['path'], threshold = threshold)
+            new_status, job_run_time = check_ts_refine_content(target['path'], threshold = threshold)
         orig_status = target['ts_refine_status']
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                   'ts_status':'job_unrun','ts_refine_status': new_status
+                   'ts_status':'job_unrun', 'ts_refine_status': new_status, 'ts_refine_run_time':job_run_time
+                    }
+            elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
+                update_field = {
+                    'ts_refine_status': new_status
                     }
             else:
                 update_field = {
-                    'ts_refine_status': new_status
+                    'ts_refine_status': new_status, 'ts_refine_run_time':job_run_time
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
@@ -247,15 +264,17 @@ def check_ts_refine_jobs(qm_collection:object, threshold:float=-50.0):
 TS check.
 """
 
-def check_ts_content(target_path:str, threshold:float = -50.0) -> Union[str, float]:
-    level_of_theory = 'QCHEM'
+def check_ts_content(target_path:str, threshold:float=-50.0, level_of_theory:str='ORCA') -> Union[str, float]:
     ts_dir_path = path.join(target_path, 'TS')
     qchem_ts_out_path = path.join(ts_dir_path, 'ts.out')
     orca_ts_out_path = path.join(ts_dir_path, 'ts_geo.out')
-    # Which means the ts is running with orca
-    if not path.exists(qchem_ts_out_path):
-        level_of_theory = 'ORCA'
     ts_geo_path = path.join(ts_dir_path, 'ts_geo.xyz')
+
+    try:
+        job_output = find_job_output_file('ts.job.o*', ts_dir_path)
+        job_run_time = get_job_run_time(job_output)
+    except:
+        job_run_time = 0
 
     if level_of_theory == 'QCHEM':
         try:
@@ -263,20 +282,20 @@ def check_ts_content(target_path:str, threshold:float = -50.0) -> Union[str, flo
             freqs = q.get_frequencies()
             nnegfreq = sum(1 for freq in freqs if freq < 0.0)
             if nnegfreq > 1:
-                return "Have more than one imaginary frequency", 0.0
+                return "Have more than one imaginary frequency", 0.0, job_run_time
             elif nnegfreq == 0:
-                return "All positive frequency", 0.0
+                return "All positive frequency", 0.0, job_run_time
             else:
                 if min(freqs) < threshold:
                     energy = q.get_energy()
                     zpe = q.get_zpe()
                     ts_energy = energy + zpe
                     q.create_geo_file(ts_geo_path)
-                    return "job_success", float(ts_energy)
+                    return "job_success", float(ts_energy), job_run_time
                 else:
-                    return f"Imaginary frequency greater than {threshold} cm-1", 0.0
+                    return f"Imaginary frequency greater than {threshold} cm-1", 0.0, job_run_time
         except:
-            return "job_fail", 0.0
+            return "job_fail", 0.0, job_run_time
     elif level_of_theory == 'ORCA':
         if path.exists(ts_geo_path):
             try:
@@ -284,22 +303,22 @@ def check_ts_content(target_path:str, threshold:float = -50.0) -> Union[str, flo
                 freqs = q.get_frequencies()
                 nnegfreq = sum(1 for freq in freqs if freq < 0.0)
                 if nnegfreq > 1:
-                    return "Have more than one imaginary frequency", 0.0
+                    return "Have more than one imaginary frequency", 0.0, job_run_time
                 elif nnegfreq == 0:
-                    return "All positive frequency", 0.0
+                    return "All positive frequency", 0.0, job_run_time
                 else:
                     if min(freqs) < threshold:
                         #ts_energy = q.get_free_energy()
                         ts_energy = q.get_energy()
-                        return "job_success", float(ts_energy)
+                        return "job_success", float(ts_energy), job_run_time
                     else:
-                        return f"Imaginary frequency greater than {threshold} cm-1", 0.0
+                        return f"Imaginary frequency greater than {threshold} cm-1", 0.0, job_run_time
             except:
-                return "job_fail", 0.0
+                return "job_fail", 0.0, job_run_time
         else:
-            return "job_fail", 0.0
+            return "job_fail", 0.0, job_run_time
 
-def check_ts_jobs(qm_collection:object, threshold:float = -50.0):
+def check_ts_jobs(qm_collection:object, threshold:float=-50.0, level_of_theory:str='ORCA', use_irc:bool=True):
     """
     This method checks job with following steps:
     1. select jobs to check
@@ -316,24 +335,28 @@ def check_ts_jobs(qm_collection:object, threshold:float = -50.0):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, ts_energy = check_ts_content(target['path'], threshold = threshold)
+            new_status, ts_energy, job_run_time = check_ts_content(target['path'], threshold = threshold, level_of_theory = level_of_theory)
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
         orig_status = target['ts_status']
         if orig_status != new_status:
             if new_status == 'job_success':
-                if target['use_irc'] == '0':
+                if use_irc:
                     update_field = {
-                        'ts_status': new_status, 'ts_energy': ts_energy, 'energy_status': 'job_unrun'
+                        'ts_status': new_status, 'ts_energy': ts_energy, 'ts_run_time':job_run_time
                         }
                 else:
                     update_field = {
-                        'ts_status': new_status, 'ts_energy': ts_energy, 'irc_status': 'job_unrun'
+                        'ts_status': new_status, 'ts_energy': ts_energy, 'irc_status': 'job_unrun', 'ts_run_time':job_run_time
                         }
-            else:
+            elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
                     'ts_status': new_status
+                    }
+            else:
+                update_field = {
+                    'ts_status': new_status, 'ts_run_time':job_run_time
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
@@ -347,13 +370,19 @@ def check_irc_content(target_path:str) -> str:
     last_output = path.join(irc_dir_path, 'finished_last.xyz')
     forward_end_output = path.join(irc_dir_path, 'forward_end_opt.xyz')
     backward_end_output = path.join(irc_dir_path, 'backward_end_opt.xyz')
+    try:
+        job_output = find_job_output_file('irc.job.o*', irc_dir_path)
+        job_run_time = get_job_run_time(job_output)
+    except:
+        job_run_time = 0
+
     if path.exists(forward_end_output) and path.exists(backward_end_output):
-        return 'job_success'
+        return 'job_success', job_run_time
     # The last two is to make sure not in the crash
     elif path.exists(first_output) and path.exists(last_output) and not path.exists(forward_end_output) and not path.exists(backward_end_output):
-        return 'job_success'
+        return 'job_success', job_run_time
     else:
-        return 'job_fail'
+        return 'job_fail', job_run_time
 
 def check_irc_jobs(qm_collection:object):
     """
@@ -372,7 +401,7 @@ def check_irc_jobs(qm_collection:object):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status = check_irc_content(target['path'])
+            new_status, job_run_time = check_irc_content(target['path'])
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -380,11 +409,15 @@ def check_irc_jobs(qm_collection:object):
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'irc_status': new_status, 'irc_opt_status': 'job_unrun'
+                    'irc_status': new_status, 'irc_opt_status': 'job_unrun', 'irc_run_time':job_run_time
+                    }
+            elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
+                update_field = {
+                    'irc_status': new_status
                     }
             else:
                 update_field = {
-                    'irc_status': new_status
+                    'irc_status': new_status, 'sirc_run_time':job_run_time
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
@@ -536,6 +569,14 @@ def select_irc_opt_finished_target(qm_collection:object) -> list:
 
 def check_irc_opt_content(dir_path:str, level_of_theory:str='ORCA', direction:str='forward') -> Union[str, float]:
     irc_path = path.join(dir_path, "IRC")
+    try:
+        if direction == 'forward':
+            job_output = find_job_output_file('irc_forward_opt.job.o*', irc_path)
+        else:
+            job_output = find_job_output_file('irc_backward_opt.job.o*', irc_path)
+        job_run_time = get_job_run_time(job_output)
+    except:
+        job_run_time = 0
     if level_of_theory == 'QCHEM':
         if direction == 'forward':
             output_path = path.join(irc_path, 'irc_forward.out')
@@ -546,14 +587,14 @@ def check_irc_opt_content(dir_path:str, level_of_theory:str='ORCA', direction:st
             freqs = q.get_frequencies()
             nnegfreq = sum(1 for freq in freqs if freq < 0.0)
             if nnegfreq > 0:
-                return 'Have negative frequency', 0.0
+                return 'Have negative frequency', 0.0, job_run_time
             else:
                 energy = q.get_energy()
                 zpe = q.get_zpe()
                 energy += zpe
-                return 'job_success', energy
+                return 'job_success', energy, job_run_time
         except:
-            return 'job_fail', 0.0
+            return 'job_fail', 0.0, job_run_time
     elif level_of_theory == 'ORCA':
         if direction == 'forward':
             output_path = path.join(irc_path, 'irc_forward.out')
@@ -564,13 +605,13 @@ def check_irc_opt_content(dir_path:str, level_of_theory:str='ORCA', direction:st
             freqs = q.get_frequencies()
             nnegfreq = sum(1 for freq in freqs if freq < 0.0)
             if nnegfreq > 0:
-                return 'Have negative frequency', 0.0
+                return 'Have negative frequency', 0.0, job_run_time
             else:
                 #energy = q.get_free_energy()
                 energy = q.get_energy()
-                return 'job_success', float(energy)
+                return 'job_success', float(energy), job_run_time
         except:
-            return 'job_fail', 0.0
+            return 'job_fail', 0.0, job_run_time
 
 def check_irc_opt_jobs(qm_collection:object, level_of_theory:str='ORCA'):
     """
@@ -588,7 +629,7 @@ def check_irc_opt_jobs(qm_collection:object, level_of_theory:str='ORCA'):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, energy = check_irc_opt_content(target['path'], level_of_theory=level_of_theory.upper(), direction='forward')
+            new_status, energy, job_run_time = check_irc_opt_content(target['path'], level_of_theory=level_of_theory.upper(), direction='forward')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -596,7 +637,7 @@ def check_irc_opt_jobs(qm_collection:object, level_of_theory:str='ORCA'):
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'irc_forward_opt_status': new_status, 'irc_forward_opt_energy': energy
+                    'irc_forward_opt_status': new_status, 'irc_forward_opt_energy': energy, 'irc_forward_opt_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -604,7 +645,7 @@ def check_irc_opt_jobs(qm_collection:object, level_of_theory:str='ORCA'):
                     }
             else:
                 update_field = {
-                    'irc_forward_opt_status': new_status, 'irc_forward_opt_energy': energy
+                    'irc_forward_opt_status': new_status, 'irc_forward_opt_energy': energy, 'irc_forward_opt_run_time':job_run_time
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
@@ -615,7 +656,7 @@ def check_irc_opt_jobs(qm_collection:object, level_of_theory:str='ORCA'):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, energy = check_irc_opt_content(target['path'], level_of_theory=level_of_theory.upper(), direction='backward')
+            new_status, energy, job_run_time = check_irc_opt_content(target['path'], level_of_theory=level_of_theory.upper(), direction='backward')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -623,7 +664,7 @@ def check_irc_opt_jobs(qm_collection:object, level_of_theory:str='ORCA'):
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'irc_backward_opt_status': new_status, 'irc_backward_opt_energy': energy,
+                    'irc_backward_opt_status': new_status, 'irc_backward_opt_energy': energy, 'irc_backward_opt_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -631,7 +672,7 @@ def check_irc_opt_jobs(qm_collection:object, level_of_theory:str='ORCA'):
                     }
             else:
                 update_field = {
-                    'irc_backward_opt_status': new_status, 'irc_backrward_opt_energy': energy
+                    'irc_backward_opt_status': new_status, 'irc_backrward_opt_energy': energy, 'irc_backward_opt_run_time':job_run_time
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
@@ -828,8 +869,7 @@ def insert_reaction(qm_collection:object, reactions_collection:object):
 ARD check unrun
 """
 
-def insert_ard(qm_collection:object, reactions_collection:object, statistics_collection:object, config_collection:object, barrier_threshold:float=70.0, qmmm:bool=True):
-    use_irc = list(config_collection.find({'generations':1}))[0]['use_irc']
+def insert_ard(qm_collection:object, reactions_collection:object, statistics_collection:object, config_collection:object, barrier_threshold:float=70.0, qmmm:bool=True, use_irc:bool=True):
     ard_query = {"ard_status":
                  {"$in":
                   ["job_unrun", "job_launched", "job_running", "job_queueing"]
@@ -910,25 +950,25 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
                          {'qmmm_freq_ts_status':
                              {'$in':
                               ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
-                         {'qmmm_refine_status':
+                         {'qmmm_sp_status':
                              {'$in':
                               ["job_unrun"]}},
-                         {'qmmm_ts_refine_status':
+                         {'qmmm_sp_ts_status':
                              {'$in':
                               ["job_unrun"]}},
-                         {'qmmm_refine_reactant_status':
+                         {'qmmm_sp_reactant_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}},
-                         {'qmmm_refine_product_status':
+                         {'qmmm_sp_product_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}},
-                         {'qmmm_refine_ts_status':
+                         {'qmmm_sp_ts_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}}
                      ]
                      }
 
-    if use_irc == '0':
+    if use_irc:
         not_finished_number = len(list(qm_collection.find({'$or':
                                                 [ssm_query, ts_refine_query, ts_query, insert_reaction_query, ard_query]
                                                 })))
@@ -1156,6 +1196,14 @@ def check_qmmm_opt_content(dir_path:str, direction:str='reactant') -> str:
     else:
         output_path = path.join(qmmm_product_dir, 'qmmm_opt.out')
     try:
+        if direction == 'reactant':
+            job_output = find_job_output_file('qmmm_opt.job.o*', qmmm_reactant_dir)
+        else:
+            job_output = find_job_output_file('qmmm_opt.job.o*', qmmm_reactant_dir)
+        job_run_time = get_job_run_time(job_output)     
+    except:
+        job_run_time = 0
+    try:
         q = QChem(outputfile=output_path)
         if direction == 'reactant':
             reactant = path.join(qmmm_reactant_dir, 'qmmm_opt.xyz')
@@ -1163,9 +1211,9 @@ def check_qmmm_opt_content(dir_path:str, direction:str='reactant') -> str:
         else:
             product = path.join(qmmm_product_dir, 'qmmm_opt.xyz')
             q.create_qmmm_geomtry(file_path = product)
-        return 'job_success'
+        return 'job_success', job_run_time
     except:
-        return 'job_fail'
+        return 'job_fail', job_run_time
 
 def check_qmmm_opt_jobs(qm_collection:object, reactions_collection:object):
     """
@@ -1183,7 +1231,7 @@ def check_qmmm_opt_jobs(qm_collection:object, reactions_collection:object):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status = check_qmmm_opt_content(target['path'], direction='reactant')
+            new_status, job_run_time = check_qmmm_opt_content(target['path'], direction='reactant')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1191,7 +1239,7 @@ def check_qmmm_opt_jobs(qm_collection:object, reactions_collection:object):
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_opt_reactant_status': new_status
+                    'qmmm_opt_reactant_status': new_status, 'qmmm_opt_reactant_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1199,7 +1247,7 @@ def check_qmmm_opt_jobs(qm_collection:object, reactions_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_opt_reactant_status': new_status
+                    'qmmm_opt_reactant_status': new_status, 'qmmm_opt_reactant_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set":update_field}, True)
@@ -1212,7 +1260,7 @@ def check_qmmm_opt_jobs(qm_collection:object, reactions_collection:object):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status = check_qmmm_opt_content(target['path'], direction='product')
+            new_status, job_run_time = check_qmmm_opt_content(target['path'], direction='product')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1220,7 +1268,7 @@ def check_qmmm_opt_jobs(qm_collection:object, reactions_collection:object):
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_opt_product_status': new_status
+                    'qmmm_opt_product_status': new_status, 'qmmm_opt_product_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1228,7 +1276,7 @@ def check_qmmm_opt_jobs(qm_collection:object, reactions_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_opt_product_status': new_status
+                    'qmmm_opt_product_status': new_status, 'qmmm_opt_product_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set":update_field}, True)
@@ -1275,6 +1323,14 @@ def select_qmmm_freq_opt_finished_target(qm_collection:object) -> list:
 def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:bool=False) -> str:
     qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
     qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT')
+    try:
+        if direction == 'reactant':
+            job_output = find_job_output_file('qmmm_freq_opt.job.o*', qmmm_reactant_dir)
+        else:
+            job_output = find_job_output_file('qmmm_freq_opt.job.o*', qmmm_product_dir)
+        job_run_time = get_job_run_time(job_output)
+    except:
+        job_run_time = 0
     if direction == 'reactant':
         output_path = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.out')
     else:
@@ -1283,7 +1339,7 @@ def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:
         q = QChem(outputfile=output_path)
         if direction == 'reactant':
             if restart:
-                return 'job_success'
+                return 'job_success', job_run_time
             else:
                 freqs = q.get_frequencies()
                 nnegfreq = sum(1 for freq in freqs if freq < 0.0)
@@ -1291,12 +1347,12 @@ def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:
                 if not os.path.exists(reactant):
                     q.create_qmmm_geomtry(file_path = reactant)
                 if nnegfreq > 0:
-                    return 'restart'
+                    return 'restart', job_run_time
                 else:
-                    return 'job_success'
+                    return 'job_success', job_run_time
         else:
             if restart:
-                return 'job_success'
+                return 'job_success', job_run_time
             else:
                 freqs = q.get_frequencies()
                 nnegfreq = sum(1 for freq in freqs if freq < 0.0)
@@ -1304,11 +1360,11 @@ def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:
                 if not os.path.exists(product):
                     q.create_qmmm_geomtry(file_path = product)
                 if nnegfreq > 0:
-                    return 'restart'
+                    return 'restart', job_run_time
                 else:
-                    return 'job_success'
+                    return 'job_success', job_run_time
     except:
-        return 'job_fail'
+        return 'job_fail', job_run_time
 
 def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, restart_times:int = 2):
     """
@@ -1326,11 +1382,16 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            times = target['qmmm_freq_opt_reactant_restart_times']
-            if times >= restart_times:
-                new_status = check_qmmm_freq_opt_content(target['path'], direction='reactant', restart=True)
+            times = target['qmmm_freq_opt_reactant_run_time']
+            if times > 0:
+                already_run_time = target['qmmm_freq_opt_reactant_run_time']
             else:
-                new_status = check_qmmm_freq_opt_content(target['path'], direction='reactant')
+                already_run_time = 0
+            if times >= restart_times:
+                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='reactant', restart=True)
+            else:
+                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='reactant')
+            job_run_time += already_run_time
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1338,7 +1399,7 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_freq_opt_reactant_status': new_status
+                    'qmmm_freq_opt_reactant_status': new_status, 'qmmm_freq_opt_reactant_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1346,7 +1407,7 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
                     }
             else:
                 update_field = {
-                    'qmmm_freq_opt_reactant_status': new_status, 'qmmm_freq_opt_reactant_restart_times':times + 1
+                    'qmmm_freq_opt_reactant_status': new_status, 'qmmm_freq_opt_reactant_restart_times':times + 1, 'qmmm_freq_opt_reactant_run_time':job_run_time
                     }
             update_field_reaction = {
                 'qmmm_freq_opt_reactant_status': new_status
@@ -1363,10 +1424,15 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
         if new_status == "off_queue":
             # 3. check job content
             times = target['qmmm_freq_opt_product_restart_times']
-            if times >= restart_times:
-                new_status = check_qmmm_freq_opt_content(target['path'], direction='product', restart=True)
+            if times > 0:
+                already_run_time = target['qmmm_freq_opt_product_run_time']
             else:
-                new_status = check_qmmm_freq_opt_content(target['path'], direction='product')
+                already_run_time = 0
+            if times >= restart_times:
+                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='product', restart=True)
+            else:
+                new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='product')
+            job_run_time += already_run_time
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1374,7 +1440,7 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_freq_opt_product_status': new_status
+                    'qmmm_freq_opt_product_status': new_status, 'qmmm_freq_opt_product_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1382,7 +1448,7 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
                     }
             else:
                 update_field = {
-                    'qmmm_freq_opt_product_status': new_status, 'qmmm_freq_opt_product_restart_times':times + 1
+                    'qmmm_freq_opt_product_status': new_status, 'qmmm_freq_opt_product_restart_times':times + 1, 'qmmm_freq_opt_product_run_time':job_run_time
                     }
             update_field_reaction = {
                 'qmmm_freq_opt_reactant_status': new_status
@@ -1425,7 +1491,7 @@ def select_qmmm_freq_finished_target(qm_collection:object) -> list:
                  {'qmmm_freq_product_status':
                   {'$in':
                    ['job_success']}},
-                 {'qmmm_refine_status':
+                 {'qmmm_sp_status':
                   {'$nin':
                    ['job_unrun']}}
              ]
@@ -1436,6 +1502,15 @@ def select_qmmm_freq_finished_target(qm_collection:object) -> list:
 def check_qmmm_freq_content(dir_path:str, direction:str='reactant') -> Union[str, float]:
     qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
     qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT')
+
+    try:
+        if direction == 'reactant':
+            job_output = find_job_output_file('qmmm_freq.job.o*', qmmm_reactant_dir)
+        else:
+            job_output = find_job_output_file('qmmm_freq.job.o*', qmmm_product_dir)
+        job_run_time = get_job_run_time(job_output)      
+    except:
+        job_run_time = 0
 
     if direction == 'reactant':
         output_path = path.join(qmmm_reactant_dir, 'qmmm_freq_opt.out')
@@ -1450,15 +1525,15 @@ def check_qmmm_freq_content(dir_path:str, direction:str='reactant') -> Union[str
         nnegfreq = sum(1 for freq in freqs if freq < 0.0)
 
         if nnegfreq > 0:
-            return 'Have negative frequency', 0.0
+            return 'Have negative frequency', 0.0, job_run_time
         else:
             q.create_qmmm_geomtry(reactant_path)
             energy = q.get_energy()
             zpe = q.get_zpe()
             energy += zpe
-            return "job_success", energy
+            return "job_success", energy, job_run_time
     except:
-        return "job_fail", 0.0
+        return "job_fail", 0.0, job_run_time
 
 def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
     """
@@ -1476,7 +1551,7 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, energy = check_qmmm_freq_content(target['path'], direction='reactant')
+            new_status, energy, job_run_time = check_qmmm_freq_content(target['path'], direction='reactant')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1484,10 +1559,10 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy
+                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_reactant_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy
+                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_reactant_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1498,10 +1573,10 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_freq_reactant_status': new_status
+                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_run_time':job_run_time
                     }
                 update_field_reaction = {
-                        'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy
+                        'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_reactant_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set":update_field_reaction}, True)
@@ -1514,7 +1589,7 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, energy = check_qmmm_freq_content(target['path'], direction='product')
+            new_status, energy, job_run_time = check_qmmm_freq_content(target['path'], direction='product')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1522,10 +1597,10 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_energy':energy
+                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_energy':energy, 'qmmm_freq_product_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_energy':energy
+                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_energy':energy, 'qmmm_freq_product_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1536,10 +1611,10 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_freq_product_status': new_status
+                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_energy':energy
+                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
@@ -1549,11 +1624,11 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
     for target in finished_targets:
         if target['qmmm_freq_ts_status'] == 'job_fail':
             update_field = {
-                'qmmm_freq_status': 'job_success', 'qmmm_refine_status':'ts_failed'
+                'qmmm_freq_status': 'job_success', 'qmmm_sp_status':'ts_failed'
                 }
         else:
             update_field = {
-                'qmmm_freq_status': 'job_success', 'qmmm_refine_status':'job_unrun'
+                'qmmm_freq_status': 'job_success', 'qmmm_sp_status':'job_unrun'
                 }
         qm_collection.update_one(target, {"$unset": {'qmmm_freq_reactant_status': '', 'qmmm_freq_product_status': '',
                                                      'qmmm_freq_reactant_jobid': '', 'qmmm_freq_product_jobid': ''}, "$set": update_field}, True)
@@ -1566,9 +1641,14 @@ def check_qmmm_freq_ts_content(dir_path:str, restart:bool=False, times:int=0) ->
     qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
     output_path = path.join(qmmm_ts_dir, 'qmmm_freq_ts.out')
     try:
+        job_output = find_job_output_file('qmmm_freq_ts.job.o*', qmmm_ts_dir)
+        job_run_time = get_job_run_time(job_output)
+    except:
+        job_run_time = 0
+    try:
         q = QChem(outputfile=output_path)
         if restart:
-            return 'job_success'
+            return 'job_success', job_run_time
         else:
             freqs = q.get_frequencies()
             nnegfreq = sum(1 for freq in freqs if freq < 0.0)
@@ -1576,14 +1656,14 @@ def check_qmmm_freq_ts_content(dir_path:str, restart:bool=False, times:int=0) ->
             if not os.path.exists(ts):
                 q.create_qmmm_geomtry(file_path = ts)
             if nnegfreq != 1:
-                return 'restart'
+                return 'restart', job_run_time
             else:
                 if times >= 1:
-                    return 'job_success'
+                    return 'job_success', job_run_time
                 else:
-                    return 'restart'
+                    return 'restart', job_run_time
     except:
-        return 'job_fail'
+        return 'job_fail', job_run_time
 
 def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, restart_times:int = 2):
     """
@@ -1602,10 +1682,15 @@ def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, r
         if new_status == "off_queue":
             # 3. check job content
             times = target['qmmm_freq_ts_restart_times']
-            if times >= restart_times:
-                new_status = check_qmmm_freq_ts_content(target['path'], restart=True)
+            if times > 0:
+                already_run_time = target['qmmm_freq_ts_run_time']
             else:
-                new_status = check_qmmm_freq_ts_content(target['path'], times = times)
+                already_run_time = 0
+            if times >= restart_times:
+                new_status, job_run_time = check_qmmm_freq_ts_content(target['path'], restart=True)
+            else:
+                new_status, job_run_time = check_qmmm_freq_ts_content(target['path'], times = times)
+            job_run_time += already_run_time
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1613,7 +1698,7 @@ def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, r
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_freq_ts_status': new_status, "qmmm_ts_freq_status": "job_unrun"
+                    'qmmm_freq_ts_status': new_status, "qmmm_ts_freq_status": "job_unrun", 'qmmm_freq_ts_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1621,7 +1706,7 @@ def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, r
                     }
             else:
                 update_field = {
-                    'qmmm_freq_ts_status': new_status, 'qmmm_freq_ts_restart_times': times + 1
+                    'qmmm_freq_ts_status': new_status, 'qmmm_freq_ts_restart_times': times + 1, 'qmmm_freq_ts_run_time':job_run_time
                     }
             update_field_reaction = {
                     'qmmm_freq_ts_status': new_status
@@ -1638,26 +1723,30 @@ def check_qmmm_ts_freq_content(dir_path:str, threshold:float=-50.0) -> Union[str
     qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
     output_path = path.join(qmmm_ts_dir, 'qmmm_freq.out')
     ts_path = path.join(qmmm_ts_dir, 'qmmm_final.xyz')
-
+    try:
+        job_output = find_job_output_file('qmmm_freq.job.o*', qmmm_ts_dir)
+        job_run_time = get_job_run_time(job_output)
+    except:
+        job_run_time = 0
     try:
         q = QChem(outputfile=output_path)
         freqs = q.get_frequencies()
         nnegfreq = sum(1 for freq in freqs if freq < 0.0)
         if nnegfreq > 1:
-            return "Have more than one imaginary frequency", 0.0
+            return "Have more than one imaginary frequency", 0.0, job_run_time
         elif nnegfreq == 0:
-            return "All positive frequency", 0.0
+            return "All positive frequency", 0.0, job_run_time
         else:
             if min(freqs) < threshold:
                 q.create_qmmm_geomtry(ts_path)
                 energy = q.get_energy()
                 zpe = q.get_zpe()
                 energy += zpe
-                return 'job_success', energy
+                return 'job_success', energy, job_run_time
             else:
-                return f"Imaginary frequency greater than {threshold} cm-1", 0.0
+                return f"Imaginary frequency greater than {threshold} cm-1", 0.0, job_run_time
     except:
-        return "job_fail", 0.0
+        return "job_fail", 0.0, job_run_time
 
 def check_qmmm_ts_freq_jobs(qm_collection:object, reactions_collection:object, threshold:float=-50.0):
     """
@@ -1675,7 +1764,7 @@ def check_qmmm_ts_freq_jobs(qm_collection:object, reactions_collection:object, t
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, energy = check_qmmm_ts_freq_content(target['path'], threshold = threshold)
+            new_status, energy, job_run_time = check_qmmm_ts_freq_content(target['path'], threshold = threshold)
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1683,10 +1772,10 @@ def check_qmmm_ts_freq_jobs(qm_collection:object, reactions_collection:object, t
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_ts_freq_status': new_status, "qmmm_ts_energy": energy, 'qmmm_ts_refine': 'job_unrun'
+                    'qmmm_ts_freq_status': new_status, "qmmm_ts_energy": energy, 'qmmm_sp_ts': 'job_unrun', 'qmmm_ts_freq_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_energy':energy
+                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_energy':energy, 'qmmm_ts_freq_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1697,10 +1786,10 @@ def check_qmmm_ts_freq_jobs(qm_collection:object, reactions_collection:object, t
                     }
             else:
                 update_field = {
-                    'qmmm_ts_freq_status': new_status
+                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_freq_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_energy':energy
+                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_freq_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
@@ -1710,7 +1799,7 @@ def check_qmmm_ts_freq_jobs(qm_collection:object, reactions_collection:object, t
 QMMM REFINE
 """
 
-def select_qmmm_refine_finished_target(qm_collection:object) -> list:
+def select_qmmm_sp_finished_target(qm_collection:object) -> list:
     """
     This method is to inform job checker which targets 
     to check, which need meet one requirement:
@@ -1719,41 +1808,53 @@ def select_qmmm_refine_finished_target(qm_collection:object) -> list:
     """
     query = {'$and':
              [
-                 {"qmmm_refine_reactant_status":
+                 {"qmmm_sp_reactant_status":
                   {"$in":
                    ['job_success']}},
-                 {'qmmm_refine_product_status':
+                 {'qmmm_sp_product_status':
                   {'$in':
                    ['job_success']}},
-                 {"qmmm_refine_ts_status":
+                 {"qmmm_sp_ts_status":
                   {"$in":
                    ['job_success']}},
-                 {"qmmm_refine_status":
+                 {"qmmm_sp_status":
                   {"$nin":
                    ['job_success']}}
              ]}
     targets = list(qm_collection.find(query))
     return targets
 
-def check_qmmm_refine_content(dir_path:str, direction:str='reactant') -> Union[str, float]:
+def check_qmmm_sp_content(dir_path:str, direction:str='reactant') -> Union[str, float]:
+    qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
+    qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT')
+    qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
+
+    try:
+        if direction == 'reactant':
+            job_output = find_job_output_file('qmmm_sp.job.o*', qmmm_reactant_dir)
+        elif direction == 'product':
+            job_output = find_job_output_file('qmmm_sp.job.o*', qmmm_product_dir)
+        elif direction == 'ts':
+            job_output = find_job_output_file('qmmm_sp.job.o*', qmmm_ts_dir)
+        job_run_time = get_job_run_time(job_output)
+    except:
+        job_run_time = 0
+
     if direction == 'reactant':
-        qmmm_reactant_dir = path.join(dir_path, 'QMMM_REACTANT')
         output_path = path.join(qmmm_reactant_dir, 'qmmm_sp.out')
     elif direction == 'product':
-        qmmm_product_dir = path.join(dir_path, 'QMMM_PRODUCT/')
         output_path = path.join(qmmm_product_dir, 'qmmm_sp.out')
     elif direction == 'ts':
-        qmmm_ts_dir = path.join(dir_path, 'QMMM_TS')
         output_path = path.join(qmmm_ts_dir, 'qmmm_sp.out')
 
     try:
         q = QChem(outputfile=output_path)
         energy = q.get_energy()
-        return 'job_success', energy
+        return 'job_success', energy, job_run_time
     except:
-        return 'job_fail', 0.0
+        return 'job_fail', 0.0, job_run_time
 
-def check_qmmm_refine_jobs(qm_collection:object, reactions_collection:object):
+def check_qmmm_sp_jobs(qm_collection:object, reactions_collection:object):
     """
     This method checks job with following steps:
     1. select jobs to check
@@ -1762,133 +1863,133 @@ def check_qmmm_refine_jobs(qm_collection:object, reactions_collection:object):
     4. update with new status
     """
     # 1. select jobs to check
-    targets = select_targets(qm_collection, job_name='qmmm_refine_reactant')
+    targets = select_targets(qm_collection, job_name='qmmm_sp_reactant')
     # 2. check the job pbs_status
     for target in targets:
-        job_id = target['qmmm_refine_reactant_jobid']
+        job_id = target['qmmm_sp_reactant_jobid']
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, energy = check_qmmm_refine_content(target['path'], direction='reactant')
+            new_status, energy, job_run_time = check_qmmm_sp_content(target['path'], direction='reactant')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
-        orig_status = target['qmmm_refine_reactant_status']
+        orig_status = target['qmmm_sp_reactant_status']
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_refine_reactant_status': new_status, 'qmmm_sp_reactant':energy
+                    'qmmm_sp_reactant_status': new_status, 'qmmm_sp_reactant':energy, 'qmmm_sp_reactant_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_refine_reactant_status': new_status, 'qmmm_sp_reactant':energy
+                    'qmmm_sp_reactant_status': new_status, 'qmmm_sp_reactant':energy, 'qmmm_sp_reactant_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
-                    'qmmm_refine_reactant_status': new_status
+                    'qmmm_sp_reactant_status': new_status
                     }
                 update_field_reaction = {
-                    'qmmm_refine_reactant_status': new_status
+                    'qmmm_sp_reactant_status': new_status
                     }
             else:
                 update_field = {
-                    'qmmm_refine_reactant_status': new_status
+                    'qmmm_sp_reactant_status': new_status, 'qmmm_sp_reactant_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_refine_reactant_status': new_status
+                    'qmmm_sp_reactant_status': new_status, 'qmmm_sp_reactant_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
-    targets = select_targets(qm_collection, job_name='qmmm_refine_product')
+    targets = select_targets(qm_collection, job_name='qmmm_sp_product')
     # 2. check the job pbs_status
     for target in targets:
-        job_id = target['qmmm_refine_product_jobid']
+        job_id = target['qmmm_sp_product_jobid']
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, energy = check_qmmm_refine_content(target['path'], direction='product')
+            new_status, energy, job_run_time = check_qmmm_sp_content(target['path'], direction='product')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
-        orig_status = target['qmmm_refine_product_status']
+        orig_status = target['qmmm_sp_product_status']
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_refine_product_status': new_status, 'qmmm_sp_product':energy
+                    'qmmm_sp_product_status': new_status, 'qmmm_sp_product':energy, 'qmmm_sp_product_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_refine_product_status': new_status, 'qmmm_sp_product':energy
+                    'qmmm_sp_product_status': new_status, 'qmmm_sp_product':energy, 'qmmm_sp_product_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
-                    'qmmm_refine_product_status': new_status
+                    'qmmm_sp_product_status': new_status
                     }
                 update_field_reaction = {
-                    'qmmm_refine_product_status': new_status
+                    'qmmm_sp_product_status': new_status
                     }
             else:
                 update_field = {
-                    'qmmm_refine_product_status': new_status
+                    'qmmm_sp_product_status': new_status, 'qmmm_sp_product_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_refine_product_status': new_status
+                    'qmmm_sp_product_status': new_status, 'qmmm_sp_product_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
-    targets = select_targets(qm_collection, job_name='qmmm_refine_ts')
+    targets = select_targets(qm_collection, job_name='qmmm_sp_ts')
     # 2. check the job pbs_status
     for target in targets:
-        job_id = target['qmmm_refine_ts_jobid']
+        job_id = target['qmmm_sp_ts_jobid']
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            new_status, energy = check_qmmm_refine_content(target['path'], direction='ts')
+            new_status, energy, job_run_time = check_qmmm_sp_content(target['path'], direction='ts')
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
-        orig_status = target['qmmm_refine_ts_status']
+        orig_status = target['qmmm_sp_ts_status']
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_refine_ts_status': new_status, 'qmmm_sp_ts':energy
+                    'qmmm_sp_ts_status': new_status, 'qmmm_sp_ts':energy, 'qmmm_sp_ts_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_refine_ts_status': new_status, 'qmmm_sp_ts':energy
+                    'qmmm_sp_ts_status': new_status, 'qmmm_sp_ts':energy, 'qmmm_sp_ts_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
-                    'qmmm_refine_ts_status': new_status
+                    'qmmm_sp_ts_status': new_status
                     }
                 update_field_reaction = {
-                    'qmmm_refine_ts_status': new_status
+                    'qmmm_sp_ts_status': new_status
                     }
             else:
                 update_field = {
-                    'qmmm_refine_ts_status': new_status
+                    'qmmm_sp_ts_status': new_status, 'qmmm_sp_ts_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_refine_ts_status': new_status
+                    'qmmm_sp_ts_status': new_status, 'qmmm_sp_ts_run_time':job_run_time
                     }
 
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
-    finished_targets = select_qmmm_refine_finished_target(qm_collection)
+    finished_targets = select_qmmm_sp_finished_target(qm_collection)
     for target in finished_targets:
         delta_H = (target['qmmm_sp_product'] - target['qmmm_sp_reactant']) * 627.5095
         barrier = (target['qmmm_sp_ts'] - target['qmmm_sp_reactant']) * 627.5095
         update_field = {
-            'qmmm_refine_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier
+            'qmmm_sp_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier
             }
         reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
         reactions_collection.update_one(reaction_target, {"$set": update_field}, True)
-        qm_collection.update_one(target, {"$unset": {'qmmm_refine_reactant_status': '', 'qmmm_refine_reactant_jobid': '',
-                                                     'qmmm_refine_product_status': '', 'qmmm_refine_product_jobid': '',
-                                                     'qmmm_refine_ts_status': '', 'qmmm_refine_ts_jobid': ''}, 
+        qm_collection.update_one(target, {"$unset": {'qmmm_sp_reactant_status': '', 'qmmm_sp_reactant_jobid': '',
+                                                     'qmmm_sp_product_status': '', 'qmmm_sp_product_jobid': '',
+                                                     'qmmm_sp_ts_status': '', 'qmmm_sp_ts_jobid': ''}, 
                                                      "$set": update_field}, True)
 
 """
@@ -2066,10 +2167,15 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     config_collection = db['config']
     target = list(config_collection.find({'generations': 1}))[0]
     qmmm = target['use_qmmm']
+    use_irc = target['use_irc']
     if qmmm == '1':
         qmmm = True
     else:
         qmmm = False
+    if use_irc == '1':
+        use_irc = True
+    else:
+        use_irc = False
     qmmm_path = path.join(target['config_path'], 'qmmm.xyz')
     try:
         qmmm_mol = next(pybel.readfile('xyz', qmmm_path))
@@ -2086,21 +2192,21 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     # If the ssm perform by orca with xtb GFN2-xtb, then refine the TS is a good choice.  Get a better initial guess
     check_ssm_jobs(qm_collection, refine=refine, thershold = 100.0)  # TS guess energy filter
     check_ts_refine_jobs(qm_collection, threshold = -50.0)  # Imaginary freq should smaller than threshold
-    check_ts_jobs(qm_collection, threshold = -50.0) # Imaginary freq should smaller than threshold
+    check_ts_jobs(qm_collection, threshold = -50.0, level_of_theory=level_of_theory, use_irc=use_irc) # Imaginary freq should smaller than threshold
     check_irc_jobs(qm_collection)
     check_irc_opt_jobs(qm_collection, level_of_theory=level_of_theory)
     check_irc_opt_side_fail_jobs(qm_collection)
     check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False, check_mm_overlap=True, qmmm=qmmm_mol, qm_atoms=23, threshold_ratio=0.6)
     check_barrier(qm_collection)
     insert_reaction(qm_collection, reactions_collection)
-    insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=65.0, qmmm=qmmm)
+    insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=65.0, qmmm=qmmm, use_irc=use_irc)
 
     check_qmmm_opt_jobs(qm_collection, reactions_collection)
     check_qmmm_freq_opt_jobs(qm_collection, reactions_collection, restart_times = 2)
     check_qmmm_freq_ts_jobs(qm_collection, reactions_collection, restart_times = 3)
     check_qmmm_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_ts_freq_jobs(qm_collection, reactions_collection, threshold = -50.0)
-    check_qmmm_refine_jobs(qm_collection, reactions_collection)
+    check_qmmm_sp_jobs(qm_collection, reactions_collection)
     
     # check_qmmm_freq_ts_side_fail_jobs(qm_collection)
 

@@ -1197,21 +1197,21 @@ def launch_qmmm_ts_freq_jobs(qm_collection:object, config_path:str, num:int=10, 
 QMMM REFINE
 """
 
-def select_qmmm_refine_targets(qm_collection:object) -> list:
+def select_qmmm_sp_targets(qm_collection:object) -> list:
     query = {'$and':
-            [{"qmmm_refine_status":
+            [{"qmmm_sp_status":
                 {"$in":
                     ["job_unrun"]}
                 },
-                {"qmmm_ts_refine":
+                {"qmmm_sp_ts":
                 {"$in":
                     ["job_unrun"]}
                 }]}
     targets = list(qm_collection.find(query))
     return targets
 
-def launch_qmmm_refine_jobs(qm_collection:object, config_path:str, num:int=10, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16):
-    targets = select_qmmm_refine_targets(qm_collection)
+def launch_qmmm_sp_jobs(qm_collection:object, config_path:str, num:int=10, ncpus:int=16, mpiprocs:int=1, ompthreads:int=16):
+    targets = select_qmmm_sp_targets(qm_collection)
     count = 0
     for target in targets[:num]:
         qmmm_reactant_dir = path.join(target['path'], 'QMMM_REACTANT')
@@ -1266,7 +1266,7 @@ def launch_qmmm_refine_jobs(qm_collection:object, config_path:str, num:int=10, n
         job_id_3 = stdout.decode().replace("\n", "")
 
         # update status job_launched
-        update_qmmm_refine_status(qm_collection, target, job_id_1, job_id_2, job_id_3)
+        update_qmmm_sp_status(qm_collection, target, job_id_1, job_id_2, job_id_3)
         count += 1
     if count != 0:
         print(highlight_text('QMMM SP'))
@@ -1339,11 +1339,11 @@ def create_qmmm_sp(qmmm_dir:str, config_path:str, target_geometry:str, ncpus:int
 
     return subfile
 
-def update_qmmm_refine_status(qm_collection:object, target:object, job_id_1:str, job_id_2:str, job_id_3:str):
-    update_field = {'qmmm_refine_reactant_status': "job_launched", 'qmmm_refine_reactant_jobid': job_id_1,
-                    'qmmm_refine_product_status': "job_launched", 'qmmm_refine_product_jobid': job_id_2,
-                    'qmmm_refine_ts_status': "job_launched", 'qmmm_refine_ts_jobid': job_id_3}
-    qm_collection.update_one(target, {"$unset": {'qmmm_refine_status': "", 'qmmm_ts_refine':""}, "$set": update_field}, True)
+def update_qmmm_sp_status(qm_collection:object, target:object, job_id_1:str, job_id_2:str, job_id_3:str):
+    update_field = {'qmmm_sp_reactant_status': "job_launched", 'qmmm_sp_reactant_jobid': job_id_1,
+                    'qmmm_sp_product_status': "job_launched", 'qmmm_sp_product_jobid': job_id_2,
+                    'qmmm_sp_ts_status': "job_launched", 'qmmm_sp_ts_jobid': job_id_3}
+    qm_collection.update_one(target, {"$unset": {'qmmm_sp_status': "", 'qmmm_sp_ts':""}, "$set": update_field}, True)
 
 
 def launch_jobs(num=30, level_of_theory='ORCA', ncpus=4, mpiprocs=1, ompthreads=4):
@@ -1364,7 +1364,7 @@ def launch_jobs(num=30, level_of_theory='ORCA', ncpus=4, mpiprocs=1, ompthreads=
     launch_qmmm_freq_ts_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
     launch_qmmm_freq_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
     launch_qmmm_ts_freq_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
-    launch_qmmm_refine_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
+    launch_qmmm_sp_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
 
 print_header()
 launch_jobs(num=3, level_of_theory='ORCA', ncpus=4, mpiprocs=4, ompthreads=1)

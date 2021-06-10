@@ -146,7 +146,6 @@ class Network(object):
                     'path': dir_path,
                     'ssm_status': 'job_unrun',
                     'generations': self.generations,
-                    'use_irc': self.use_irc
                 })
 
         self.logger.info('After delta H filter {} product remain.\n'.format(len(prod_mols_filtered)))
@@ -207,7 +206,6 @@ class Network(object):
                 'path': dir_path,
                 'ssm_status': 'job_unrun',
                 'generations': self.generations,
-                'use_irc': self.use_irc
             })
             self.logger.info('Finished {}/{}\n'.format(self.count, total_prod_num))
             return 1
@@ -254,7 +252,6 @@ class Network(object):
                 'path': dir_path,
                 'ssm_status': 'job_unrun',
                 'generations': self.generations,
-                'use_irc': self.use_irc
             })
             self.logger.info(f'Finished {self.count}/{total_prod_num}\n')
             return 1
