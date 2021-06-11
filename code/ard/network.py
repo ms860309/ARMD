@@ -176,8 +176,7 @@ class Network(object):
 
         if H298_prod == False or H298_reac == False:
             return 0
-        self.logger.info(
-            'Product energy calculate by mopac is {} kcal/mol and reactant is {} kcal/mol'.format(H298_prod, H298_reac))
+        self.logger.info('Product energy calculate by mopac is {} kcal/mol and reactant is {} kcal/mol'.format(H298_prod, H298_reac))
         if refH:
             self.logger.info('In the {} generations, reactant hf use {} instead.'.format(self.generations, refH))
             dH = H298_prod - refH
