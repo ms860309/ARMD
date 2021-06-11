@@ -43,7 +43,7 @@ class Mopac(object):
             self.fixed_atoms = fixed_atoms
         self.cluster_bond = cluster_bond
 
-    def mopac_get_H298(self, tmp_path, charge=0, multiplicity='SINGLET'):
+    def mopac_get_H298(self, tmp_path, charge=0, multiplicity='SINGLET', form_bond_distance_threshold=6.0):
         """
         Create a directory folder called "tmp" for mopac calculation
         Create a input file called "input.mop" for mopac calculation
@@ -53,7 +53,7 @@ class Mopac(object):
         reactant_path = path.join(tmpdir, 'reactant.mop')
         product_path = path.join(tmpdir, 'product.mop')
 
-        reac_geo, prod_geo = self.genInput(self.reactant_mol, self.product_mol)
+        reac_geo, prod_geo = self.genInput(self.reactant_mol, self.product_mol, threshold=form_bond_distance_threshold)
 
         if reac_geo == False and prod_geo == False:
             self.logger.info('Mopac fail')
@@ -85,7 +85,7 @@ class Mopac(object):
             self.finalize(start_time, 'mopac')
             return float(reactant), float(product)
 
-    def genInput(self, reactant_mol, product_mol, threshold=5.0):
+    def genInput(self, reactant_mol, product_mol, threshold=6.0):
         start_time = time.time()
 
         # These two lines are required so that new coordinates are

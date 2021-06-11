@@ -44,6 +44,7 @@ class Network(object):
         self.use_irc = kwargs['use_irc']
         self.use_qmmm = kwargs['use_qmmm']
         self.reactant_path = path.dirname(kwargs['reactant_path'])
+        self.form_bond_distance_threshold = float(kwargs['form_bond_distance_threshold'])
 
     def genNetwork(self, mol_object, **kwargs):
         """
@@ -171,7 +172,7 @@ class Network(object):
         self.count += 1
         mopac_object = Mopac(reac_obj, prod_mol, self.mopac_method, self.forcefield, self.constraintff_alg,
                              form_bonds, break_bonds, self.logger, total_prod_num, self.count, self.fixed_atoms, cluster_bond)
-        H298_reac, H298_prod = mopac_object.mopac_get_H298(self.reactant_path)
+        H298_reac, H298_prod = mopac_object.mopac_get_H298(self.reactant_path, form_bond_distance_threshold = self.form_bond_distance_threshold)
 
         if H298_prod == False or H298_reac == False:
             return 0
@@ -217,7 +218,7 @@ class Network(object):
         self.count += 1
         xtb_object = XTB(self.forcefield, self.constraintff_alg, form_bonds, break_bonds,
                          self.logger, total_prod_num, self.count, self.fixed_atoms, cluster_bond, self.xtb_method)
-        H298_reac, H298_prod = xtb_object.xtb_get_H298(reac_mol, prod_mol, self.reactant_path, config_path)
+        H298_reac, H298_prod = xtb_object.xtb_get_H298(reac_mol, prod_mol, self.reactant_path, config_path, form_bond_distance_threshold = self.form_bond_distance_threshold)
 
         if H298_prod == False or H298_reac == False:
             return 0
