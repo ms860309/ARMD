@@ -25,7 +25,7 @@ class XTBError(Exception):
 
 class XTB(object):
 
-    def __init__(self, forcefield, constraintff_alg, form_bonds, break_bonds, logger, count, num, constraint=None, fixed_atom=None, cluster_bond = None, xtb_method = 'gfn2'):
+    def __init__(self, forcefield, constraintff_alg, form_bonds, break_bonds, logger, count, num, fixed_atoms=None, cluster_bond = None, xtb_method = 'gfn2'):
         self.forcefield = forcefield
         self.constraintff_alg = constraintff_alg
         self.form_bonds = form_bonds
@@ -33,8 +33,7 @@ class XTB(object):
         self.logger = logger
         self.count = count
         self.num = num
-        self.constraint = constraint
-        self.fixed_atom = fixed_atom
+        self.fixed_atoms = fixed_atoms
         self.cluster_bond = cluster_bond
         self.xtb_method = xtb_method
 
@@ -63,8 +62,8 @@ class XTB(object):
                 f.write(reac_geo)
             start_time = time.time()
             try:
-                self.runXTB(tmpdir, config_path, constraint=self.constraint, target='reactant.xyz', method = 'gfn2')
-                reactant_energy = self.getE(tmpdir, 'reactant.xyz')
+                self.runXTB(tmpdir, config_path, fixed_atoms=self.fixed_atoms, target='reactant', method = 'gfn2')
+                reactant_energy = self.getE(tmpdir, 'reactant')
             except:
                 self.logger.info('xTB reactant fail')
                 return False, False
@@ -72,8 +71,8 @@ class XTB(object):
             with open(product_path, 'w') as f:
                 f.write(prod_geo)
             try:
-                self.runXTB(tmpdir, config_path, constraint=self.constraint, target='product.xyz', method = 'gfn2')
-                product_energy = self.getE(tmpdir, 'product.xyz')
+                self.runXTB(tmpdir, config_path, fixed_atoms=self.fixed_atoms, target='product', method = 'gfn2')
+                product_energy = self.getE(tmpdir, 'product')
             except:
                 self.logger.info('xTB product fail')
                 return False, False
@@ -84,18 +83,28 @@ class XTB(object):
     def genInput(self, reactant_mol, product_mol, threshold=6.0):
         start_time = time.time()
 
-        # Initial optimization
-        Hatom = gen3D.readstring('smi', '[H]')
-        ff = pybel.ob.OBForceField.FindForceField('mmff94')
+        # These two lines are required so that new coordinates are
+        # generated for each new product. Otherwise, Open Babel tries to
+        # use the coordinates of the previous molecule if it is isomorphic
+        # to the current one, even if it has different atom indices
+        # participating in the bonds. a hydrogen atom is chosen
+        # arbitrarily, since it will never be the same as any of the
+        # product structures.
 
-        reactant_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        # Set up constraint
+        constraint_forcefield = ob.OBFFConstraints()
+        constraint_forcefield.AddAtomConstraint(1)
+        ff = pybel.ob.OBForceField.FindForceField(self.forcefield)
+        Hatom = gen3D.readstring('smi', '[H]')
+
+        reactant_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
-        product_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        product_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
 
         # Arrange
-        try:  # Pass the more than 4 fragment situation
-            arrange3D = gen3D.Arrange3D(reactant_mol, product_mol, self.constraint, self.fixed_atom, self.cluster_bond)
+        try:
+            arrange3D = gen3D.Arrange3D(reactant_mol, product_mol, self.fixed_atoms, self.cluster_bond)
             msg = arrange3D.arrangeIn3D()
             if msg != '':
                 print(msg)
@@ -104,13 +113,16 @@ class XTB(object):
             self.logger.info('Arrange fail')
             return False, False
 
-        ff.Setup(Hatom.OBMol)
-        reactant_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        ff.Setup(Hatom.OBMol, constraint_forcefield)
+        ff.SetConstraints(constraint_forcefield)
+        reactant_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
-        ff.Setup(Hatom.OBMol)
-        product_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        ff.Setup(Hatom.OBMol, constraint_forcefield)
+        ff.SetConstraints(constraint_forcefield)
+        product_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
-        ff.Setup(Hatom.OBMol)
+        ff.Setup(Hatom.OBMol, constraint_forcefield)
+        ff.SetConstraints(constraint_forcefield) # Ensures that new coordinates are generated for next molecule (see above)
 
 
         # Check reactant expected forming bond length must smaller than 4 angstrom after arrange. Default = 4
@@ -166,25 +178,25 @@ class XTB(object):
         return float(max(dist))
 
     @staticmethod
-    def getE(tmpdir, target='reactant.xyz'):
+    def getE(tmpdir, target='reactant'):
         """
         Here the energy is Eh (hartree)
         """
-        input_path = path.join(tmpdir, target)
+        input_path = path.join(tmpdir, f'{target}.xyz')
         with open(input_path, 'r') as f:
             lines = f.readlines()
         HeatofFormation = lines[1].strip().split()[1]
         return HeatofFormation
 
     @staticmethod
-    def runXTB(tmpdir, config_path, constraint=True, target='reactant.xyz', method = 'gfn2'):
-        input_path = path.join(tmpdir, target)
-        outname = '{}.xyz'.format(target.split('.')[0])
+    def runXTB(tmpdir, config_path, fixed_atoms=True, target='reactant', method = 'gfn2'):
+        outname = f'{target}.xyz'
+        input_path = path.join(tmpdir, outname)
         output_path = path.join(tmpdir, 'xtbopt.xyz')
         constraint_path = path.join(config_path, 'xtb_constraint.inp')
 
         new_output_path = path.join(tmpdir, outname)
-        if constraint == None:
+        if fixed_atoms is None:
             if method == 'gfn2':
                 p = Popen(['xtb', input_path, '--gfn', '2', '--opt', 'tight'])
             elif method == 'gfn1':
@@ -192,7 +204,7 @@ class XTB(object):
             else:
                 raise XTBError('Unsupported xtb method')
             p.wait()
-            os.rename(output_path, new_output_path)
+            shutil.move(output_path, new_output_path)
         else:
             if method == 'gfn2':
                 p = Popen(['xtb', '--opt', 'tight', '--gfn', '2', '--input', constraint_path, input_path])
@@ -201,4 +213,4 @@ class XTB(object):
             else:
                 raise XTBError('Unsupported xtb method')
             p.wait()
-            os.rename(output_path, new_output_path)
+            shutil.move(output_path, new_output_path)

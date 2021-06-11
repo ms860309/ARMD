@@ -56,25 +56,18 @@ def extract_bonds(bonds):
     return lines
 
 
-def extract_constraint_index(constraint):
-    with open(constraint, 'r') as f:
+def extract_fixed_atom_index(fixed_atoms):
+    with open(fixed_atoms, 'r') as f:
         lines = f.read()
     lines = eval(lines)
     return lines
 
 
-def extract_fixed_atom_index(fixed_atom):
-    with open(fixed_atom, 'r') as f:
-        lines = f.read()
-    lines = eval(lines)
-    return lines
-
-
-def getE(tmpdir, target='reactant.xyz'):
+def getE(tmpdir, target='reactant'):
     """
     Here the energy is Eh (hartree)
     """
-    input_path = path.join(tmpdir, target)
+    input_path = path.join(tmpdir, f'{target}.xyz')
     with open(input_path, 'r') as f:
         lines = f.readlines()
     HeatofFormation = lines[1].strip().split()[1]
@@ -101,7 +94,7 @@ def check_bond_length(product, add_bonds):
         dist = [0]
     return float(max(dist))
 
-def xtb_get_H298(reactant_mol, product_mol, constraint, fixed_atom, reactant_path):
+def xtb_get_H298(reactant_mol, product_mol, fixed_atoms, reactant_path):
     """
     Create a directory folder called "tmp" for mopac calculation
     Create a input file called "input.mop" for mopac calculation
@@ -111,7 +104,7 @@ def xtb_get_H298(reactant_mol, product_mol, constraint, fixed_atom, reactant_pat
     reactant_path = path.join(tmpdir, 'reactant.xyz')
     product_path = path.join(tmpdir, 'product.xyz')
 
-    reac_geo, prod_geo = gen_geometry(reactant_mol, product_mol, constraint, fixed_atom)
+    reac_geo, prod_geo = gen_geometry(reactant_mol, product_mol, fixed_atoms)
 
     if path.exists(tmpdir):
         shutil.rmtree(tmpdir)
@@ -121,22 +114,23 @@ def xtb_get_H298(reactant_mol, product_mol, constraint, fixed_atom, reactant_pat
     with open(reactant_path, 'w') as f:
         f.write(reac_geo)
 
-    runXTB(tmpdir, 'reactant.xyz')
-    reactant_energy = getE(tmpdir, 'reactant.xyz')
+    runXTB(tmpdir, 'reactant')
+    reactant_energy = getE(tmpdir, 'reactant')
 
     prod_geo = f"{len(str(prod_geo).splitlines())}\n\n{prod_geo}"
     with open(product_path, 'w') as f:
         f.write(prod_geo)
 
-    runXTB(tmpdir, 'product.xyz')
-    product_energy = getE(tmpdir, 'product.xyz')
+    runXTB(tmpdir, 'product')
+    product_energy = getE(tmpdir, 'product')
 
     return float(reactant_energy), float(product_energy)
 
 
-def runXTB(tmpdir, target='reactant.xyz'):
-    input_path = path.join(tmpdir, target)
-    outname = '{}.xyz'.format(target.split('.')[0])
+def runXTB(tmpdir, target='reactant', constraint=True):
+    outname = f'{target}.xyz'
+    input_path = path.join(tmpdir, outname)
+
     output_path = path.join(tmpdir, 'xtbopt.xyz')
     config_path = path.join(path.dirname(path.dirname(tmpdir)), 'config')
     constraint_path = path.join(config_path, 'xtb_constraint.inp')
@@ -145,45 +139,51 @@ def runXTB(tmpdir, target='reactant.xyz'):
         constraint_path = path.join(config_path, 'xtb_constraint.inp')
     new_output_path = path.join(tmpdir, outname)
     if constraint == None:
-        p = Popen(['xtb', input_path, '--gfn', '1', '--opt', 'tight'])
+        p = Popen(['xtb', input_path, '--gfn', '2', '--opt', 'tight'])
         p.wait()
-        os.rename(output_path, new_output_path)
+        shutil.move(output_path, new_output_path)
     else:
-        p = Popen(['xtb', '--opt', 'tight', '--gfn', '1', '--input', constraint_path, input_path])
+        p = Popen(['xtb', '--opt', 'tight', '--gfn', '2', '--input', constraint_path, input_path])
         p.wait()
-        os.rename(output_path, new_output_path)
+        shutil.move(output_path, new_output_path)
 
 
 
-def gen_geometry(reactant_mol, product_mol, constraint, fixed_atom):
+def gen_geometry(reactant_mol, product_mol, fixed_atoms):
 
-    # Initial optimization
+    # Set up constraint
+    constraint_forcefield = ob.OBFFConstraints()
+    constraint_forcefield.AddAtomConstraint(1)
+    ff = pb.ob.OBForceField.FindForceField('uff')
     Hatom = gen3D.readstring('smi', '[H]')
-    ff = pb.ob.OBForceField.FindForceField('mmff94')
+    
 
     # reactant_bonds = [tuple(sorted((bond.GetBeginAtomIdx() - 1, bond.GetEndAtomIdx() - 1)) + [bond.GetBondOrder()])
     #                     for bond in pb.ob.OBMolBondIter(reactant_mol.OBMol)]
     # reactant_bonds = tuple(sorted(reactant_bonds))
     # print(reactant_bonds)
 
-    reactant_mol.gen3D(constraint, forcefield='uff',
+    reactant_mol.gen3D(fixed_atoms, forcefield='uff',
                     method='ConjugateGradients', make3D=False)
 
-    product_mol.gen3D(constraint, forcefield='uff',
+    product_mol.gen3D(fixed_atoms, forcefield='uff',
                     method='ConjugateGradients', make3D=False)
 
     #print(product_mol.write('inchikey'))
     arrange3D = gen3D.Arrange3D(
-        reactant_mol, product_mol, constraint, fixed_atom, cluster_bond = [(12,14,1), (12,15,1), (12,16,1), (12,17,1), (12,13,1), (17,23,1),(16,23,1)])
+        reactant_mol, product_mol, fixed_atoms, cluster_bond = [(12,14,1), (12,15,1), (12,16,1), (12,17,1), (12,13,1), (17,23,1),(16,23,1)])
     msg = arrange3D.arrangeIn3D()
     if msg != '':
         print(msg)
 
-    ff.Setup(Hatom.OBMol)
-    reactant_mol.gen3D(constraint, forcefield='uff', method='ConjugateGradients', make3D=False)
-    ff.Setup(Hatom.OBMol)
-    product_mol.gen3D(constraint, forcefield='uff', method='ConjugateGradients', make3D=False)
-    ff.Setup(Hatom.OBMol)  # Ensures that new coordinates are generated for next molecule (see above)
+    ff.Setup(Hatom.OBMol, constraint_forcefield)
+    ff.SetConstraints(constraint_forcefield)
+    reactant_mol.gen3D(fixed_atoms, forcefield='uff', method='ConjugateGradients', make3D=False)
+    ff.Setup(Hatom.OBMol, constraint_forcefield)
+    ff.SetConstraints(constraint_forcefield)
+    product_mol.gen3D(fixed_atoms, forcefield='uff', method='ConjugateGradients', make3D=False)
+    ff.Setup(Hatom.OBMol, constraint_forcefield)  # Ensures that new coordinates are generated for next molecule (see above)
+    ff.SetConstraints(constraint_forcefield)
 
     product_geometry = product_mol.toNode()
     reactant_geometry = reactant_mol.toNode()
@@ -191,11 +191,9 @@ def gen_geometry(reactant_mol, product_mol, constraint, fixed_atom):
 
 
 xyz_path = './reactant.xyz'
-constraint_path = './constraint.txt'
-fixed_atom_path = './fixed_atom.txt'
+fixed_atom_path = './fixed_atoms.txt'
 
-constraint = extract_constraint_index(constraint_path)
-fixed_atom = extract_fixed_atom_index(fixed_atom_path)
+fixed_atoms = extract_fixed_atom_index(fixed_atom_path)
 reactant = readXYZ(xyz_path)
 atoms = tuple(atom.atomicnum for atom in reactant)
 rb = [(22, 27, 1), (20, 26, 1), (16, 18, 1), (22, 29, 1), (20, 28, 1), (16, 22, 1), (22, 34, 1), (15, 22, 1), (20, 30, 1), (14, 20, 1), 
@@ -232,7 +230,7 @@ product_bonds = ((0, 1, 2), (0, 5, 1), (0, 6, 1), (14, 7, 1), (1, 2, 2), (1, 3, 
 product = gen3D.makeMolFromAtomsAndBonds(atoms, product_bonds, spin=reactant.spin)
 product.setCoordsFromMol(reactant)
 
-a, b = xtb_get_H298(reactant, product, constraint, fixed_atom, os.getcwd())
+a, b = xtb_get_H298(reactant, product, fixed_atoms, os.getcwd())
 print(a)
 print(b)
 print((b-a)*627.5095)

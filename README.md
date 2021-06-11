@@ -9,15 +9,14 @@ But this command only generate the `reactant.xyz`, `product.xyz` and `driving co
 For kinetic verification you should use the crontab and `Q-Chem` or `ORCA` with `Single-ended String Methid(SSM)` and `Pysisyphus(for irc)`.
 `python ard.py input.txt reactant.xyz`
 More complicate command example:
-`python ard.py input.txt reactant.xyz -bonds <bonds.txt> -constraint <constraint.txt> -fixed_atom <fixed_atom.txt> -generations <1>`
+`python ard.py input.txt reactant.xyz -bonds <bonds.txt> -fixed_atoms <fixed_atoms.txt> -generations <1>`
 
 ## Preparation
 
  * `input.txt` : The settings
  * `reactant.xyz` : The reactant xyz which constrain all molecules
  * `bonds.txt`: For manual bond case is to specify the bonds. For cluster case is to specify missing bond in active site
- * `constraint.txt` : For openbabel and mopac constrained optimization. (xtb should also set up this because the openbabel is used before arrange)
- * `fixed_atom.txt` : For catalyst system, change this may help to specify `bond_can_form`, `bond_can_break` and arrange
+ * `fixed_atoms.txt` : For catalyst system, change this may help to specify `bond_can_form`, `bond_can_break` and arrange. For openbabel and mopac constrained optimization. (xtb should also set up this because the openbabel is used before arrange)
  * `Config/` : See the following introduction
 
  `I will put more detailed guidelines on the wiki.`

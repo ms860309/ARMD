@@ -443,13 +443,13 @@ def select_irc_equal_target(qm_collection:object) -> list:
     targets = list(qm_collection.find(query))
     return targets
 
-def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False, check_mm_overlap:bool=True, qmmm:object=None, qm_atoms:int=23, threshold_ratio:float=0.6):
+def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atoms_path:str=None, active_site:bool=False, check_mm_overlap:bool=True, qmmm:object=None, qm_atoms:int=23, threshold_ratio:float=0.6):
     targets = select_irc_equal_target(qm_collection)
     acceptable_condition = ['forward equal to reactant',
                             'backward equal to reactant']
 
     for target in targets:
-        new_status, forward, backward = check_irc_equal_status(target, cluster_bond_path=cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=active_site, check_mm_overlap=check_mm_overlap, qmmm=qmmm, qm_atoms=qm_atoms, threshold_ratio=threshold_ratio)
+        new_status, forward, backward = check_irc_equal_status(target, cluster_bond_path=cluster_bond_path, fixed_atoms_path = fixed_atoms_path, active_site=active_site, check_mm_overlap=check_mm_overlap, qmmm=qmmm, qm_atoms=qm_atoms, threshold_ratio=threshold_ratio)
         orig_status = target['irc_equal']
         if orig_status != new_status:
             if new_status in acceptable_condition:
@@ -466,7 +466,7 @@ def check_irc_equal(qm_collection:object, cluster_bond_path:str=None, fixed_atom
                 }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
-def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom_path:str=None, active_site:bool=False, check_mm_overlap:bool=True, qmmm:object=None, qm_atoms:int=23, threshold_ratio:float=0.6) -> Union[str, object, object]:
+def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atoms_path:str=None, active_site:bool=False, check_mm_overlap:bool=True, qmmm:object=None, qm_atoms:int=23, threshold_ratio:float=0.6) -> Union[str, object, object]:
     """
     If you only want to consider the reactant part then active_site should be "False". --> You can want to consider active site
     check_mm_overlap: Set to ture. It will check if the qm atoms overlap with mm atoms
@@ -516,9 +516,9 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
     elif pyMol_3.write('inchiKey').strip() != pyMol_4.write('inchiKey').strip() and same:
         return 'same forward and reverse reactant part but different active site', pyMol_3, pyMol_4
     elif pyMol_3.write('inchiKey').strip() == reactant_inchi_key:
-        f = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
+        f = FILTER(reactant_file=backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atoms = fixed_atoms_path)
         status, msg = f.check_feasible_rxn(check_mm_overlap=check_mm_overlap, qmmm = qmmm, qm_atoms = qm_atoms, threshold_ratio = threshold_ratio)
-        f2 = FILTER(reactant_file=forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
+        f2 = FILTER(reactant_file=forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atoms = fixed_atoms_path)
         status2, msg2 = f2.check_feasible_rxn(check_mm_overlap=check_mm_overlap, qmmm = qmmm, qm_atoms = qm_atoms, threshold_ratio = threshold_ratio)
         if status == 'job_success' and status2 == 'job_success':
             shutil.copyfile(backward_end_output, irc_reactant_path)
@@ -526,9 +526,9 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
         else:
             return msg, pyMol_3, pyMol_4
     elif pyMol_4.write('inchiKey').strip() == reactant_inchi_key:
-        f = FILTER(forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
+        f = FILTER(forward_end_output, cluster_bond_file=cluster_bond_path, fixed_atoms = fixed_atoms_path)
         status, msg = f.check_feasible_rxn(check_mm_overlap=check_mm_overlap, qmmm = qmmm, qm_atoms = qm_atoms, threshold_ratio = threshold_ratio)
-        f2 = FILTER(backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atom = fixed_atom_path)
+        f2 = FILTER(backward_end_output, cluster_bond_file=cluster_bond_path, fixed_atoms = fixed_atoms_path)
         status2, msg2 = f2.check_feasible_rxn(check_mm_overlap=check_mm_overlap, qmmm = qmmm, qm_atoms = qm_atoms, threshold_ratio = threshold_ratio)
         if status == 'job_success' and status2 == 'job_success':
             shutil.copyfile(forward_end_output, irc_reactant_path)
@@ -2208,7 +2208,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
         checker_path = path.realpath(sys.argv[0])
         ard_path = path.dirname(path.dirname(checker_path))
         cluster_bond_path = path.join(ard_path, 'script/bonds.txt')
-        fixed_atom_path = path.join(ard_path, 'script/fixed_atom.txt')
+        fixed_atoms_path = path.join(ard_path, 'script/fixed_atoms.txt')
     
     # If the ssm perform by orca with xtb GFN2-xtb, then refine the TS is a good choice.  Get a better initial guess
     check_ssm_jobs(qm_collection, refine=refine, thershold = 100.0)  # TS guess energy filter
@@ -2217,7 +2217,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_irc_jobs(qm_collection)
     check_irc_opt_jobs(qm_collection, level_of_theory=level_of_theory)
     check_irc_opt_side_fail_jobs(qm_collection)
-    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atom_path = fixed_atom_path, active_site=False, check_mm_overlap=True, qmmm=qmmm_mol, qm_atoms=23, threshold_ratio=0.6)
+    check_irc_equal(qm_collection, cluster_bond_path = cluster_bond_path, fixed_atoms_path = fixed_atoms_path, active_site=False, check_mm_overlap=True, qmmm=qmmm_mol, qm_atoms=23, threshold_ratio=0.6)
     check_barrier(qm_collection)
     insert_reaction(qm_collection, reactions_collection)
     insert_ard(qm_collection, reactions_collection, statistics_collection, config_collection, barrier_threshold=65.0, qmmm=qmmm, use_irc=use_irc)

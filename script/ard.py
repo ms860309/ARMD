@@ -20,7 +20,7 @@ if __name__ == '__main__':
     from openbabel import pybel
 
     # local application imports
-    from main import ARD, readInput, readXYZ, extract_bonds, extract_constraint_index, extract_fixed_atom_index
+    from main import ARD, readInput, readXYZ, extract_bonds, extract_fixed_atoms_index
 
     # disable log
     RDLogger.DisableLog('rdApp.*')
@@ -30,16 +30,14 @@ if __name__ == '__main__':
 
     # Set up parser for reading the input filename from the command line
     parser = argparse.ArgumentParser(
-        description='Automatic Reaction Discovery')
+        description='Automatic Reaction Mechanism Discovery')
     parser.add_argument('file', type=str, metavar='infile',
                         help='An input file describing the job options')
     parser.add_argument('reactant', default='reactant.xyz', type=str,
                         metavar='infile', help='An reactant xyz input file')
     parser.add_argument('-bonds', default='bonds.txt', type=str,
                         help='Manual specify bonds, (If you want to manually add bonds, set manual_bonds as 0 and manual_cluster_bond as 1 then put the bond you want to add in bonds.txt)', required=False)
-    parser.add_argument('-constraint', default='constraint.txt', type=str,
-                        help='Manual specify constraint atom index (start from 0)', required=False)
-    parser.add_argument('-fixed_atom', default='fixed_atom.txt', type=str,
+    parser.add_argument('-fixed_atoms', default='fixed_atoms.txt', type=str,
                         help='Manual specify fixed atom index (start from 0)', required=False)
     parser.add_argument('-generations', default=1, type=int,
                         help='The network generation index', required=False)
@@ -51,18 +49,11 @@ if __name__ == '__main__':
     reactant_file = path.abspath(args.reactant)
     kwargs = readInput(input_file)
 
-    # Constraint
-    if kwargs['constraint'] == '1':
-        index = extract_constraint_index(args.constraint)
-        kwargs['constraint_index'] = index
+    if kwargs['fixed_atoms'] == '1':
+        index = extract_fixed_atoms_index(args.fixed_atoms)
+        kwargs['fixed_atoms'] = index
     else:
-        kwargs['constraint_index'] = None
-
-    if kwargs['fixed_atom'] == '1':
-        index = extract_fixed_atom_index(args.fixed_atom)
-        kwargs['fixed_atom'] = index
-    else:
-        kwargs['fixed_atom'] = None
+        kwargs['fixed_atoms'] = None
 
     # Manual set up bonds
     if kwargs['manual_bonds'] == '1':
@@ -75,7 +66,7 @@ if __name__ == '__main__':
         else:
             kwargs['manual_cluster_bond'] = None
         kwargs['bonds'] = None
-    OBMol, reactant_graph = readXYZ(reactant_file, kwargs['bonds'], kwargs['manual_cluster_bond'], kwargs['constraint_index'])
+    OBMol, reactant_graph = readXYZ(reactant_file, kwargs['bonds'], kwargs['manual_cluster_bond'], kwargs['fixed_atoms'])
 
     kwargs['reactant'] = OBMol
     kwargs['graph'] = reactant_graph

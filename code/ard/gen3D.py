@@ -51,7 +51,7 @@ def readstring(format, string):
     return Molecule(mol.OBMol)
 
 
-def make3DandOpt(mol, forcefield='mmff94', make3D=True):
+def make3DandOpt(mol, forcefield='uff', make3D=True):
     """
     Generate 3D coordinates and optimize them using a force field.
     """
@@ -60,7 +60,7 @@ def make3DandOpt(mol, forcefield='mmff94', make3D=True):
     mol.localopt(forcefield=forcefield)
 
 
-def constraint_force_field(mol, freeze_index, forcefield='mmff94', method='ConjugateGradients', steps=5000):
+def constraint_force_field(mol, freeze_index, forcefield='uff', method='ConjugateGradients', steps=5000):
     """
     An openbabel constraint force field.
     mol is OBMol object
@@ -420,7 +420,7 @@ class Molecule(pybel.Molecule):
         self.separateMol()
 
         # Generate 3D geometries separately
-        if len(self.mols) > 1 and constraint == None:
+        if len(self.mols) > 1 and constraint is None:
             for mol in self.mols:
                 is_hydrogen_mol = len(mol.atoms) == 2 and all(
                     a.OBAtom.GetAtomicNum() == 1 for a in mol)
@@ -443,7 +443,7 @@ class Molecule(pybel.Molecule):
                     ind = [a.idx for a in mol]
                     bond = mol.OBMol.GetBond(ind[0], ind[1])
                     bond.SetLength(1.21)
-                elif constraint == None:
+                elif constraint is None:
                     make3DandOpt(mol, forcefield=forcefield, make3D=make3D)
                 else:
                     constraint_force_field(mol, constraint, forcefield, method)
@@ -451,7 +451,7 @@ class Molecule(pybel.Molecule):
             self.mergeMols()
             self.OBMol.SetTotalSpinMultiplicity(spin)
         else:
-            if constraint == None:
+            if constraint is None:
                 make3DandOpt(self, forcefield=forcefield, make3D=make3D)
             else:
                 constraint_force_field(self, constraint, forcefield, method)
@@ -573,7 +573,7 @@ class Molecule(pybel.Molecule):
         else:
             self.mols_indices = tuple([atom] for atom in range(len(self.atoms)))
 
-    def detRotors(self, mols_indices, fixed_atom=[]):
+    def detRotors(self, mols_indices, fixed_atoms=[]):
         """
         Determine the rotors and atoms in the rotors of the molecule.
         """
@@ -585,13 +585,13 @@ class Molecule(pybel.Molecule):
         for bond_1 in pybel.ob.OBMolBondIter(self.OBMol):
             if bond_1.IsRotor():
                 ref_1, ref_2 = bond_1.GetBeginAtomIdx() - 1, bond_1.GetEndAtomIdx() - 1
-                if mols_indices[ref_1] not in fixed_atom or mols_indices[ref_2] not in fixed_atom:
+                if mols_indices[ref_1] not in fixed_atoms or mols_indices[ref_2] not in fixed_atoms:
                     self.rotors.append((ref_1, ref_2))
                     atom_in_rotor = [False] * natoms
 
                     conns = det_connectivity(total_bond, atom_index=ref_1, pass_idx=ref_2)
                     for conn in conns:
-                        if conn in fixed_atom:
+                        if conn in fixed_atoms:
                             atom_in_rotor[ref_2] = True
                             break
                     else:
@@ -650,7 +650,7 @@ class Arrange3D(object):
 
     """
 
-    def __init__(self, mol_1, mol_2, constraint=None, fixed_atom=None, cluster_bond = None):
+    def __init__(self, mol_1, mol_2, fixed_atoms=None, cluster_bond = None):
         # set initial position has been disable so i think we can remove this fragment constraint
         # if not (0 < len(mol_1.mols) <= 4 and 0 < len(mol_2.mols) <= 4):
         #raise Exception('More than 4 molecules are not supported')
@@ -669,23 +669,19 @@ class Arrange3D(object):
         self.nodes_2 = None
         self.fdist_1 = None
         self.fdist_2 = None
-        if constraint == None:
-            self.constraint = []
-        else:
-            self.constraint = constraint
 
-        if fixed_atom == None:
-            self.fixed_atom = []
+        if fixed_atoms is None:
+            self.fixed_atoms = []
         else:
-            self.fixed_atom = fixed_atom
+            self.fixed_atoms = fixed_atoms
 
-        if cluster_bond == None:
+        if cluster_bond is None:
             self.cluster_bond = []
         else:
             self.cluster_bond = cluster_bond
         self.initializeVars(mol_1, mol_2)
 
-    def initializeVars(self, mol_1, mol_2, d_intermol=1.0, d_intramol=2.0):
+    def initializeVars(self, mol_1, mol_2, d_intermol=1.0, d_intramol=1.5):
         """
         Set up class variables and determine the bonds and torsions to be
         matched between reactant and product.
@@ -758,12 +754,12 @@ class Arrange3D(object):
         self.dof_1, self.def_2 = 6 * (len(self.mol_1.mols) - 1), 6 * (len(self.mol_2.mols) - 1)
 
         for idx, mol in enumerate(mol_1.mols):
-            mol.detRotors(mol.mols_indices[idx], self.fixed_atom)
+            mol.detRotors(mol.mols_indices[idx], self.fixed_atoms)
             mol.detCloseAtoms(d_intramol)
             self.dof_1 += len(mol.rotors)
 
         for idx, mol in enumerate(mol_2.mols):
-            mol.detRotors(mol.mols_indices[idx], self.fixed_atom)
+            mol.detRotors(mol.mols_indices[idx], self.fixed_atoms)
             mol.detCloseAtoms(d_intramol)
             self.def_2 += len(mol.rotors)
 
@@ -811,25 +807,26 @@ class Arrange3D(object):
             disps_guess = np.array([0.0]*dof)
             # The 10 x 10 box should find all minimum
             #bounds = Bounds([-5.0]*dof, [5.0]*dof)
-            if self.constraint == []:
+            if self.fixed_atoms == []:
                 result = minimize(self.objectiveFunction, disps_guess,
                                         constraints={'type': 'ineq', 'fun': self.constraintFunction},
                                         method='SLSQP',
                                         options={'disp': False, 'maxiter':1000})  # , callback = callbackF, 'eps':1e-10
             else:
-                # result = minimize(self.objectiveFunction, disps_guess,
-                #                         constraints=[{'type': 'ineq', 'fun': self.constraintFunction},
-                #                                     {'type': 'ineq', 'fun': self.third_constraintFunction}
-                #                                     ],
-                #                         method='COBYLA',
-                #                         options={'disp': False})
-
                 result = minimize(self.objectiveFunction, disps_guess,
                                         constraints=[{'type': 'ineq', 'fun': self.constraintFunction},
                                                     {'type': 'ineq', 'fun': self.third_constraintFunction}
                                                     ],
-                                        method='SLSQP',
-                                        options={'disp': False, 'maxiter':200, 'ftol':0.01})  # , callback = callbackF, 'eps':1e-10
+                                        method='COBYLA',
+                                        options={'disp': False})
+
+                # result = minimize(self.objectiveFunction, disps_guess,
+                #                         constraints=[{'type': 'ineq', 'fun': self.constraintFunction},
+                #                                     {'type': 'ineq', 'fun': self.third_constraintFunction}
+                #                                     ],
+                #                         method='SLSQP',
+                #                         options={'disp': False, 'maxiter':200, 'ftol':0.01})  # , callback = callbackF, 'eps':1e-10
+
                 # if not s_result.success:
                 #     result = result
                 # else:
@@ -1080,7 +1077,7 @@ class Arrange3D(object):
             for i in range(0, nmols):
                 index = mols[i].mols_indices[i]
                 for idx in index:
-                    if idx in self.fixed_atom:
+                    if idx in self.fixed_atoms:
                         check.append(i)
             check = set(check)
 
@@ -1117,8 +1114,8 @@ class Arrange3D(object):
             atoms = tuple(atom.atomicnum for atom in mol)
             for atom in atoms:
                 atom_symbol_2.append(ob.GetSymbol(atom))
-        force_1 = get_ob_forces(atom_symbol_1, np.concatenate(coords_1), cluster_bond = self.cluster_bond, freeze_index=self.constraint)
-        force_2 = get_ob_forces(atom_symbol_2, np.concatenate(coords_2), cluster_bond = self.cluster_bond, freeze_index=self.constraint)
+        force_1 = get_ob_forces(atom_symbol_1, np.concatenate(coords_1), cluster_bond = self.cluster_bond, freeze_index=self.fixed_atoms)
+        force_2 = get_ob_forces(atom_symbol_2, np.concatenate(coords_2), cluster_bond = self.cluster_bond, freeze_index=self.fixed_atoms)
 
     def backtransform(self, new_coords, nodes_copy):
         """
@@ -1126,7 +1123,7 @@ class Arrange3D(object):
         """
         matches = []
         for idx, i in enumerate(self.mol_1.mols_indices):
-            for constrained_atom in self.constraint:
+            for constrained_atom in self.fixed_atoms:
                 if constrained_atom in i:
                     target1 = i.index(constrained_atom)
                     matches.append((idx, target1))
@@ -1169,8 +1166,8 @@ class Arrange3D(object):
         #     atoms = tuple(atom.atomicnum for atom in mol)
         #     for atom in atoms:
         #         atom_symbol_2.append(ob.GetSymbol(atom))
-        # force_1 = get_ob_forces(atom_symbol_1, np.concatenate(coords_1), cluster_bond = self.cluster_bond, freeze_index=self.constraint)
-        # force_2 = get_ob_forces(atom_symbol_2, np.concatenate(coords_2), cluster_bond = self.cluster_bond, freeze_index=self.constraint)
+        # force_1 = get_ob_forces(atom_symbol_1, np.concatenate(coords_1), cluster_bond = self.cluster_bond, freeze_index=self.fixed_atoms)
+        # force_2 = get_ob_forces(atom_symbol_2, np.concatenate(coords_2), cluster_bond = self.cluster_bond, freeze_index=self.fixed_atoms)
 
         # with open ('./visual_arrange.xyz', 'a') as f:
         #     coords = "\n".join(["{} {:10.08f} {:10.08f} {:10.08f}".format(a, *c) for a, c in zip(atom_symbol_1, np.concatenate(coords_1))])
@@ -1219,8 +1216,8 @@ class Arrange3D(object):
         coords_1 = self.newCoords(self.mol_1.mols, self.nodes_1, disps[:self.dof_1])
         coords_2 = self.newCoords(self.mol_2.mols, self.nodes_2, disps[self.dof_1:])
 
-        # combs = combinations(self.constraint, 2)
-        for constrained_atom in self.constraint:
+        # combs = combinations(self.fixed_atoms, 2)
+        for constrained_atom in self.fixed_atoms:
             matches_1 = [match for match in self.get_idx(constrained_atom, self.mol_1.mols_indices)]
             matches_2 = [match for match in self.get_idx(constrained_atom, self.mol_2.mols_indices)]
             dist1 += np.linalg.norm(coords_1[matches_1[0][0]][matches_1[0][1]] - self.nodes_1_copy[matches_1[0][0]].coords[matches_1[0][1]])
@@ -1276,8 +1273,8 @@ class Arrange3D(object):
         coords_1 = self.newCoords(self.mol_1.mols, self.nodes_1, disps[:self.dof_1])
         coords_2 = self.newCoords(self.mol_2.mols, self.nodes_2, disps[self.dof_1:])
 
-        # combs = combinations(self.constraint, 2)
-        for constrained_atom in self.constraint:
+        # combs = combinations(self.fixed_atoms, 2)
+        for constrained_atom in self.fixed_atoms:
             matches_1 = [match for match in self.get_idx(constrained_atom, self.mol_1.mols_indices)]
             matches_2 = [match for match in self.get_idx(constrained_atom, self.mol_2.mols_indices)]
             dist1 += np.linalg.norm(coords_1[matches_1[0][0]][matches_1[0][1]] - self.nodes_1_copy[matches_1[0][0]].coords[matches_1[0][1]])
@@ -1293,8 +1290,8 @@ class Arrange3D(object):
         coords_1 = self.newCoords(self.mol_1.mols, self.nodes_1, disps[:self.dof_1])
         coords_2 = self.newCoords(self.mol_2.mols, self.nodes_2, disps[self.dof_1:])
 
-        # combs = combinations(self.constraint, 2)
-        for constrained_atom in self.constraint:
+        # combs = combinations(self.fixed_atoms, 2)
+        for constrained_atom in self.fixed_atoms:
             matches_1 = [match for match in self.get_idx(constrained_atom, self.mol_1.mols_indices)]
             matches_2 = [match for match in self.get_idx(constrained_atom, self.mol_2.mols_indices)]
             dist1 += np.linalg.norm(coords_1[matches_1[0][0]][matches_1[0][1]] - self.nodes_1_copy[matches_1[0][0]].coords[matches_1[0][1]])

@@ -17,8 +17,7 @@ def select_ard_target(qm_collection:object):
     reg_query = {'ard_status':
                  {"$in":
                   ["job_unrun"]
-                  }
-                 }
+                  }}
     targets = list(qm_collection.find(reg_query))
     return targets
 
@@ -88,20 +87,19 @@ def launch_ard_jobs(qm_collection:object, config_collection:object, status_colle
         print(highlight_text('ARD'))
         print('\nARD launced {} jobs\n'.format(count))
 
-def create_ard_sub_file(dir_path, script_path, gen_num, next_reactant, ncpus=4, mpiprocs=1, ompthreads=4, mem=1):
+def create_ard_sub_file(dir_path, script_path, gen_num, next_reactant, ncpus=1, mpiprocs=1, ompthreads=1, mem=1):
     subfile = path.join(dir_path, 'ard.job')
     product_xyz_path = path.join(dir_path, next_reactant)
     ard_path = path.join(script_path, 'ard.py')
     input_path = path.join(script_path, 'input.txt')
     bonds_path = path.join(script_path, 'bonds.txt')
-    constraint = path.join(script_path, 'constraint.txt')
-    fixed_atom = path.join(script_path, 'fixed_atom.txt')
+    fixed_atoms = path.join(script_path, 'fixed_atoms.txt')
     shell = '#!/usr/bin/bash'
     pbs_setting = '#PBS -l select=1:ncpus={}:mpiprocs={}:ompthreads={}\n#PBS -q workq\n#PBS -j oe'.format(ncpus, mpiprocs, ompthreads)
     target_path = 'cd {}'.format(script_path)
     nes1 = 'source ~/.bashrc\nexport MKL_NUM_THREADS={}\nexport OMP_NUM_THREADS={}\nexport OMP_STACKSIZE={}G\n'.format(ncpus, ompthreads, mem)
     nes2 = 'conda activate ard'
-    command = 'python {} {} {} -bonds {} -constraint {} -fixed_atom {} -generations {}'.format(ard_path, input_path, product_xyz_path, bonds_path, constraint, fixed_atom, gen_num)
+    command = 'python {} {} {} -bonds {} -fixed_atoms {} -generations {}'.format(ard_path, input_path, product_xyz_path, bonds_path, fixed_atoms, gen_num)
     deactivate = 'conda deactivate'
 
     with open(subfile, 'w') as f:
@@ -137,16 +135,16 @@ def check_ard_job_status(job_id):
     else:
         return 'job_launched'
 
-
-
 qm_collection = db['qm_calculate_center']
 config_collection = db['config']
 status_collection = db['status']
-
-target = list(config_collection.find({'generations': 1}))[0]
-qmmm = target['use_qmmm']
-if qmmm == '1':
-    qmmm = True
-else:
-    qmmm = False
-launch_ard_jobs(qm_collection, config_collection, status_collection, ncpus=1, mpiprocs=1, ompthreads=1, qmmm=qmmm)
+try:
+    target = list(config_collection.find({'generations': 1}))[0]
+    qmmm = target['use_qmmm']
+    if qmmm == '1':
+        qmmm = True
+    else:
+        qmmm = False
+    launch_ard_jobs(qm_collection, config_collection, status_collection, ncpus=1, mpiprocs=1, ompthreads=1, qmmm=qmmm)
+except:
+    launch_ard_jobs(qm_collection, config_collection, status_collection, ncpus=1, mpiprocs=1, ompthreads=1)

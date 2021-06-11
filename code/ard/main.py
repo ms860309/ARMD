@@ -97,11 +97,10 @@ class ARD(object):
 
 ###############################################################################
 
-
 def readInput(input_file):
     # Allowed keywords
     keys = ('nbreak', 'nform', 'forcefield', 'constraintff_alg', 'mopac_method', 'dh_cutoff', 'dh_cutoff_method', 'catalyst', 'use_qmmm',
-            'manual_bonds', 'bond_dissociation_cutoff', 'constraint', 'use_inchi_key', 'manual_cluster_bond', 'fixed_atom', 'use_irc', 'xtb_method')
+            'manual_bonds', 'bond_dissociation_cutoff', 'constraint', 'use_inchi_key', 'manual_cluster_bond', 'fixed_atoms', 'use_irc', 'xtb_method')
     # Read all data from file
     with open(input_file, 'r') as f:
         input_data = f.read().splitlines()
@@ -119,29 +118,19 @@ def readInput(input_file):
                 input_dict[key] = line.split()[1]
     return input_dict
 
-
 def extract_bonds(bonds):
     with open(bonds, 'r') as f:
         lines = f.read()
     lines = eval(lines)
     return lines
 
-
-def extract_constraint_index(constraint):
-    with open(constraint, 'r') as f:
+def extract_fixed_atoms_index(fixed_atoms):
+    with open(fixed_atoms, 'r') as f:
         lines = f.read()
     lines = eval(lines)
     return lines
 
-
-def extract_fixed_atom_index(fixed_atom):
-    with open(fixed_atom, 'r') as f:
-        lines = f.read()
-    lines = eval(lines)
-    return lines
-
-
-def readXYZ(xyz, bonds=None, cluster_bond=None, constraint=None):
+def readXYZ(xyz, bonds=None, cluster_bond=None, fixed_atoms=None):
     # extract molecule information from xyz
     mol = next(pb.readfile('xyz', xyz))
     reactant_atom = [a.OBAtom.GetAtomicNum() for a in mol]
@@ -165,7 +154,7 @@ def readXYZ(xyz, bonds=None, cluster_bond=None, constraint=None):
         if cluster_bond:
             bonds = [(bond.GetBeginAtomIdx(), bond.GetEndAtomIdx(), bond.GetBondOrder())
                      for bond in pb.ob.OBMolBondIter(mol.OBMol)]
-            #bonds = imaginary_bond(bonds, reactant_atom, constraint)
+            #bonds = imaginary_bond(bonds, reactant_atom, fixed_atoms)
             bonds.extend(cluster_bond)
 
         for bond in bonds:
@@ -194,13 +183,13 @@ def readXYZ(xyz, bonds=None, cluster_bond=None, constraint=None):
     return mol_obj, reactant_graph
 
 
-def imaginary_bond(bonds, reactant_atom, constraint):
-    for atom in constraint:
+def imaginary_bond(bonds, reactant_atom, fixed_atoms):
+    for atom in fixed_atoms:
         for bond in bonds:
             idx_1 = bond[0] - 1
             idx_2 = bond[1] - 1
             if idx_1 == atom or idx_2 == atom:
-                if idx_1 not in constraint or idx_2 not in constraint:
+                if idx_1 not in fixed_atoms or idx_2 not in fixed_atoms:
                     # remove hydrogen
                     if reactant_atom[idx_1] != 1 and reactant_atom[idx_2] != 1:
                         bonds.remove(bond)

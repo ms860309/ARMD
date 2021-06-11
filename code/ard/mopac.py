@@ -26,7 +26,7 @@ class MopacError(Exception):
 
 class Mopac(object):
 
-    def __init__(self, reactant_mol, product_mol, mopac_method, forcefield, constraintff_alg, form_bonds, break_bonds, logger, count, num, constraint=None, fixed_atom=None, cluster_bond = None):
+    def __init__(self, reactant_mol, product_mol, mopac_method, forcefield, constraintff_alg, form_bonds, break_bonds, logger, count, num, fixed_atoms=None, cluster_bond = None):
         self.reactant_mol = reactant_mol
         self.product_mol = product_mol
         self.mopac_method = mopac_method
@@ -37,8 +37,10 @@ class Mopac(object):
         self.logger = logger
         self.count = count
         self.num = num
-        self.constraint = constraint
-        self.fixed_atom = fixed_atom
+        if fixed_atoms is None:
+            self.fixed_atoms = []
+        else:
+            self.fixed_atoms = fixed_atoms
         self.cluster_bond = cluster_bond
 
     def mopac_get_H298(self, tmp_path, charge=0, multiplicity='SINGLET'):
@@ -86,20 +88,25 @@ class Mopac(object):
     def genInput(self, reactant_mol, product_mol, threshold=5.0):
         start_time = time.time()
 
-        # Initial optimization
+        # These two lines are required so that new coordinates are
+        # generated for each new product. Otherwise, Open Babel tries to
+        # use the coordinates of the previous molecule if it is isomorphic
+        # to the current one, even if it has different atom indices
+        # participating in the bonds. a hydrogen atom is chosen
+        # arbitrarily, since it will never be the same as any of the
+        # product structures.
 
         Hatom = gen3D.readstring('smi', '[H]')
-        ff = pybel.ob.OBForceField.FindForceField('mmff94')
-        reactant_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        ff = pybel.ob.OBForceField.FindForceField(self.forcefield)
+        reactant_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
-        product_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        product_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
 
 
         # Arrange
-        try:  # Pass the more than 4 fragment situation
-            arrange3D = gen3D.Arrange3D(
-                reactant_mol, product_mol, self.constraint, self.fixed_atom)
+        try:
+            arrange3D = gen3D.Arrange3D(reactant_mol, product_mol, self.fixed_atoms)
             msg = arrange3D.arrangeIn3D()
             if msg != '':
                 print(msg)
@@ -109,10 +116,10 @@ class Mopac(object):
             return False, False
 
         ff.Setup(Hatom.OBMol)
-        reactant_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        reactant_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
         ff.Setup(Hatom.OBMol)
-        product_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        product_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
         ff.Setup(Hatom.OBMol)
 
@@ -136,8 +143,8 @@ class Mopac(object):
             self.logger.info('Structure:\n{}\n'.format(str(product_mol.toNode())))
             self.logger.info('Form bonds: {}\nBreak bonds: {}\nForm bond distance: {}'.format(self.form_bonds, self.break_bonds, dist))
             
-            reactant_geometry = self.gen_geo_inp(reactant_mol, constraint=self.constraint)
-            product_geometry = self.gen_geo_inp(product_mol, constraint=self.constraint)
+            reactant_geometry = self.gen_geo_inp(reactant_mol, fixed_atoms=self.fixed_atoms)
+            product_geometry = self.gen_geo_inp(product_mol, fixed_atoms=self.fixed_atoms)
 
             self.finalize(start_time, 'arrange')
             return reactant_geometry, product_geometry
@@ -149,17 +156,17 @@ class Mopac(object):
         self.logger.info('Total {} run time: {:.1f} s'.format(jobname, time.time() - start_time))
 
     @staticmethod
-    def gen_geo_inp(mol_object, constraint=None):
+    def gen_geo_inp(mol_object, fixed_atoms=None):
         geometry = str(mol_object.toNode()).splitlines()
         product_geometry = []
         for idx, i in enumerate(geometry):
             i_list = i.split()
             atom = i_list[0] + " "
             k = i_list[1:] + [""]
-            if not constraint:
+            if not fixed_atoms:
                 l = " 1 ".join(k)
             else:
-                if idx in constraint:
+                if idx in fixed_atoms:
                     l = " 0 ".join(k)
                 else:
                     l = " 1 ".join(k)

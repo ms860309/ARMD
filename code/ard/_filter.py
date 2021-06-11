@@ -10,14 +10,14 @@ import props
 ELEMENT_TABLE = props.ElementData()
 
 class FILTER(object):
-    def __init__(self, reactant_file, cluster_bond_file = None, fixed_atom = None):
+    def __init__(self, reactant_file, cluster_bond_file = None, fixed_atoms = None):
         self.reactant_file = reactant_file
         self.cluster_bond_file = cluster_bond_file
-        self.fixed_atom = fixed_atom
-        if self.fixed_atom:
-            with open(self.fixed_atom, 'r') as f:
+        self.fixed_atoms = fixed_atoms
+        if self.fixed_atoms:
+            with open(self.fixed_atoms, 'r') as f:
                 lines = f.read()
-            self.fixed_atom = eval(lines)
+            self.fixed_atoms = eval(lines)
         
     def initialization(self):
         mol = next(pb.readfile('xyz', self.reactant_file))
@@ -99,14 +99,14 @@ class FILTER(object):
         else:
             for idx, i in enumerate(self.atoms):
                 # use !=  or  >   need test
-                if i == 6 and idx not in self.fixed_atom:
+                if i == 6 and idx not in self.fixed_atoms:
                     if bond_type[idx] < 3 or bond_type[idx] > 4: # remove only C=O
                         return False, 'reactant carbon bond type is invalid.({})'.format(bond_type[idx])
                 # use !=  or  >   need test
-                elif i == 8 and bond_type[idx] > 2 and idx not in self.fixed_atom: # Here we can't use !=2 because some time reactant O don't detect bind on Sn
+                elif i == 8 and bond_type[idx] > 2 and idx not in self.fixed_atoms: # Here we can't use !=2 because some time reactant O don't detect bind on Sn
                     return False, 'reactant oxygen bond type is invalid.({})'.format(bond_type[idx])
                 # use !=  or  >   need test
-                elif i == 14 and bond_type[idx] != 4 and idx not in self.fixed_atom:
+                elif i == 14 and bond_type[idx] != 4 and idx not in self.fixed_atoms:
                     return False, 'reactant silicon bond type is invalid.({})'.format(bond_type[idx])
                 # While the bronsted acid already have proton on the active site, then aborted.
                 elif i == 8 and bond_type[idx] > 3:
@@ -115,17 +115,17 @@ class FILTER(object):
     
     def check_unreasonable_connection(self):
         # Use generator is more efficient
-        reactant_carbon = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atom and reactant_atoms == 6]
-        reactant_oxygen = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atom and reactant_atoms == 8]
-        active_site_oxygen = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] == 8]
-        active_site_silicon = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] == 14]
-        active_site_metal = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] in [42, 50, 74]]
-        hcap = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] == 1]
+        reactant_carbon = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atoms and reactant_atoms == 6]
+        reactant_oxygen = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atoms and reactant_atoms == 8]
+        active_site_oxygen = [active_site_atom for active_site_atom in self.fixed_atoms if self.atoms[active_site_atom] == 8]
+        active_site_silicon = [active_site_atom for active_site_atom in self.fixed_atoms if self.atoms[active_site_atom] == 14]
+        active_site_metal = [active_site_atom for active_site_atom in self.fixed_atoms if self.atoms[active_site_atom] in [42, 50, 74]]
+        hcap = [active_site_atom for active_site_atom in self.fixed_atoms if self.atoms[active_site_atom] == 1]
 
         for bond in self.reactant_bonds:
             if (bond[0] in reactant_oxygen and bond[1] in active_site_silicon) or (bond[1] in reactant_oxygen and bond[0] in active_site_silicon):
                 return False, 'reactant oxygen have connection with active site silicon.'
-            elif (bond[0] not in self.fixed_atom and bond[1] in hcap) or (bond[1] not in self.fixed_atom and bond[0] in hcap):
+            elif (bond[0] not in self.fixed_atoms and bond[1] in hcap) or (bond[1] not in self.fixed_atoms and bond[0] in hcap):
                 return False, 'reactant have connection with hcap.'
             elif (bond[0] in reactant_carbon and bond[1] in active_site_oxygen) or (bond[1] in reactant_carbon and bond[0] in active_site_oxygen):
                 return False, 'reactant carbon have connection with active site oxygen.'
@@ -136,7 +136,7 @@ class FILTER(object):
     def check_overlap_mm_region(self, qm_silicon = [], threshold = 5.4):
         # mm silicon index start from 0
         # Choose the silicon in cluster model which is in mm region
-        self.mol.gen3D(self.fixed_atom, make3D=False)
+        self.mol.gen3D(self.fixed_atoms, make3D=False)
         if len(self.mol.mols) == 1:
             return True, 'pass'
         else:
@@ -144,7 +144,7 @@ class FILTER(object):
             fd1 = [node.getCentroid() for node in nodes_1]
             tmps, dist2 = [], []
             for idx, i in enumerate(self.mol.mols):
-                if all(idx2 not in self.fixed_atom for idx2 in i.mols_indices[idx]):
+                if all(idx2 not in self.fixed_atoms for idx2 in i.mols_indices[idx]):
                     if any(self.atoms[idx2] == 6 or self.atoms[idx2] == 8 for idx2 in i.mols_indices[idx]):
                         tmps.append(idx)
 
@@ -185,11 +185,11 @@ class FILTER(object):
 
 
 # cluster_bond = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/script/bonds.txt'
-# fixed_atom = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/script/fixed_atom.txt'
+# fixed_atoms = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/script/fixed_atoms.txt'
 # qmmm = '/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/qmmm.xyz'
 # qmmm_mol = next(pb.readfile('xyz', qmmm))
 # # reactant_file = os.path.join('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions', 'UYFCJUSUJARWAH-UHFFFAOYSA-N_9/product.xyz')
-# # f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
+# # f = FILTER(reactant_file=reactant_file, cluster_bond_file=cluster_bond, fixed_atoms = fixed_atoms)
 # # msg = f.check_overlap_mm_region_2(qmmm = qmmm_mol, qm_atoms = 23)
 
 
@@ -199,7 +199,7 @@ class FILTER(object):
 #     print(i)
 #     b = os.path.join('/mnt/d/Lab/QMproject/AutomaticReactionDiscovery/code/ard/reactions', i)
 #     reactant_file = os.path.join(b, 'reactant.xyz')
-#     f = FILTER(reactant_file, cluster_bond_file=cluster_bond, fixed_atom = fixed_atom)
+#     f = FILTER(reactant_file, cluster_bond_file=cluster_bond, fixed_atoms = fixed_atoms)
 #     status, msg = f.check_feasible_rxn(check_mm_overlap = True, qmmm = qmmm_mol, qm_atoms = 23, threshold_ratio = 0.6)
 #     # state, msg = f.check_feasible_rxn(check_mm_overlap=True)
 #     # print(state)

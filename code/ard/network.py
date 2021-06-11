@@ -39,9 +39,8 @@ class Network(object):
         self.ard_path = kwargs['ard_path']
         self.generations = kwargs['generations']
         self.method = kwargs["dh_cutoff_method"]
-        self.constraint = kwargs['constraint_index']
         self.count = 0
-        self.fixed_atom = kwargs['fixed_atom']
+        self.fixed_atoms = kwargs['fixed_atoms']
         self.use_irc = kwargs['use_irc']
         self.use_qmmm = kwargs['use_qmmm']
         self.reactant_path = path.dirname(kwargs['reactant_path'])
@@ -131,7 +130,7 @@ class Network(object):
             for mol in prod_mols_filtered:
                 index = prod_mols.index(mol)
                 # Generate geometry and return path
-                mol_object.gen3D(self.constraint, forcefield=self.forcefield, method=self.constraintff_alg, make3D=False)
+                mol_object.gen3D(self.fixed_atoms, forcefield=self.forcefield, method=self.constraintff_alg, make3D=False)
                 reac_mol_copy = mol_object.copy()
                 dir_path = self.gen_geometry(mol_object, mol, reac_mol_copy, add_bonds[index], break_bonds[index])
                 product_inchi_key = mol.write('inchiKey').strip()
@@ -171,7 +170,7 @@ class Network(object):
     def filter_dh_mopac(self, reac_obj, cluster_bond, prod_mol, form_bonds, break_bonds, total_prod_num, qm_collection, refH=None):
         self.count += 1
         mopac_object = Mopac(reac_obj, prod_mol, self.mopac_method, self.forcefield, self.constraintff_alg,
-                             form_bonds, break_bonds, self.logger, total_prod_num, self.count, self.constraint, self.fixed_atom, cluster_bond)
+                             form_bonds, break_bonds, self.logger, total_prod_num, self.count, self.fixed_atoms, cluster_bond)
         H298_reac, H298_prod = mopac_object.mopac_get_H298(self.reactant_path)
 
         if H298_prod == False or H298_reac == False:
@@ -217,7 +216,7 @@ class Network(object):
     def filter_dh_xtb(self, reac_mol, prod_mol, cluster_bond, form_bonds, break_bonds, total_prod_num, qm_collection, config_path, refH=None):
         self.count += 1
         xtb_object = XTB(self.forcefield, self.constraintff_alg, form_bonds, break_bonds,
-                         self.logger, total_prod_num, self.count, self.constraint, self.fixed_atom, cluster_bond, self.xtb_method)
+                         self.logger, total_prod_num, self.count, self.fixed_atoms, cluster_bond, self.xtb_method)
         H298_reac, H298_prod = xtb_object.xtb_get_H298(reac_mol, prod_mol, self.reactant_path, config_path)
 
         if H298_prod == False or H298_reac == False:
@@ -267,7 +266,7 @@ class Network(object):
             shutil.rmtree(tmpdir)
         os.mkdir(tmpdir)
 
-        reactant_geometry = Mopac.gen_geo_inp(mol_object, constraint=self.constraint)
+        reactant_geometry = Mopac.gen_geo_inp(mol_object, fixed_atoms=self.fixed_atoms)
 
         with open(reactant_path, 'w') as f:
             f.write("NOSYM CHARGE={} {} {}\n\n".format(charge, multiplicity, self.mopac_method))
@@ -287,8 +286,8 @@ class Network(object):
 
         shutil.copyfile(path.join(self.ard_path, 'reactant.xyz'), reactant_path)
         try:
-            XTB.runXTB(tmpdir, config_path, constraint=self.constraint, target='reactant.xyz', method = self.xtb_method)
-            mol_hf = XTB.getE(tmpdir, target='reactant.xyz')
+            XTB.runXTB(tmpdir, config_path, fixed_atoms=self.fixed_atoms, target='reactant', method = self.xtb_method)
+            mol_hf = XTB.getE(tmpdir, target='reactant')
         except:
             raise Exception('The initial reactant energy calculation by xtb is fail.')
         return float(mol_hf)
@@ -306,14 +305,13 @@ class Network(object):
         # Initial optimization
         Hatom = gen3D.readstring('smi', '[H]')
         ff = pybel.ob.OBForceField.FindForceField(self.forcefield)
-        reactant_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        reactant_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
-        product_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        product_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
         # Arrange
         # If arrange error can use try
-        arrange3D = gen3D.Arrange3D(
-            reactant_mol, product_mol, self.constraint, self.fixed_atom, self.cluster_bond)
+        arrange3D = gen3D.Arrange3D(reactant_mol, product_mol, self.fixed_atoms, self.fixed_atoms, self.cluster_bond)
         msg = arrange3D.arrangeIn3D()
         if msg != '':
             self.logger.info(msg)
@@ -321,10 +319,10 @@ class Network(object):
         # After arrange to prevent openbabel use the previous product coordinates if it is isomorphic
         # to the current one, even if it has different atom indices participating in the bonds.
         ff.Setup(Hatom.OBMol)
-        reactant_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        reactant_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
         ff.Setup(Hatom.OBMol)
-        product_mol.gen3D(self.constraint, forcefield=self.forcefield,
+        product_mol.gen3D(self.fixed_atoms, forcefield=self.forcefield,
                             method=self.constraintff_alg, make3D=False)
         ff.Setup(Hatom.OBMol)
 

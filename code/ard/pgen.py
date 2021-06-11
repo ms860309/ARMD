@@ -61,7 +61,7 @@ class Generate(object):
           (beginAtomIdx, endAtomIdx, bondOrder)
     """
 
-    def __init__(self, reac_mol, fixed_atom=None, **kwargs):
+    def __init__(self, reac_mol, fixed_atoms=None, **kwargs):
         self.reac_mol = reac_mol
         self.reactant_inchikey = [reac_mol.write('inchiKey').strip()]
         self.reac_mol_graph = kwargs['graph']
@@ -74,7 +74,7 @@ class Generate(object):
             self.use_inchi_key = True
         else:
             self.use_inchi_key = False
-        self.fixed_atom = fixed_atom
+        self.fixed_atoms = fixed_atoms
 
         self.initialize()
         self.reactant_coords = [np.array([atom.coords for atom in self.reac_mol]).reshape(len(self.atoms), 3)]
@@ -90,29 +90,29 @@ class Generate(object):
                             for bond in pybel.ob.OBMolBondIter(self.reac_mol.OBMol)]
         self.reactant_bonds = tuple(sorted(reactant_bonds))
 
-        if self.fixed_atom:
-            self.active_site_oxygen = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] == 8]
-            self.active_site_metal = [active_site_atom for active_site_atom in self.fixed_atom if self.atoms[active_site_atom] in [42, 50, 74, 13]]
-            self.reactant_oxygen = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atom and reactant_atoms == 8]
-            self.reactant_carbon = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atom and reactant_atoms == 6]
+        if self.fixed_atoms:
+            self.active_site_oxygen = [active_site_atom for active_site_atom in self.fixed_atoms if self.atoms[active_site_atom] == 8]
+            self.active_site_metal = [active_site_atom for active_site_atom in self.fixed_atoms if self.atoms[active_site_atom] in [42, 50, 74, 13]]
+            self.reactant_oxygen = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atoms and reactant_atoms == 8]
+            self.reactant_carbon = [idx for idx, reactant_atoms in enumerate(self.atoms) if idx not in self.fixed_atoms and reactant_atoms == 6]
             # The zeolite usually reactant with its faced active site oxygen
             self.active_site_oxygen.remove(12)
             # Extract bonds as an unmutable sequence (indices are made compatible with atom list)
             # self.reactant_hydrogen is -OH self.reactant_hydrogen_2 is C-H
             reactant_hydrogen_1 =[bond[0] for bond in self.reactant_bonds 
-                                if bond[0] not in self.fixed_atom and bond[1] not in self.fixed_atom and self.atoms[bond[0]] == 1 and self.atoms[bond[1]] == 8]
+                                if bond[0] not in self.fixed_atoms and bond[1] not in self.fixed_atoms and self.atoms[bond[0]] == 1 and self.atoms[bond[1]] == 8]
             self.reactant_hydrogen =[bond[1] for bond in self.reactant_bonds 
-                                if bond[0] not in self.fixed_atom and bond[1] not in self.fixed_atom and self.atoms[bond[1]] == 1 and self.atoms[bond[0]] == 8]
+                                if bond[0] not in self.fixed_atoms and bond[1] not in self.fixed_atoms and self.atoms[bond[1]] == 1 and self.atoms[bond[0]] == 8]
             self.reactant_hydrogen.extend(reactant_hydrogen_1)
             reactant_hydrogen_1 =[bond[0] for bond in self.reactant_bonds 
-                                if bond[0] not in self.fixed_atom and bond[1] not in self.fixed_atom and self.atoms[bond[0]] == 1 and self.atoms[bond[1]] == 6]
+                                if bond[0] not in self.fixed_atoms and bond[1] not in self.fixed_atoms and self.atoms[bond[0]] == 1 and self.atoms[bond[1]] == 6]
             self.reactant_hydrogen_2 =[bond[1] for bond in self.reactant_bonds 
-                                if bond[0] not in self.fixed_atom and bond[1] not in self.fixed_atom and self.atoms[bond[1]] == 1 and self.atoms[bond[0]] == 6]
+                                if bond[0] not in self.fixed_atoms and bond[1] not in self.fixed_atoms and self.atoms[bond[1]] == 1 and self.atoms[bond[0]] == 6]
             self.reactant_hydrogen_2.extend(reactant_hydrogen_1)
             active_site_hydrogen =[bond[0] for bond in self.reactant_bonds 
-                                if bond[0] in self.fixed_atom or bond[1] in self.fixed_atom if self.atoms[bond[0]] == 1 and self.atoms[bond[1]] == 8]
+                                if bond[0] in self.fixed_atoms or bond[1] in self.fixed_atoms if self.atoms[bond[0]] == 1 and self.atoms[bond[1]] == 8]
             self.active_site_hydrogen =[bond[1] for bond in self.reactant_bonds 
-                                if bond[0] in self.fixed_atom or bond[1] in self.fixed_atom if self.atoms[bond[1]] == 1 and self.atoms[bond[0]] == 8]
+                                if bond[0] in self.fixed_atoms or bond[1] in self.fixed_atoms if self.atoms[bond[1]] == 1 and self.atoms[bond[0]] == 8]
             self.active_site_hydrogen.extend(active_site_hydrogen)
         else:
             self.reactant_carbon = [idx for idx, reactant_atoms in enumerate(self.atoms) if reactant_atoms == 6]
@@ -123,9 +123,9 @@ class Generate(object):
         """
 
         bond_can_break = []
-        if self.fixed_atom:
+        if self.fixed_atoms:
             if self.catalyst in ['SnBEA', 'WBEA', 'MoBEA']:
-                bond_can_form = [bonds for bonds in bonds_form_all if bonds[0] not in self.fixed_atom and bonds[1] not in self.fixed_atom]
+                bond_can_form = [bonds for bonds in bonds_form_all if bonds[0] not in self.fixed_atoms and bonds[1] not in self.fixed_atoms]
                 # index start from 0
                 # HR (reactant hydrogen, -OH) <---> OA (active site oxygen)
                 # Like active site recovery
@@ -207,7 +207,7 @@ class Generate(object):
                             bond_can_form.remove((bonds[0], bonds[1], 1))
 
                     # Create bond can form list
-                    if bonds[0] not in self.fixed_atom or bonds[1] not in self.fixed_atom:
+                    if bonds[0] not in self.fixed_atoms or bonds[1] not in self.fixed_atoms:
                         order = bonds[2]
                         while order > 1:
                             bond_can_break.append((bonds[0], bonds[1], order - 1))
@@ -217,7 +217,7 @@ class Generate(object):
                 bond_can_form = sorted(bond_can_form, key = itemgetter(0))
                 bond_can_break = sorted(bond_can_break, key = itemgetter(0))
             elif self.catalyst in ['HZSM5']:
-                bond_can_form = [bonds for bonds in bonds_form_all if bonds[0] not in self.fixed_atom and bonds[1] not in self.fixed_atom]
+                bond_can_form = [bonds for bonds in bonds_form_all if bonds[0] not in self.fixed_atoms and bonds[1] not in self.fixed_atoms]
                 # index start from 0
                 # HR (reactant hydrogen, -OH) <---> OA (active site oxygen)
                 # Like active site recovery
@@ -278,7 +278,7 @@ class Generate(object):
                             bond_can_form.remove((bonds[0], bonds[1], 1))
 
                     # Create bond can form list
-                    if bonds[0] not in self.fixed_atom or bonds[1] not in self.fixed_atom:
+                    if bonds[0] not in self.fixed_atoms or bonds[1] not in self.fixed_atoms:
                         order = bonds[2]
                         while order > 1:
                             bond_can_break.append((bonds[0], bonds[1], order - 1))
@@ -409,8 +409,8 @@ class Generate(object):
         else:
             for idx, i in enumerate(self.atoms):
                 # For catalyst (SnBEA)
-                if self.fixed_atom:
-                    if idx not in self.fixed_atom:
+                if self.fixed_atoms:
+                    if idx not in self.fixed_atoms:
                         if i == 6 and bond_type[idx] != 4:
                             return False
                         # elif i == 8 and bond_type[idx] != 2:
@@ -519,7 +519,7 @@ class Generate(object):
 
         if nbreak == 0 and nform == 0:
             products.add((tuple(sorted(bonds))))
-            # if all(bonds_broken[num][0] not in self.fixed_atom or bonds_broken[num][1] not in self.fixed_atom for num in range(len(bonds_broken))):
+            # if all(bonds_broken[num][0] not in self.fixed_atoms or bonds_broken[num][1] not in self.fixed_atoms for num in range(len(bonds_broken))):
             #     products.add((tuple(sorted(bonds))))
 
         if nbreak > 0:
