@@ -344,11 +344,11 @@ def check_ts_jobs(qm_collection:object, threshold:float=-50.0, level_of_theory:s
             if new_status == 'job_success':
                 if use_irc:
                     update_field = {
-                        'ts_status': new_status, 'ts_energy': ts_energy, 'ts_run_time':job_run_time
+                        'ts_status': new_status, 'ts_energy': ts_energy, 'irc_status': 'job_unrun', 'ts_run_time':job_run_time
                         }
                 else:
                     update_field = {
-                        'ts_status': new_status, 'ts_energy': ts_energy, 'irc_status': 'job_unrun', 'ts_run_time':job_run_time
+                        'ts_status': new_status, 'ts_energy': ts_energy, 'ts_run_time':job_run_time
                         }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -968,7 +968,7 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
                      ]
                      }
 
-    if use_irc:
+    if not use_irc:
         not_finished_number = len(list(qm_collection.find({'$or':
                                                 [ssm_query, ts_refine_query, ts_query, insert_reaction_query, ard_query]
                                                 })))

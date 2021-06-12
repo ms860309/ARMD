@@ -1378,4 +1378,7 @@ def launch_jobs(num=30, level_of_theory='ORCA', ncpus=4, mpiprocs=1, ompthreads=
     launch_qmmm_sp_jobs(qm_collection, config_path, num=num, ncpus=16, mpiprocs=1, ompthreads=16)
 
 print_header()
-launch_jobs(num=3, level_of_theory='ORCA', ncpus=4, mpiprocs=4, ompthreads=1)
+try:
+    launch_jobs(num=3, level_of_theory='ORCA', ncpus=4, mpiprocs=4, ompthreads=1)
+except:
+    pass

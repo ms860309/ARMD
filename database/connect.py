@@ -5,7 +5,7 @@ import os
 import sys
 from openbabel import pybel
 from openbabel import openbabel as ob
-
+from extract_time import find_job_output_file, get_job_run_time
 
 class Connector(object):
 

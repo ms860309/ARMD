@@ -1,4 +1,3 @@
-from connect import db
 import os
 import fnmatch
 
@@ -8,7 +7,7 @@ def find_job_output_file(pattern, path):
         for name in files:
             if fnmatch.fnmatch(name, pattern):
                 result.append(os.path.join(root, name))
-    return result
+    return result[0]
 
 def get_job_run_time(file):
     with open(file) as f:

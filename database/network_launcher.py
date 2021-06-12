@@ -8,8 +8,8 @@ import sys
 from helper import highlight_text, print_header
 sys.path.append(path.join(path.dirname(
     path.dirname(path.abspath(__file__))), 'script'))
-
-# Manual run 0th generations
+    
+pybel.ob.obErrorLog.SetOutputLevel(0)
 
 
 def select_ard_target(qm_collection:object):
