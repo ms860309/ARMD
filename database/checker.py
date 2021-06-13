@@ -992,12 +992,14 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
         for i in should_adds:
             finished_reactant_list.append(i['reactant_inchi_key'])
             reactant_smiles = i['reactant_smiles'].split('.')
+            reactant_part_smiles = []
             if len(reactant_smiles) > 1:
-                reactant_part_smiles = []
                 for rs in reactant_smiles:
-                    for metal in ['Sn', 'W', 'Mo', 'Al']:
+                    for metal in ['Sn']:
                         if metal not in rs and 'C' in rs:
                             reactant_part_smiles.append(rs)
+            else:
+                reactant_part_smiles = reactant_smiles
             reactant_part_smiles = set(reactant_part_smiles)
             finished_reactant_smiles_part_list.append(reactant_part_smiles)
 
@@ -1057,7 +1059,7 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
             product_part_smiles = []
             if len(product_smiles) > 1:
                 for ps in product_smiles:
-                    for metal in ['Sn', 'W', 'Mo', 'Al']:
+                    for metal in ['Sn']:
                         if metal not in ps and 'C' in ps:
                             product_part_smiles.append(ps)
                 product_part_smiles = set(product_part_smiles)
@@ -1100,20 +1102,19 @@ def insert_qmmm(qm_collection:object, reactions_collection:object, threshold:flo
         # Prevent reactant equal to product but with different active site (maybe proton at the different oxygen)
         reactant_smiles = ard_qm_target['reactant_smiles'].split('.')
         product_smiles = ard_qm_target['product_smiles'].split('.')
+        reactant_part_smiles, product_part_smiles = [], []
         if len(reactant_smiles) > 1:
-            reactant_part_smiles = []
             for rs in reactant_smiles:
-                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                for metal in ['Sn']:
                     if metal not in rs and 'C' in rs:
                         reactant_part_smiles.append(rs)
             reactant_part_smiles = set(reactant_part_smiles)
         else:
             reactant_part_smiles = set(reactant_smiles)
-            
-        product_part_smiles = []
+
         if len(product_smiles) > 1:
             for ps in product_smiles:
-                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                for metal in ['Sn']:
                     if metal not in ps and 'C' in ps:
                         product_part_smiles.append(ps)
             product_part_smiles = set(product_part_smiles)
@@ -1199,7 +1200,7 @@ def check_qmmm_opt_content(dir_path:str, direction:str='reactant') -> str:
         if direction == 'reactant':
             job_output = find_job_output_file('qmmm_opt.job.o*', qmmm_reactant_dir)
         else:
-            job_output = find_job_output_file('qmmm_opt.job.o*', qmmm_reactant_dir)
+            job_output = find_job_output_file('qmmm_opt.job.o*', qmmm_product_dir)
         job_run_time = get_job_run_time(job_output)     
     except:
         job_run_time = 0
@@ -1250,7 +1251,7 @@ def check_qmmm_opt_jobs(qm_collection:object, reactions_collection:object):
                     'qmmm_opt_reactant_status': new_status, 'qmmm_opt_reactant_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
-            reactions_collection.update_one(reaction_target, {"$set":update_field}, True)
+            reactions_collection.update_one(reaction_target, {"$set":{'qmmm_opt_reactant_status': new_status}}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
     targets = select_targets(qm_collection, job_name='qmmm_opt_product')
@@ -1279,7 +1280,7 @@ def check_qmmm_opt_jobs(qm_collection:object, reactions_collection:object):
                     'qmmm_opt_product_status': new_status, 'qmmm_opt_product_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
-            reactions_collection.update_one(reaction_target, {"$set":update_field}, True)
+            reactions_collection.update_one(reaction_target, {'qmmm_opt_reactant_status': new_status}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
     finished_targets = select_qmmm_opt_finished_target(qm_collection)
@@ -1390,7 +1391,7 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
         new_status = check_job_status(job_id)
         if new_status == "off_queue":
             # 3. check job content
-            times = target['qmmm_freq_opt_reactant_run_time']
+            times = target['qmmm_freq_opt_reactant_restart_times']
             if times > 0:
                 already_run_time = target['qmmm_freq_opt_reactant_run_time']
             else:
@@ -1417,11 +1418,8 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
                 update_field = {
                     'qmmm_freq_opt_reactant_status': new_status, 'qmmm_freq_opt_reactant_restart_times':times + 1, 'qmmm_freq_opt_reactant_run_time':job_run_time
                     }
-            update_field_reaction = {
-                'qmmm_freq_opt_reactant_status': new_status
-                }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
-            reactions_collection.update_one(reaction_target, {"$set":update_field_reaction}, True)
+            reactions_collection.update_one(reaction_target, {"$set":{'qmmm_freq_opt_reactant_status':new_status}}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
     targets = select_targets(qm_collection, job_name='qmmm_freq_opt_product')
@@ -1458,18 +1456,15 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
                 update_field = {
                     'qmmm_freq_opt_product_status': new_status, 'qmmm_freq_opt_product_restart_times':times + 1, 'qmmm_freq_opt_product_run_time':job_run_time
                     }
-            update_field_reaction = {
-                'qmmm_freq_opt_reactant_status': new_status
-                }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
-            reactions_collection.update_one(reaction_target, {"$set":update_field_reaction}, True)
+            reactions_collection.update_one(reaction_target, {"$set":{'qmmm_freq_opt_product_status':new_status}}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
     finished_targets = select_qmmm_freq_opt_finished_target(qm_collection)
     for target in finished_targets:
         if target['qmmm_freq_opt_reactant_status'] == 'job_success' and target['qmmm_freq_opt_product_status'] == 'job_success':
             update_field = {
-                'qmmm_freq_opt_status': 'job_success', 'qmmm_freq_status': 'job_success'
+                'qmmm_freq_opt_status': 'job_success', 'qmmm_freq_status': 'job_success', 'qmmm_sp_status':'job_unrun'
                 }
         else:
             update_field = {
@@ -1496,6 +1491,32 @@ def select_qmmm_freq_finished_target(qm_collection:object) -> list:
     Returns a list of targe
     """
 
+    # query = {'$or':[{'$and':
+    #          [
+    #              {"qmmm_freq_reactant_status":
+    #               {"$in":
+    #                ['job_success']}},
+    #              {'qmmm_freq_product_status':
+    #               {'$in':
+    #                ['job_success']}},
+    #              {'qmmm_sp_status':
+    #               {'$nin':
+    #                ['job_unrun']}}
+    #          ]
+    #          },
+    #         {'$and':
+    #          [
+    #              {"qmmm_freq_status":
+    #               {"$in":
+    #                ['job_success']}},
+    #              {'qmmm_ts_freq_status':
+    #               {'$in':
+    #                ['job_success']}},
+    #              {'qmmm_sp_status':
+    #               {'$nin':
+    #                ['job_unrun']}}
+    #          ]
+    #          }]}
     query = {'$and':
              [
                  {"qmmm_freq_reactant_status":
@@ -1572,27 +1593,18 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_reactant_run_time':job_run_time
-                    }
-                update_field_reaction = {
-                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_reactant_run_time':job_run_time
+                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
                     'qmmm_freq_reactant_status': new_status
                     }
-                update_field_reaction = {
-                    'qmmm_freq_reactant_status': new_status
-                    }
             else:
                 update_field = {
-                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_reactant_run_time':job_run_time
-                    }
-                update_field_reaction = {
-                        'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_reactant_run_time':job_run_time
+                    'qmmm_freq_reactant_status': new_status, 'qmmm_freq_reactant_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
-            reactions_collection.update_one(reaction_target, {"$set":update_field_reaction}, True)
+            reactions_collection.update_one(reaction_target, {"$set":{'qmmm_freq_reactant_status': new_status}}, True)
             qm_collection.update_one(target, {"$set":update_field}, True)
 
     targets = select_targets(qm_collection, job_name='qmmm_freq_product')
@@ -1610,27 +1622,18 @@ def check_qmmm_freq_jobs(qm_collection:object, reactions_collection:object):
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_energy':energy, 'qmmm_freq_product_run_time':job_run_time
-                    }
-                update_field_reaction = {
-                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_energy':energy, 'qmmm_freq_product_run_time':job_run_time
+                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
                     'qmmm_freq_product_status': new_status
                     }
-                update_field_reaction = {
-                    'qmmm_freq_product_status': new_status
-                    }
             else:
                 update_field = {
-                    'qmmm_freq_product_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_product_run_time':job_run_time
-                    }
-                update_field_reaction = {
-                    'qmmm_freq_product_status': new_status, 'qmmm_freq_reactant_energy':energy, 'qmmm_freq_product_run_time':job_run_time
+                    'qmmm_freq_product_status': new_status, 'qmmm_freq_product_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
-            reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
+            reactions_collection.update_one(reaction_target, {"$set": {'qmmm_freq_product_status': new_status}}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
     finished_targets = select_qmmm_freq_finished_target(qm_collection)
@@ -1715,7 +1718,7 @@ def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, r
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_freq_ts_status': new_status, "qmmm_ts_freq_status": "job_success", 'qmmm_freq_ts_run_time':job_run_time
+                    'qmmm_freq_ts_status': new_status, "qmmm_ts_freq_status": "job_success", 'qmmm_sp_ts_status': 'job_unrun', 'qmmm_freq_ts_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1729,11 +1732,8 @@ def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, r
                 update_field = {
                     'qmmm_freq_ts_status': new_status, 'qmmm_freq_ts_restart_times': times + 1, 'qmmm_freq_ts_run_time':job_run_time
                     }
-            update_field_reaction = {
-                    'qmmm_freq_ts_status': new_status
-                }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
-            reactions_collection.update_one(reaction_target, {"$set":update_field_reaction}, True)
+            reactions_collection.update_one(reaction_target, {"$set":{'qmmm_freq_ts_status':new_status}}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
 """
@@ -1793,27 +1793,18 @@ def check_qmmm_ts_freq_jobs(qm_collection:object, reactions_collection:object, t
         if orig_status != new_status:
             if new_status == 'job_success':
                 update_field = {
-                    'qmmm_ts_freq_status': new_status, "qmmm_ts_energy": energy, 'qmmm_sp_ts': 'job_unrun', 'qmmm_ts_freq_run_time':job_run_time
-                    }
-                update_field_reaction = {
-                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_energy':energy, 'qmmm_ts_freq_run_time':job_run_time
+                    'qmmm_ts_freq_status': new_status, 'qmmm_sp_ts_status': 'job_unrun', 'qmmm_ts_freq_run_time':job_run_time
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
                     'qmmm_ts_freq_status': new_status
                     }
-                update_field_reaction = {
-                    'qmmm_ts_freq_status': new_status
-                    }
             else:
                 update_field = {
-                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_energy':energy, 'qmmm_ts_freq_run_time':job_run_time
-                    }
-                update_field_reaction = {
-                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_energy':energy, 'qmmm_ts_freq_run_time':job_run_time
+                    'qmmm_ts_freq_status': new_status, 'qmmm_ts_freq_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
-            reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
+            reactions_collection.update_one(reaction_target, {"$set": {'qmmm_ts_freq_status':new_status}}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
 """
@@ -1902,7 +1893,7 @@ def check_qmmm_sp_jobs(qm_collection:object, reactions_collection:object):
                     'qmmm_sp_reactant_status': new_status, 'qmmm_sp_reactant':energy, 'qmmm_sp_reactant_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_sp_reactant_status': new_status, 'qmmm_sp_reactant':energy, 'qmmm_sp_reactant_run_time':job_run_time
+                    'qmmm_sp_reactant_status': new_status, 'qmmm_sp_reactant':energy
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1913,10 +1904,10 @@ def check_qmmm_sp_jobs(qm_collection:object, reactions_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_sp_reactant_status': new_status, 'qmmm_sp_reactant_run_time':job_run_time
+                    'qmmm_sp_reactant_status': new_status, 'qmmm_sp_reactant':energy, 'qmmm_sp_reactant_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_sp_reactant_status': new_status, 'qmmm_sp_reactant_run_time':job_run_time
+                    'qmmm_sp_reactant_status': new_status, 'qmmm_sp_reactant':energy
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
@@ -1940,7 +1931,7 @@ def check_qmmm_sp_jobs(qm_collection:object, reactions_collection:object):
                     'qmmm_sp_product_status': new_status, 'qmmm_sp_product':energy, 'qmmm_sp_product_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_sp_product_status': new_status, 'qmmm_sp_product':energy, 'qmmm_sp_product_run_time':job_run_time
+                    'qmmm_sp_product_status': new_status, 'qmmm_sp_product':energy
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1951,10 +1942,10 @@ def check_qmmm_sp_jobs(qm_collection:object, reactions_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_sp_product_status': new_status, 'qmmm_sp_product_run_time':job_run_time
+                    'qmmm_sp_product_status': new_status, 'qmmm_sp_product':energy, 'qmmm_sp_product_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_sp_product_status': new_status, 'qmmm_sp_product_run_time':job_run_time
+                    'qmmm_sp_product_status': new_status, 'qmmm_sp_product':energy
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
             reactions_collection.update_one(reaction_target, {"$set": update_field_reaction}, True)
@@ -1978,7 +1969,7 @@ def check_qmmm_sp_jobs(qm_collection:object, reactions_collection:object):
                     'qmmm_sp_ts_status': new_status, 'qmmm_sp_ts':energy, 'qmmm_sp_ts_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_sp_ts_status': new_status, 'qmmm_sp_ts':energy, 'qmmm_sp_ts_run_time':job_run_time
+                    'qmmm_sp_ts_status': new_status, 'qmmm_sp_ts':energy
                     }
             elif new_status == "job_running" or new_status == "job_queueing" or new_status == "job_launched":
                 update_field = {
@@ -1989,10 +1980,10 @@ def check_qmmm_sp_jobs(qm_collection:object, reactions_collection:object):
                     }
             else:
                 update_field = {
-                    'qmmm_sp_ts_status': new_status, 'qmmm_sp_ts_run_time':job_run_time
+                    'qmmm_sp_ts_status': new_status, 'qmmm_sp_ts':energy, 'qmmm_sp_ts_run_time':job_run_time
                     }
                 update_field_reaction = {
-                    'qmmm_sp_ts_status': new_status, 'qmmm_sp_ts_run_time':job_run_time
+                    'qmmm_sp_ts_status': new_status, 'qmmm_sp_ts':energy
                     }
 
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
@@ -2004,13 +1995,13 @@ def check_qmmm_sp_jobs(qm_collection:object, reactions_collection:object):
         delta_H = (target['qmmm_sp_product'] - target['qmmm_sp_reactant']) * 627.5095
         barrier = (target['qmmm_sp_ts'] - target['qmmm_sp_reactant']) * 627.5095
         update_field = {
-            'qmmm_sp_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier
+            'qmmm_sp_status': 'job_success', 'qmmm_sp_ts_status': 'job_success','qmmm_delta_H':delta_H, 'qmmm_barrier':barrier
             }
         reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
         reactions_collection.update_one(reaction_target, {"$set": update_field}, True)
         qm_collection.update_one(target, {"$unset": {'qmmm_sp_reactant_status': '', 'qmmm_sp_reactant_jobid': '',
                                                      'qmmm_sp_product_status': '', 'qmmm_sp_product_jobid': '',
-                                                     'qmmm_sp_ts_status': '', 'qmmm_sp_ts_jobid': ''}, 
+                                                     'qmmm_sp_ts_jobid': ''}, 
                                                      "$set": update_field}, True)
 
 """

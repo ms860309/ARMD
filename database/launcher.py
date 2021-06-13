@@ -1214,7 +1214,7 @@ def select_qmmm_sp_targets(qm_collection:object) -> list:
                 {"$in":
                     ["job_unrun"]}
                 },
-                {"qmmm_sp_ts":
+                {"qmmm_sp_ts_status":
                 {"$in":
                     ["job_unrun"]}
                 }]}
@@ -1354,7 +1354,7 @@ def update_qmmm_sp_status(qm_collection:object, target:object, job_id_1:str, job
     update_field = {'qmmm_sp_reactant_status': "job_launched", 'qmmm_sp_reactant_jobid': job_id_1,
                     'qmmm_sp_product_status': "job_launched", 'qmmm_sp_product_jobid': job_id_2,
                     'qmmm_sp_ts_status': "job_launched", 'qmmm_sp_ts_jobid': job_id_3}
-    qm_collection.update_one(target, {"$unset": {'qmmm_sp_status': "", 'qmmm_sp_ts':""}, "$set": update_field}, True)
+    qm_collection.update_one(target, {"$unset": {'qmmm_sp_status': ""}, "$set": update_field}, True)
 
 
 def launch_jobs(num=30, level_of_theory='ORCA', ncpus=4, mpiprocs=1, ompthreads=4):

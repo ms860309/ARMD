@@ -645,7 +645,7 @@ def print_information(generations):
                             {"$in":
                                 ["job_unrun"]}
                             },
-                            {"qmmm_sp_ts":
+                            {"qmmm_sp_ts_status":
                             {"$in":
                                 ["job_unrun"]}
                             },
