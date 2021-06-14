@@ -1,7 +1,9 @@
 ! PBE0 D3BJ def2-SVP rijcosx def2/J TIGHTSCF TightOpt Freq Grid4 GridX4 NoFinalGrid noautostart miniprint nopop
 
 %geom
-maxiter 150    # Maximum optimize iterations
+Recalc_Hess 150
+maxiter 300    # Maximum optimize iterations
+MaxStep 0.10  # 0.10 a.u.
 Constraints  # The atom you want to constraint, index from 0.
 	{C 23 C}
 	{C 24 C}
