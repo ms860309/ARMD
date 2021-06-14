@@ -83,7 +83,7 @@ def create_qchem_ssm_sub_file(dir_path:str, SSM_dir_path:str, config_path:str, n
     calculator = 'module load qchem\n'
     # activate conda env is necessary because gsm install on the environment
     initialization = 'source ~/.bashrc\n'
-    env = 'conda activate gsm_env\n'
+    env = 'conda activate ard\n'
     scratch = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
                 'mkdir -p $QCSCRATCH\n')
     if path.exists(frozen_file):

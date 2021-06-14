@@ -813,19 +813,19 @@ class Arrange3D(object):
                                         method='SLSQP',
                                         options={'disp': False, 'maxiter':1000})  # , callback = callbackF, 'eps':1e-10
             else:
-                result = minimize(self.objectiveFunction, disps_guess,
-                                        constraints=[{'type': 'ineq', 'fun': self.constraintFunction},
-                                                    {'type': 'ineq', 'fun': self.third_constraintFunction}
-                                                    ],
-                                        method='COBYLA',
-                                        options={'disp': False})
-
                 # result = minimize(self.objectiveFunction, disps_guess,
                 #                         constraints=[{'type': 'ineq', 'fun': self.constraintFunction},
                 #                                     {'type': 'ineq', 'fun': self.third_constraintFunction}
                 #                                     ],
-                #                         method='SLSQP',
-                #                         options={'disp': False, 'maxiter':200, 'ftol':0.01})  # , callback = callbackF, 'eps':1e-10
+                #                         method='COBYLA',
+                #                         options={'disp': False})
+
+                result = minimize(self.objectiveFunction, disps_guess,
+                                        constraints=[{'type': 'ineq', 'fun': self.constraintFunction},
+                                                    {'type': 'ineq', 'fun': self.third_constraintFunction}
+                                                    ],
+                                        method='SLSQP',
+                                        options={'disp': False, 'maxiter':200, 'ftol':0.01})  # , callback = callbackF, 'eps':1e-10
 
                 # if not s_result.success:
                 #     result = result
