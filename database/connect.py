@@ -16,7 +16,7 @@ class Connector(object):
         #self.server = 'mongodb://localhost:27017/'
         #self.mongo_db = mongo_db
         self.client = self.connect()
-        self.db = self.client['test']
+        self.db = self.client['final_2']
 
     def connect(self):
         client = MongoClient(self.server, serverSelectionTimeoutMS=60000)

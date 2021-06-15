@@ -944,7 +944,7 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
                          {'qmmm_freq_reactant_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}},
-                         {'qmmm_freq_reactant_status':
+                         {'qmmm_freq_product_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}},
                          {'qmmm_freq_ts_status':
@@ -987,7 +987,6 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
     ard_should_add_number = sum([i['add how many products'] for i in should_adds])
 
     if int(not_finished_number) == 0 and int(ard_had_add_number) == int(ard_should_add_number):
-
         finished_reactant_list, finished_reactant_smiles_part_list = [], []
         for i in should_adds:
             finished_reactant_list.append(i['reactant_inchi_key'])
@@ -1280,7 +1279,7 @@ def check_qmmm_opt_jobs(qm_collection:object, reactions_collection:object):
                     'qmmm_opt_product_status': new_status, 'qmmm_opt_product_run_time':job_run_time
                     }
             reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
-            reactions_collection.update_one(reaction_target, {'qmmm_opt_reactant_status': new_status}, True)
+            reactions_collection.update_one(reaction_target, {'$set':{'qmmm_opt_product_status': new_status}}, True)
             qm_collection.update_one(target, {"$set": update_field}, True)
 
     finished_targets = select_qmmm_opt_finished_target(qm_collection)
@@ -1995,7 +1994,7 @@ def check_qmmm_sp_jobs(qm_collection:object, reactions_collection:object):
         delta_H = (target['qmmm_sp_product'] - target['qmmm_sp_reactant']) * 627.5095
         barrier = (target['qmmm_sp_ts'] - target['qmmm_sp_reactant']) * 627.5095
         update_field = {
-            'qmmm_sp_status': 'job_success', 'qmmm_sp_ts_status': 'job_success','qmmm_delta_H':delta_H, 'qmmm_barrier':barrier
+            'qmmm_sp_status': 'job_success', 'qmmm_sp_ts_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier
             }
         reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
         reactions_collection.update_one(reaction_target, {"$set": update_field}, True)
@@ -2019,69 +2018,49 @@ def select_qmmm_freq_ts_side_fail_target(qm_collection:object) -> list:
     query = {'$or':[
             {'$and':
             [
-                {"qmmm_freq_ts_status":
+                {"qmmm_sp_ts_status":
                 {"$in":
-                    ['job_fail']}},
+                    ['job_unrun']}},
+                {'qmmm_freq_reactant_status':
+                  {'$in':
+                    ["Have negative frequency", "job_fail"]}}
+            ]
+            },
+            {'$and':
+            [
+                {"qmmm_sp_ts_status":
+                {"$in":
+                    ['job_unrun']}},
+                {'qmmm_freq_product_status':
+                  {'$in':
+                    ["Have negative frequency", "job_fail"]}}
+            ]
+            },
+            {'$and':
+            [
+                {"qmmm_sp_ts_status":
+                {"$in":
+                    ['job_unrun']}},
                 {'qmmm_freq_opt_reactant_status':
                   {'$in':
-                    ["job_running", "job_queueing", "job_launched"]}}
+                    ["job_fail"]}}
             ]
             },
             {'$and':
             [
-                {"qmmm_freq_ts_status":
+                {"qmmm_sp_ts_status":
                 {"$in":
-                    ['job_fail']}},
+                    ['job_unrun']}},
                 {'qmmm_freq_opt_product_status':
                   {'$in':
-                    ["job_running", "job_queueing", "job_launched"]}}
-            ]
-            },
-            {'$and':
-            [
-                {"qmmm_freq_ts_status":
-                {"$in":
-                    ['job_fail']}},
-                {'qmmm_opt_reactant_status':
-                  {'$in':
-                    ["job_running", "job_queueing", "job_launched"]}}
-            ]
-            },
-            {'$and':
-            [
-                {"qmmm_freq_ts_status":
-                {"$in":
-                    ['job_fail']}},
-                {'qmmm_opt_product_status':
-                  {'$in':
-                    ["job_running", "job_queueing", "job_launched"]}}
-            ]
-            },
-            {'$and':
-            [
-                {"qmmm_freq_ts_status":
-                {"$in":
-                    ['job_fail']}},
-                {'qmmm_freq_opt_status':
-                  {'$in':
-                    ["job_unrun"]}}
-            ]
-            },
-            {'$and':
-            [
-                {"qmmm_freq_ts_status":
-                {"$in":
-                    ['job_fail']}},
-                {'qmmm_opt_status':
-                  {'$in':
-                    ["job_unrun"]}}
+                    ["job_fail"]}}
             ]
             }]}
 
     targets = list(qm_collection.find(query))
     return targets
 
-def check_qmmm_freq_ts_side_fail_jobs(qm_collection:object):
+def check_side_fail_jobs(qm_collection:object):
     """
     This method checks job with following steps:
     1. select jobs to check
@@ -2094,84 +2073,33 @@ def check_qmmm_freq_ts_side_fail_jobs(qm_collection:object):
     # 2. check the job pbs_status
     for target in targets:
         try:
-            if target['qmmm_freq_opt_reactant_status'] in ["job_running", "job_queueing", "job_launched"]:
-                job_id = target['qmmm_freq_opt_reactant_jobid']
-                commands = ['qdel', job_id]
-                process = subprocess.Popen(commands,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
-                stdout, stderr = process.communicate()
-                update_field = {
-                    'qmmm_freq_opt_reactant_status': 'qmmm ts fail'
-                    }
-                qm_collection.update_one(target, {"$set": update_field}, True)
+            freq_reac = target['qmmm_freq_reactant_status']
+            if freq_reac in ["Have negative frequency", "job_fail"]:
+                qm_collection.update_one(target, {"$set": {'qmmm_sp_ts_status': 'reactant_or_product_freq_fail'}}, True)
         except:
             pass
 
         try:
-            if target['qmmm_freq_opt_product_status'] in ["job_running", "job_queueing", "job_launched"]:
-                job_id = target['qmmm_freq_opt_product_jobid']
-                commands = ['qdel', job_id]
-                process = subprocess.Popen(commands,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
-                stdout, stderr = process.communicate()
-                update_field = {
-                    'qmmm_freq_opt_product_status': 'qmmm ts fail'
-                    }
-                qm_collection.update_one(target, {"$set": update_field}, True)
+            freq_prod = target['qmmm_freq_product_status']
+            if freq_prod in ["Have negative frequency", "job_fail"]:
+                qm_collection.update_one(target, {"$set": {'qmmm_sp_ts_status': 'reactant_or_product_freq_fail'}}, True)
         except:
             pass
 
         try:
-            if target['qmmm_freq_opt_status'] in ["job_unrun"]:
-                update_field = {
-                    'qmmm_freq_opt_status': 'qmmm ts fail'
-                    }
-                qm_collection.update_one(target, {"$set": update_field}, True)
+            freq_opt_reac = target['qmmm_freq_opt_reactant_status']
+            if freq_opt_reac in ["job_fail"]:
+                qm_collection.update_one(target, {"$set": {'qmmm_sp_ts_status': 'reactant_or_product_freq_fail'}}, True)
         except:
             pass
 
         try:
-            if target['qmmm_opt_reactant_status'] in ["job_running", "job_queueing", "job_launched"]:
-                job_id = target['qmmm_opt_reacrant_jobid']
-                commands = ['qdel', job_id]
-                process = subprocess.Popen(commands,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
-                stdout, stderr = process.communicate()
-                update_field = {
-                    'qmmm_opt_reactant_status': 'qmmm ts fail'
-                    }
-                qm_collection.update_one(target, {"$set": update_field}, True)
-        except:
-            pass
-
-        try:
-            if target['qmmm_opt_product_status'] in ["job_running", "job_queueing", "job_launched"]:
-                job_id = target['qmmm_opt_product_jobid']
-                commands = ['qdel', job_id]
-                process = subprocess.Popen(commands,
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
-                stdout, stderr = process.communicate()
-                update_field = {
-                    'qmmm_opt_product_status': 'qmmm ts fail'
-                    }
-                qm_collection.update_one(target, {"$set": update_field}, True)
+            freq_opt_prod = target['qmmm_freq_opt_product_status']
+            if freq_opt_prod in ["job_fail"]:
+                qm_collection.update_one(target, {"$set": {'qmmm_sp_ts_status': 'reactant_or_product_freq_fail'}}, True)
         except:
             pass
         
-        try:
-            if target['qmmm_opt_status'] in ["job_unrun"]:
-                update_field = {
-                    'qmmm_opt_status': 'qmmm ts fail'
-                    }
-                qm_collection.update_one(target, {"$set": update_field}, True)
-        except:
-            pass
-        
-
 def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     qm_collection = db['qm_calculate_center']
     reactions_collection = db['reactions']
@@ -2220,6 +2148,6 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_qmmm_ts_freq_jobs(qm_collection, reactions_collection, threshold = -50.0)
     check_qmmm_sp_jobs(qm_collection, reactions_collection)
     
-    # check_qmmm_freq_ts_side_fail_jobs(qm_collection)
+    check_side_fail_jobs(qm_collection)
 
 check_jobs(refine=True, cluster_bond_path=True, level_of_theory='ORCA')
