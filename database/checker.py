@@ -901,7 +901,7 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
                          {"irc_forward_opt_status":
                           {"$in":
                            ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
-                         {'irc_forward_opt_status':
+                         {'irc_backward_opt_status':
                              {'$in':
                               ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
                          {'irc_opt_status':
