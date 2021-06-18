@@ -1,7 +1,7 @@
 irc:
  type: eulerpc              # Similar to EulerPC from Gaussian
  max_cycles: 50
- displ_length: 0.2
+ displ_length: 0.15
 calc:
  type: orca
  keywords: PBE0 D3BJ def2-SVP rijcosx def2/J TightSCF NoFinalGrid miniprint nopop
