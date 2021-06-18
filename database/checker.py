@@ -489,7 +489,7 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
         if len(reactant_smiles) > 1:
             reactant_part_smiles = []
             for rs in reactant_smiles:
-                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                for metal in ['Sn']:
                     if metal not in rs and 'C' in rs:
                         reactant_part_smiles.append(rs)
             reactant_part_smiles = set(reactant_part_smiles)
@@ -500,7 +500,7 @@ def check_irc_equal_status(target:object, cluster_bond_path:str=None, fixed_atom
         product_part_smiles = []
         if len(product_smiles) > 1:
             for ps in product_smiles:
-                for metal in ['Sn', 'W', 'Mo', 'Al']:
+                for metal in ['Sn']:
                     if metal not in ps and 'C' in ps:
                         product_part_smiles.append(ps)
             product_part_smiles = set(product_part_smiles)
@@ -1994,7 +1994,7 @@ def check_qmmm_sp_jobs(qm_collection:object, reactions_collection:object):
         delta_H = (target['qmmm_sp_product'] - target['qmmm_sp_reactant']) * 627.5095
         barrier = (target['qmmm_sp_ts'] - target['qmmm_sp_reactant']) * 627.5095
         update_field = {
-            'qmmm_sp_status': 'job_success', 'qmmm_sp_ts_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier
+            'qmmm_sp_status': 'job_success', 'qmmm_sp_ts_status': 'job_success', 'qmmm_delta_H':delta_H, 'qmmm_barrier':barrier, 'qmmm_equal': 'waiting for checking'
             }
         reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
         reactions_collection.update_one(reaction_target, {"$set": update_field}, True)
@@ -2099,7 +2099,60 @@ def check_side_fail_jobs(qm_collection:object):
                 qm_collection.update_one(target, {"$set": {'qmmm_sp_ts_status': 'reactant_or_product_freq_fail'}}, True)
         except:
             pass
-        
+
+"""
+QMMM REFINE
+"""
+
+def select_qmmm_equal_target(qm_collection:object) -> list:
+    """
+    This method is to inform job checker which targets 
+    to check, which need meet one requirement:
+    1. status is job_launched or job_running
+    Returns a list of targe
+    """
+    query = {'qmmm_equal': 'waiting for checking'}
+    targets = list(qm_collection.find(query))
+    return targets
+
+def check_qmmm_equal(qm_collection:object, reactions_collection:object, cluster_bond_path:str=None):
+    targets = select_qmmm_equal_target(qm_collection)
+
+    for target in targets:
+        qmmm_reactant = path.join(target['path'], 'QMMM_REACTANT')
+        qmmm_product = path.join(target['path'], 'QMMM_PRODUCT')
+        pyMol_1 = xyz_to_pyMol(qmmm_reactant, cluster_bond_path=cluster_bond_path)
+        pyMol_2 = xyz_to_pyMol(qmmm_product, cluster_bond_path=cluster_bond_path)
+
+        reactant_inchi_key = target['reactant_inchi_key']
+        product_inchi_key = target['product_inchi_key']
+
+        if pyMol_1.write('inchiKey').strip() == pyMol_2.write('inchiKey').strip():
+            new_status = 'qmmm_reactant_equal_to_product'
+        elif pyMol_1.write('inchiKey').strip() == reactant_inchi_key and pyMol_2.write('inchiKey').strip() == product_inchi_key:
+            new_status = 'qmmm_reactant_equal_to_irc_reactant_and_qmmm_product_equal_to_irc_product'
+        elif pyMol_1.write('inchiKey').strip() != reactant_inchi_key and pyMol_2.write('inchiKey').strip() == product_inchi_key:
+            new_status = 'qmmm_reactant_do_not_equal_to_irc_reactant_but_qmmm_product_equal_to_irc_product'
+        elif pyMol_1.write('inchiKey').strip() == reactant_inchi_key and pyMol_2.write('inchiKey').strip() == product_inchi_key:
+            new_status = 'qmmm_reactant_equal_to_irc_reactant_but_qmmm_product_do_not_equal_to_irc_product'
+        elif pyMol_1.write('inchiKey').strip() != reactant_inchi_key and pyMol_2.write('inchiKey').strip() != product_inchi_key:
+            new_status = 'qmmm_reactant_and_qmmm_product_do_not_equal_to_any_side'
+
+        orig_status = target['qmmm_equal']
+        if orig_status != new_status:
+            update_field = {
+                'qmmm_equal': new_status,
+                'qmmm_reactant_inchi_key': pyMol_1.write('inchiKey').strip(), 'qmmm_product_inchi_key': pyMol_2.write('inchiKey').strip(),
+                'qmmm_reactant_smiles': pyMol_1.write('can').split()[0], 'qmmm_product_smiles': pyMol_2.write('can').split()[0]
+            }
+            reaction_target = list(reactions_collection.find({'path':target['path']}))[0]
+            reactions_collection.update_one(reaction_target, {"$set": update_field}, True)
+            qm_collection.update_one(target, {"$set": update_field}, True)
+
+"""
+Check jobs
+"""
+
 def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     qm_collection = db['qm_calculate_center']
     reactions_collection = db['reactions']
@@ -2147,7 +2200,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_qmmm_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_ts_freq_jobs(qm_collection, reactions_collection, threshold = -50.0)
     check_qmmm_sp_jobs(qm_collection, reactions_collection)
-    
+    check_qmmm_equal(qm_collection, reactions_collection, cluster_bond_path=cluster_bond_path)
     check_side_fail_jobs(qm_collection)
 
 check_jobs(refine=True, cluster_bond_path=True, level_of_theory='ORCA')

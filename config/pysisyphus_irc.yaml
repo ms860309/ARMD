@@ -2,15 +2,9 @@ irc:
  type: eulerpc              # Similar to EulerPC from Gaussian
  max_cycles: 50
  displ_length: 0.2
-endopt:
- fragments: False            # Detect fragments at the end of the IRC and optimize them separately.
- thresh: gau
- geom: 
-  type: redund
-  freeze_atoms: [23,24,25,26,27,28,29,30,31,32,33,34]
 calc:
  type: orca
- keywords: PBE0 D3BJ def2-SVP rijcosx def2/J TightSCF Grid4 GridX4 NoFinalGrid miniprint nopop
+ keywords: PBE0 D3BJ def2-SVP rijcosx def2/J TightSCF NoFinalGrid miniprint nopop
  pal: 8
  charge: 0
  mult: 1
