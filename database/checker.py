@@ -31,6 +31,7 @@ sys.path.append(path.join(path.dirname(path.dirname(path.abspath(__file__))), 'c
 from _filter import FILTER
 from typing import Union
 from extract_time import find_job_output_file, get_job_run_time
+
 class CheckError(Exception):
     pass
 
