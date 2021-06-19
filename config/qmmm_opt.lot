@@ -5,7 +5,7 @@ BASIS                       def2-svp
 ECP                         def2-ecp
 geom_opt_coords             0
 max_scf_cycles              250
-geom_opt_max_cycles         150
+geom_opt_max_cycles         300
 QM_MM_INTERFACE             Zeolite
 force_field                 charmm27
 user_connect                TRUE

@@ -1,10 +1,10 @@
-! PBE0 D3BJ def2-SVP OptTS rijcosx def2/J Freq TIGHTSCF NoFinalGrid miniprint nopop
+! PBE0 D3BJ def2-SVP OptTS rijcosx def2/J Freq TIGHTSCF miniprint nopop
 
 %geom
 Calc_Hess true # Calculate Hessian in the beginning
-Recalc_Hess  50
-Convergence tight  # Same convergence criteria with tightopt
+Recalc_Hess 50  # Recalculate the Hessian every 50 steps
 MaxStep 0.08  # 0.08 a.u.
+Convergence tight  # Same convergence criteria with tightopt
 Constraints # The atom you want to constraint, index from 0.
 	{C 23 C}
 	{C 24 C}
