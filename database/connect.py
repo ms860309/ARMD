@@ -16,7 +16,7 @@ class Connector(object):
         #self.server = 'mongodb://localhost:27017/'
         #self.mongo_db = mongo_db
         self.client = self.connect()
-        self.db = self.client['final_2']
+        self.db = self.client['Final']
 
     def connect(self):
         client = MongoClient(self.server, serverSelectionTimeoutMS=60000)
@@ -209,4 +209,26 @@ for reaction in reactions:
             shutil.copyfile(os.path.join(qmmm_ts_dirpath, 'qmmm_sp.out'), os.path.join(a, 'ts/qmmm_sp.out'))
     except:
         continue
+"""
+"""
+reactions_collection = db['reactions']
+reactions = list(reactions_collection.find({}))
+for reaction in reactions:
+    qm_collection = db['qm_calculate_center']
+    target = list(qm_collection.find({'path':reaction['path']}))[0]
+    try:
+        ssm_barrier = target['ssm_barrier']
+    except:
+        ssm_barrier = 0
+    try:
+        irc_barrier = target['barrier']
+    except:
+        irc_barrier = 0
+    try:
+        qmmm_barrier = target['qmmm_barrier']
+    except:
+        qmmm_barrier = 0
+    print(f'ssm_barrier:{ssm_barrier}')
+    print(f'irc_barrier:{irc_barrier}')
+    print(f'qmmm_barrier:{qmmm_barrier}')
 """

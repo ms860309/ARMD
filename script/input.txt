@@ -9,7 +9,7 @@ mopac_method                   PM7                  # The mopac calculation leve
 xtb_method                     gfn2                 #  gfn2 or gfn1
 manual_bonds                   0                    # Manually specify bonds function (bonds file is 1-based)
 manual_cluster_bond            1                    # Manually defile cluster bonds, this onlt effct when manual_bonds != 1
-bond_dissociation_cutoff       300                  # Bond dissociation energy cutoff in kcal/mol
+bond_dissociation_cutoff       315                  # Bond dissociation energy cutoff in kcal/mol
 use_inchi_key                  1                    # Use inchi key as a filter 
 constraint                     1                    # The index of constraint atom index (start from 0). eg. constraint forcefield
 fixed_atoms                    1                    # fix some atom that can't be break or form(bond_can_break: one of the atom should not in fixed_atoms)

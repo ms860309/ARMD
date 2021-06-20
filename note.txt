@@ -93,3 +93,20 @@ http://sobereva.com/44
 曾經遇到過qmmm (SnBEA zeolite)不論如何計算都會有imaginary frequency(其值freq+opt之後都差不多)，經過交叉比對發現是force field parameters的問題
 本來打算使用別人train的Sn metal ff parameter但是由於這個值沒有在q-chem train過因此不能直接用，所以後來解決辦法是移除active site上面所有的atom type
 也就是說 QM region = reactant + active site，只要是active site的atom type都設定為0，PS:有關lewis acid open site上面的proton也用0
+8.
+2021/6/20 update:
+由於openbabel等軟體判斷carbonyl group與Sn metal center之間的bond並不是特別準確
+因此以inchikey或者smiles等來判斷是否相同其實不是很合理
+e.g. 
+active site smiles: [Sn][SiH3]@%$^%#&!#@!
+reactant:OCC=CO
+假設判斷有bond --> OCC=CO[Sn][SiH3]@%$^%#&!#@!  或者  [Sn][SiH3](OCC=CO)@%$^%#&!#@!
+此時inchikey為 AAAAA-BBBBB-C
+但是如果判斷沒有bond則為
+smiles:OCC=CO.[Sn][SiH3]@%$^%#&!#@!  或者 [Sn][SiH3]@%$^%#&!#@!.OCC=CO
+inchikey: QDQGQKOP-QERFQKJGQ-N
+但實際上你看結構不一定能分辨出差異
+目前irc_equal以smiles的reactant部份與inchikey作為判斷，對於qmmm結束後之結構並沒有確認其結構經過優化是否等同於irc forward and backward結構
+實際上有遇到過上面的case導致結構相似但是卻判斷成不同inchikey導致下一個generation當成initial reactant時候發生問題
+例如以irc當成下一輪reactant此時inchikey為A後續irc equal判斷則利用A 但是qmmm如果判斷B則後續irc equal則利用B
+這邊的問題是 加入到reaction collection是用irc equal判斷 因此可能會導致network無法連結

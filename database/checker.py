@@ -673,7 +673,7 @@ def check_irc_opt_jobs(qm_collection:object, level_of_theory:str='ORCA'):
                     }
             else:
                 update_field = {
-                    'irc_backward_opt_status': new_status, 'irc_backrward_opt_energy': energy, 'irc_backward_opt_run_time':job_run_time
+                    'irc_backward_opt_status': new_status, 'irc_backward_opt_energy': energy, 'irc_backward_opt_run_time':job_run_time
                     }
             qm_collection.update_one(target, {"$set": update_field}, True)
 
@@ -2120,8 +2120,8 @@ def check_qmmm_equal(qm_collection:object, reactions_collection:object, cluster_
     targets = select_qmmm_equal_target(qm_collection)
 
     for target in targets:
-        qmmm_reactant = path.join(target['path'], 'QMMM_REACTANT')
-        qmmm_product = path.join(target['path'], 'QMMM_PRODUCT')
+        qmmm_reactant = path.join(target['path'], 'QMMM_REACTANT/qmmm_final.xyz')
+        qmmm_product = path.join(target['path'], 'QMMM_PRODUCT/qmmm_final.xyz')
         pyMol_1 = xyz_to_pyMol(qmmm_reactant, cluster_bond_path=cluster_bond_path)
         pyMol_2 = xyz_to_pyMol(qmmm_product, cluster_bond_path=cluster_bond_path)
 
