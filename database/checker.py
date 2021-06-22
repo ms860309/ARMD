@@ -1350,11 +1350,16 @@ def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:
                 else:
                     return 'restart', job_run_time
             else:
-                if restart_time == 0:
-                    shutil.copyfile(path.join(qmmm_reactant_dir, 'qmmm_opt.xyz'), path.join(qmmm_reactant_dir, 'qmmm_final.xyz'))
+                q = QChem(outputfile=path.join(qmmm_reactant_dir, 'qmmm_opt.out'))
+                conv = q.check_maximum_iterations()
+                if conv:
+                    if restart_time == 0:
+                        shutil.copyfile(path.join(qmmm_reactant_dir, 'qmmm_opt.xyz'), path.join(qmmm_reactant_dir, 'qmmm_final.xyz'))
+                    else:
+                        shutil.copyfile(path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz'), path.join(qmmm_reactant_dir, 'qmmm_final.xyz'))
+                    return 'job_success', job_run_time
                 else:
-                    shutil.copyfile(path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz'), path.join(qmmm_reactant_dir, 'qmmm_final.xyz'))
-                return 'job_success', job_run_time
+                    return 'restart', job_run_time
         else:
             freqs = q.get_frequencies()
             nnegfreq = sum(1 for freq in freqs if freq < 0.0)
@@ -1367,11 +1372,16 @@ def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:
                 else:
                     return 'restart', job_run_time
             else:
-                if restart_time == 0:
-                    shutil.copyfile(path.join(qmmm_product_dir, 'qmmm_opt.xyz'), path.join(qmmm_product_dir, 'qmmm_final.xyz'))
+                q = QChem(outputfile=path.join(qmmm_product_dir, 'qmmm_opt.out'))
+                conv = q.check_maximum_iterations()
+                if conv:
+                    if restart_time == 0:
+                        shutil.copyfile(path.join(qmmm_product_dir, 'qmmm_opt.xyz'), path.join(qmmm_product_dir, 'qmmm_final.xyz'))
+                    else:
+                        shutil.copyfile(path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz'), path.join(qmmm_product_dir, 'qmmm_final.xyz'))
+                    return 'job_success', job_run_time
                 else:
-                    shutil.copyfile(path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz'), path.join(qmmm_product_dir, 'qmmm_final.xyz'))
-                return 'job_success', job_run_time
+                    return 'restart', job_run_time
     except:
         return 'job_fail', job_run_time
 
@@ -2134,7 +2144,7 @@ def check_qmmm_equal(qm_collection:object, reactions_collection:object, cluster_
             new_status = 'qmmm_reactant_equal_to_irc_reactant_and_qmmm_product_equal_to_irc_product'
         elif pyMol_1.write('inchiKey').strip() != reactant_inchi_key and pyMol_2.write('inchiKey').strip() == product_inchi_key:
             new_status = 'qmmm_reactant_do_not_equal_to_irc_reactant_but_qmmm_product_equal_to_irc_product'
-        elif pyMol_1.write('inchiKey').strip() == reactant_inchi_key and pyMol_2.write('inchiKey').strip() == product_inchi_key:
+        elif pyMol_1.write('inchiKey').strip() == reactant_inchi_key and pyMol_2.write('inchiKey').strip() != product_inchi_key:
             new_status = 'qmmm_reactant_equal_to_irc_reactant_but_qmmm_product_do_not_equal_to_irc_product'
         elif pyMol_1.write('inchiKey').strip() != reactant_inchi_key and pyMol_2.write('inchiKey').strip() != product_inchi_key:
             new_status = 'qmmm_reactant_and_qmmm_product_do_not_equal_to_any_side'

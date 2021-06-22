@@ -36,6 +36,15 @@ class QChem(object):
                         if 'fatal error' in line:
                             raise QChemError(f'Q-Chem job {outputfile} had an error!')
 
+    def check_maximum_iterations(self):
+        if ' **  MAXIMUM OPTIMIZATION CYCLES REACHED  **' in self.log:
+            return False
+        else:
+            if ' **  OPTIMIZATION CONVERGED  **' in self.log:
+                return True
+            else:
+                return False
+
     def get_energy(self, first=False):
         if first:
             iterable = self.log

@@ -213,6 +213,7 @@ for reaction in reactions:
 """
 reactions_collection = db['reactions']
 reactions = list(reactions_collection.find({}))
+ssm_barriers, irc_barriers, irc_delta_Hs, qmmm_barriers, xTB_delta_Hs = [], [], [], [], []
 for reaction in reactions:
     qm_collection = db['qm_calculate_center']
     target = list(qm_collection.find({'path':reaction['path']}))[0]
@@ -225,10 +226,31 @@ for reaction in reactions:
     except:
         irc_barrier = 0
     try:
+        irc_delta_H = reaction['delta_H']
+    except:
+        irc_delta_H = 0
+    try:
         qmmm_barrier = target['qmmm_barrier']
     except:
         qmmm_barrier = 0
+    try:
+        xTB_delta_H = (target['product_xtb_hf'] - target['reactant_xtb_hf'])*627.5095
+    except:
+        xTB_delta_H = 0
+    ssm_barriers.append(ssm_barrier)
+    irc_barriers.append(irc_barrier)
+    irc_delta_Hs.append(irc_delta_H)
+    qmmm_barriers.append(qmmm_barrier)
+    xTB_delta_Hs.append(xTB_delta_H)
     print(f'ssm_barrier:{ssm_barrier}')
     print(f'irc_barrier:{irc_barrier}')
     print(f'qmmm_barrier:{qmmm_barrier}')
+    print(f"xTB_delta_H:{xTB_delta_H}")
+    print(f'irc_delta_H:{irc_delta_H}')
+    print('-----')
+
+print('------------------')
+print('ssm_barrier irc_barrier irc_delta_H qmmm_barrier xTB_delta_H')
+for i,j,k,l,m in zip(ssm_barriers, irc_barriers, irc_delta_Hs, qmmm_barriers, xTB_delta_Hs):
+    print(f'{i} {j} {k} {l} {m}')
 """
