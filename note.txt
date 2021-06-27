@@ -110,3 +110,7 @@ inchikey: QDQGQKOP-QERFQKJGQ-N
 實際上有遇到過上面的case導致結構相似但是卻判斷成不同inchikey導致下一個generation當成initial reactant時候發生問題
 例如以irc當成下一輪reactant此時inchikey為A後續irc equal判斷則利用A 但是qmmm如果判斷B則後續irc equal則利用B
 這邊的問題是 加入到reaction collection是用irc equal判斷 因此可能會導致network無法連結
+9.
+2021/06/27 update:
+或許可以考慮ssm ts irc ircopt 從頭到尾都用gfn2-xtb沒問題的時候再用dft level + qmmm check
+或者先用gfn2-xtb生成network

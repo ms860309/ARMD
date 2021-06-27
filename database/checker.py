@@ -951,12 +951,12 @@ def insert_ard(qm_collection:object, reactions_collection:object, statistics_col
                          {'qmmm_freq_ts_status':
                              {'$in':
                               ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
-                         {'qmmm_sp_status':
+                         {'$and':[{'qmmm_sp_status':
                              {'$in':
                               ["job_unrun"]}},
                          {'qmmm_sp_ts_status':
                              {'$in':
-                              ["job_unrun"]}},
+                              ["job_unrun"]}}]},
                          {'qmmm_sp_reactant_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}},
@@ -1350,16 +1350,17 @@ def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:
                 else:
                     return 'restart', job_run_time
             else:
-                q = QChem(outputfile=path.join(qmmm_reactant_dir, 'qmmm_opt.out'))
-                conv = q.check_maximum_iterations()
-                if conv:
-                    if restart_time == 0:
+                if restart_time == 0:
+                    q = QChem(outputfile=path.join(qmmm_reactant_dir, 'qmmm_opt.out'))
+                    conv = q.check_maximum_iterations()
+                    if conv:
                         shutil.copyfile(path.join(qmmm_reactant_dir, 'qmmm_opt.xyz'), path.join(qmmm_reactant_dir, 'qmmm_final.xyz'))
+                        return 'job_success', job_run_time
                     else:
-                        shutil.copyfile(path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz'), path.join(qmmm_reactant_dir, 'qmmm_final.xyz'))
-                    return 'job_success', job_run_time
+                        return 'restart', job_run_time
                 else:
-                    return 'restart', job_run_time
+                    shutil.copyfile(path.join(qmmm_reactant_dir, 'qmmm_freq_opt.xyz'), path.join(qmmm_reactant_dir, 'qmmm_final.xyz'))
+                    return 'job_success', job_run_time
         else:
             freqs = q.get_frequencies()
             nnegfreq = sum(1 for freq in freqs if freq < 0.0)
@@ -1372,16 +1373,17 @@ def check_qmmm_freq_opt_content(dir_path:str, direction:str='reactant', restart:
                 else:
                     return 'restart', job_run_time
             else:
-                q = QChem(outputfile=path.join(qmmm_product_dir, 'qmmm_opt.out'))
-                conv = q.check_maximum_iterations()
-                if conv:
-                    if restart_time == 0:
+                if restart_time == 0:
+                    q = QChem(outputfile=path.join(qmmm_product_dir, 'qmmm_opt.out'))
+                    conv = q.check_maximum_iterations()
+                    if conv:
                         shutil.copyfile(path.join(qmmm_product_dir, 'qmmm_opt.xyz'), path.join(qmmm_product_dir, 'qmmm_final.xyz'))
+                        return 'job_success', job_run_time
                     else:
-                        shutil.copyfile(path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz'), path.join(qmmm_product_dir, 'qmmm_final.xyz'))
-                    return 'job_success', job_run_time
+                        return 'restart', job_run_time
                 else:
-                    return 'restart', job_run_time
+                    shutil.copyfile(path.join(qmmm_product_dir, 'qmmm_freq_opt.xyz'), path.join(qmmm_product_dir, 'qmmm_final.xyz'))
+                    return 'job_success', job_run_time
     except:
         return 'job_fail', job_run_time
 
@@ -1410,7 +1412,10 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
                 new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='reactant', restart=True, restart_time = times)
             else:
                 new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='reactant', restart_time = times)
-            job_run_time += already_run_time
+            try:
+                job_run_time += already_run_time
+            except:
+                job_run_time = 0
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1448,7 +1453,10 @@ def check_qmmm_freq_opt_jobs(qm_collection:object, reactions_collection:object, 
                 new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='product', restart=True, restart_time = times)
             else:
                 new_status, job_run_time = check_qmmm_freq_opt_content(target['path'], direction='product', restart_time = times)
-            job_run_time += already_run_time
+            try:
+                job_run_time += already_run_time
+            except:
+                job_run_time = 0
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -1720,7 +1728,10 @@ def check_qmmm_freq_ts_jobs(qm_collection:object, reactions_collection:object, r
                 new_status, job_run_time = check_qmmm_freq_ts_content(target['path'], restart=True, threshold = threshold)
             else:
                 new_status, job_run_time = check_qmmm_freq_ts_content(target['path'], times = times, threshold = threshold)
-            job_run_time += already_run_time
+            try:
+                job_run_time += already_run_time
+            except:
+                job_run_time = 0
         # 4. check with original status which
         # should be job_launched or job_running
         # if any difference update status
@@ -2015,103 +2026,6 @@ def check_qmmm_sp_jobs(qm_collection:object, reactions_collection:object):
                                                      "$set": update_field}, True)
 
 """
-QMMM side fail check.
-If qmmm ts fail then delete the reactant and product opt (while the other side still running).
-"""
-
-def select_qmmm_freq_ts_side_fail_target(qm_collection:object) -> list:
-    """
-    This method is to inform job checker which targets 
-    to check, which need meet one requirement:
-    1. status is job_launched or job_running
-    Returns a list of targe
-    """
-    query = {'$or':[
-            {'$and':
-            [
-                {"qmmm_sp_ts_status":
-                {"$in":
-                    ['job_unrun']}},
-                {'qmmm_freq_reactant_status':
-                  {'$in':
-                    ["Have negative frequency", "job_fail"]}}
-            ]
-            },
-            {'$and':
-            [
-                {"qmmm_sp_ts_status":
-                {"$in":
-                    ['job_unrun']}},
-                {'qmmm_freq_product_status':
-                  {'$in':
-                    ["Have negative frequency", "job_fail"]}}
-            ]
-            },
-            {'$and':
-            [
-                {"qmmm_sp_ts_status":
-                {"$in":
-                    ['job_unrun']}},
-                {'qmmm_freq_opt_reactant_status':
-                  {'$in':
-                    ["job_fail"]}}
-            ]
-            },
-            {'$and':
-            [
-                {"qmmm_sp_ts_status":
-                {"$in":
-                    ['job_unrun']}},
-                {'qmmm_freq_opt_product_status':
-                  {'$in':
-                    ["job_fail"]}}
-            ]
-            }]}
-
-    targets = list(qm_collection.find(query))
-    return targets
-
-def check_side_fail_jobs(qm_collection:object):
-    """
-    This method checks job with following steps:
-    1. select jobs to check
-    2. check the job pbs-status, e.g., qstat -f "job_id"
-    3. check job content
-    4. update with new status
-    """
-    # 1. select jobs to check
-    targets = select_qmmm_freq_ts_side_fail_target(qm_collection)
-    # 2. check the job pbs_status
-    for target in targets:
-        try:
-            freq_reac = target['qmmm_freq_reactant_status']
-            if freq_reac in ["Have negative frequency", "job_fail"]:
-                qm_collection.update_one(target, {"$set": {'qmmm_sp_ts_status': 'reactant_or_product_freq_fail'}}, True)
-        except:
-            pass
-
-        try:
-            freq_prod = target['qmmm_freq_product_status']
-            if freq_prod in ["Have negative frequency", "job_fail"]:
-                qm_collection.update_one(target, {"$set": {'qmmm_sp_ts_status': 'reactant_or_product_freq_fail'}}, True)
-        except:
-            pass
-
-        try:
-            freq_opt_reac = target['qmmm_freq_opt_reactant_status']
-            if freq_opt_reac in ["job_fail"]:
-                qm_collection.update_one(target, {"$set": {'qmmm_sp_ts_status': 'reactant_or_product_freq_fail'}}, True)
-        except:
-            pass
-
-        try:
-            freq_opt_prod = target['qmmm_freq_opt_product_status']
-            if freq_opt_prod in ["job_fail"]:
-                qm_collection.update_one(target, {"$set": {'qmmm_sp_ts_status': 'reactant_or_product_freq_fail'}}, True)
-        except:
-            pass
-
-"""
 QMMM REFINE
 """
 
@@ -2161,6 +2075,130 @@ def check_qmmm_equal(qm_collection:object, reactions_collection:object, cluster_
             qm_collection.update_one(target, {"$set": update_field}, True)
 
 """
+QMMM side fail check.
+If qmmm freq ts fail then delete the other side (while the other side still running) (reactant and product opt or freq opt). 
+"""
+
+def select_qmmm_side_fail_target(qm_collection:object) -> list:
+    """
+    This method is to inform job checker which targets 
+    to check, which need meet one requirement:
+    1. status is job_launched or job_running
+    Returns a list of targe
+    """
+    query = {'$or':[{'$and':
+            [
+                {"qmmm_freq_ts_status":
+                {"$in":
+                    ['job_fail']}},
+                {'qmmm_opt_reactant_status':
+                  {'$in':
+                    ["job_running", "job_queueing", "job_launched"]}}
+            ]
+            },
+            {'$and':
+            [
+                {"qmmm_freq_ts_status":
+                {"$in":
+                    ['job_fail']}},
+                {'qmmm_opt_product_status':
+                  {'$in':
+                    ["job_running", "job_queueing", "job_launched"]}}
+            ]
+            },
+            {'$and':
+            [
+                {"qmmm_freq_ts_status":
+                {"$in":
+                    ['job_fail']}},
+                {'qmmm_freq_opt_reactant_status':
+                  {'$in':
+                    ["job_running", "job_queueing", "job_launched"]}}
+            ]
+            },
+            {'$and':
+            [
+                {"qmmm_freq_ts_status":
+                {"$in":
+                    ['job_fail']}},
+                {'qmmm_freq_opt_product_status':
+                  {'$in':
+                    ["job_running", "job_queueing", "job_launched"]}}
+            ]
+            }]}
+    targets = list(qm_collection.find(query))
+    return targets
+
+def check_qmmm_side_fail_jobs(qm_collection:object):
+    """
+    This method checks job with following steps:
+    1. select jobs to check
+    2. check the job pbs-status, e.g., qstat -f "job_id"
+    3. check job content
+    4. update with new status
+    """
+    # 1. select jobs to check
+    targets = select_qmmm_side_fail_target(qm_collection)
+    # 2. check the job pbs_status
+    for target in targets:
+        try:
+            if target['qmmm_opt_reactant_status'] in ["job_running", "job_queueing", "job_launched"]:
+                job_id = target['qmmm_opt_reactant_jobid']
+                commands = ['qdel', job_id]
+                process = subprocess.Popen(commands,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                update_field = {
+                    'qmmm_opt_reactant_status': 'the qmmm ts fail, so delete this side'
+                    }
+                qm_collection.update_one(target, {"$set": update_field}, True)
+        except:
+            pass
+        try:
+            if target['qmmm_opt_product_status'] in ["job_running", "job_queueing", "job_launched"]:
+                job_id = target['qmmm_opt_product_jobid']
+                commands = ['qdel', job_id]
+                process = subprocess.Popen(commands,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                update_field = {
+                    'qmmm_opt_product_status': 'the qmmm ts fail, so delete this side'
+                    }
+                qm_collection.update_one(target, {"$set": update_field}, True)
+        except:
+            pass
+        try:
+            if target['qmmm_freq_opt_reactant_status'] in ["job_running", "job_queueing", "job_launched"]:
+                job_id = target['qmmm_freq_opt_reactant_jobid']
+                commands = ['qdel', job_id]
+                process = subprocess.Popen(commands,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                update_field = {
+                    'qmmm_freq_opt_reactant_status': 'the qmmm ts fail, so delete this side'
+                    }
+                qm_collection.update_one(target, {"$set": update_field}, True)
+        except:
+            pass
+        try:
+            if target['qmmm_freq_opt_product_status'] in ["job_running", "job_queueing", "job_launched"]:
+                job_id = target['qmmm_freq_opt_product_jobid']
+                commands = ['qdel', job_id]
+                process = subprocess.Popen(commands,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                update_field = {
+                    'qmmm_freq_opt_product_status': 'the qmmm ts fail, so delete this side'
+                    }
+                qm_collection.update_one(target, {"$set": update_field}, True)
+        except:
+            pass
+
+"""
 Check jobs
 """
 
@@ -2194,7 +2232,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
         fixed_atoms_path = path.join(ard_path, 'script/fixed_atoms.txt')
     
     # If the ssm perform by orca with xtb GFN2-xtb, then refine the TS is a good choice.  Get a better initial guess
-    check_ssm_jobs(qm_collection, refine=refine, thershold = 100.0)  # TS guess energy filter
+    check_ssm_jobs(qm_collection, refine=refine, thershold = 80.0)  # TS guess energy filter
     check_ts_refine_jobs(qm_collection, threshold = -50.0)  # Imaginary freq should smaller than threshold
     check_ts_jobs(qm_collection, threshold = -50.0, level_of_theory=level_of_theory, use_irc=use_irc) # Imaginary freq should smaller than threshold
     check_irc_jobs(qm_collection)
@@ -2211,7 +2249,7 @@ def check_jobs(refine=True, cluster_bond_path=None, level_of_theory='ORCA'):
     check_qmmm_freq_jobs(qm_collection, reactions_collection)
     check_qmmm_ts_freq_jobs(qm_collection, reactions_collection, threshold = -50.0)
     check_qmmm_sp_jobs(qm_collection, reactions_collection)
+    check_qmmm_side_fail_jobs(qm_collection)
     check_qmmm_equal(qm_collection, reactions_collection, cluster_bond_path=cluster_bond_path)
-    check_side_fail_jobs(qm_collection)
 
 check_jobs(refine=True, cluster_bond_path=True, level_of_theory='ORCA')

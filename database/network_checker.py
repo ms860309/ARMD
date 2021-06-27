@@ -410,7 +410,7 @@ def print_information(generations):
                        [
                            {"qmmm_opt_reactant_status":
                             {"$in":
-                             ['job_fail']}
+                             ['job_fail', 'the qmmm ts fail, so delete this side']}
                             },
                            {'generations': generations}
                        ]
@@ -419,7 +419,7 @@ def print_information(generations):
                        [
                            {"qmmm_opt_product_status":
                             {"$in":
-                             ['job_fail']}
+                             ['job_fail', 'the qmmm ts fail, so delete this side']}
                             },
                            {'generations': generations}
                        ]
@@ -590,7 +590,7 @@ def print_information(generations):
                        [
                            {"qmmm_freq_opt_reactant_status":
                             {"$in":
-                             ['job_fail']}
+                             ['job_fail', 'the qmmm ts fail, so delete this side']}
                             },
                            {'generations': generations}
                        ]
@@ -599,7 +599,7 @@ def print_information(generations):
                        [
                            {"qmmm_freq_opt_product_status":
                             {"$in":
-                             ['job_fail']}
+                             ['job_fail', 'the qmmm ts fail, so delete this side']}
                             },
                            {'generations': generations}
                        ]

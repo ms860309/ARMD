@@ -1,3 +1,4 @@
+from ntpath import join
 import pymongo
 from pymongo import MongoClient
 import shutil
@@ -185,12 +186,13 @@ for reaction in reactions:
         continue
     print(f"{qmmm_barrier}   {reaction['delta_H']}")
 """
+
 """
 reactions_collection = db['reactions']
 reactions = list(reactions_collection.find({}))
 for reaction in reactions:
     try:
-        if reaction['qmmm_sp_ts'] != 0 and reaction['qmmm_sp_reactant'] != 0 and reaction['qmmm_sp_product'] != 0:
+        if reaction['qmmm_sp_reactant_status'] == 'job_success' and reaction['qmmm_sp_product_status'] == 'job_success' and reaction['qmmm_sp_ts_status'] == 'job_success':
             data_path = os.path.join(os.getcwd(), 'data')
             qmmm_reactant_dirpath = os.path.join(reaction['path'], 'QMMM_REACTANT')
             qmmm_product_dirpath = os.path.join(reaction['path'], 'QMMM_PRODUCT')
@@ -198,18 +200,22 @@ for reaction in reactions:
             dir_name = os.path.basename(reaction['path'])
             a = os.path.join(data_path, dir_name)
             os.mkdir(a)
-            os.mkdir(os.path.join(a, 'reactant'))
-            os.mkdir(os.path.join(a, 'product'))
-            os.mkdir(os.path.join(a, 'ts'))
-            shutil.copyfile(os.path.join(qmmm_reactant_dirpath, 'qmmm_freq.out'), os.path.join(a, 'reactant/qmmm_freq.out'))
-            shutil.copyfile(os.path.join(qmmm_reactant_dirpath, 'qmmm_sp.out'), os.path.join(a, 'reactant/qmmm_sp.out'))
-            shutil.copyfile(os.path.join(qmmm_product_dirpath, 'qmmm_freq.out'), os.path.join(a, 'product/qmmm_freq.out'))
-            shutil.copyfile(os.path.join(qmmm_product_dirpath, 'qmmm_sp.out'), os.path.join(a, 'product/qmmm_sp.out'))
-            shutil.copyfile(os.path.join(qmmm_ts_dirpath, 'qmmm_freq.out'), os.path.join(a, 'ts/qmmm_freq.out'))
-            shutil.copyfile(os.path.join(qmmm_ts_dirpath, 'qmmm_sp.out'), os.path.join(a, 'ts/qmmm_sp.out'))
+            shutil.copytree(qmmm_reactant_dirpath, os.path.join(a, 'QMMM_REACTANT'))
+            shutil.copytree(qmmm_product_dirpath, os.path.join(a, 'QMMM_PRODUCT'))
+            shutil.copytree(qmmm_ts_dirpath, os.path.join(a, 'QMMM_TS'))
+            print(f"reactant_inchi_key:{reaction['reactant_inchi_key']}")
+            print(f"product_inchi_key:{reaction['product_inchi_key']}")
+            print(f"reactant_smiles:{reaction['reactant_smiles']}")
+            print(f"product_smiles:{reaction['product_smiles']}")
+            print(f"generations:{reaction['generations']}")
+            print(f"qmmm_barrier:{reaction['qmmm_barrier']}")
+            print(f"qmmm_delta_H:{reaction['qmmm_delta_H']}")
+            print(f"dir_name:{dir_name}")
+            print('------------------')
     except:
         continue
 """
+
 """
 reactions_collection = db['reactions']
 reactions = list(reactions_collection.find({}))

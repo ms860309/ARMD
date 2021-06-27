@@ -4,6 +4,7 @@
 Calc_Hess true # Calculate Hessian in the beginning
 NumHess true # Request numerical Hessian (analytical not available)
 MaxStep 0.08  # 0.08 a.u.
+maxiter 100
 Recalc_Hess 10  # Recalculate the Hessian every 10 steps
 Convergence tight  # Same convergence criteria with tightopt
 Constraints # The atom you want to constraint, index from 0.
