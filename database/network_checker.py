@@ -922,6 +922,19 @@ def update_network_status():
     status_collection = db['status']
     qm_collection = db['qm_calculate_center']
     statistics_collection = db['statistics']
+    config_collection = db['config']
+    target = list(config_collection.find({'generations': 1}))[0]
+    qmmm = target['use_qmmm']
+    use_irc = target['use_irc']
+    if qmmm == '1':
+        qmmm = True
+    else:
+        qmmm = False
+    if use_irc == '1':
+        use_irc = True
+    else:
+        use_irc = False
+
     ard_had_add_number = qm_collection.count_documents({})
     ard_should_add_number = sum([i['add how many products'] for i in list(statistics_collection.find({}))])
 
@@ -930,59 +943,33 @@ def update_network_status():
                   ["job_unrun", "job_launched", "job_running", "job_queueing"]
                   }
                  }
-    energy_query = {"energy_status":
-                    {"$in":
-                        ["job_launched", "job_running",
-                            "job_queueing", 'job_unrun']
-                     }
-                    }
+
     ssm_query = {"ssm_status":
                  {"$in":
-                  ["job_launched", "job_running",
-                   "job_queueing", 'job_unrun']
+                  ["job_unrun", "job_launched", "job_running", "job_queueing"]
                   }
                  }
-    low_opt_query = {"low_opt_status":
-                     {"$in":
-                      ["job_launched", "job_running",
-                       "job_queueing", 'job_unrun']
-                      }
-                     }
-    opt_query = {"opt_status":
-                 {"$in":
-                  ["job_launched", "job_running",
-                   "job_queueing", 'job_unrun']
-                  }
-                 }
-    ts_query = {"ts_status":
-                {"$in":
-                 ["job_launched", "job_running",
-                  "job_queueing", 'job_unrun']
-                 }
-                }
     ts_refine_query = {"ts_refine_status":
                        {"$in":
-                        ["job_launched", "job_running",
-                            "job_queueing", 'job_unrun']
+                        ["job_unrun", "job_launched", "job_running", "job_queueing"]
                         }
                        }
+    ts_query = {"ts_status":
+                {"$in":
+                 ["job_unrun", "job_launched", "job_running", "job_queueing"]
+                 }
+                }
     irc_query = {"irc_status":
                  {"$in":
-                  ["job_launched", "job_running",
-                   "job_queueing", 'job_unrun']
+                  ["job_unrun", "job_launched", "job_running", "job_queueing"]
                   }
                  }
-    irc_equal_query = {"irc_equal":
-                       {"$in":
-                        ["waiting for checking"]
-                        }
-                       }
     irc_opt_query = {'$or':
                      [
                          {"irc_forward_opt_status":
                           {"$in":
                            ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
-                         {'irc_forward_opt_status':
+                         {'irc_backward_opt_status':
                              {'$in':
                               ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
                          {'irc_opt_status':
@@ -990,9 +977,15 @@ def update_network_status():
                               ["job_unrun"]}}
                      ]
                      }
+    irc_equal_query = {"irc_equal":
+                       {"$in":
+                        ["waiting for checking"]
+                        }
+                       }
     insert_reaction_query = {"insert_reaction":
                              {"$in":
                               ['need insert']}}
+
     qmmm_query = {'$or':
                      [
                          {"qmmm_opt_status":
@@ -1019,18 +1012,18 @@ def update_network_status():
                          {'qmmm_freq_reactant_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}},
-                         {'qmmm_freq_reactant_status':
+                         {'qmmm_freq_product_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}},
                          {'qmmm_freq_ts_status':
                              {'$in':
                               ["job_unrun", "job_launched", "job_running", "job_queueing"]}},
-                         {'qmmm_sp_status':
+                         {'$and':[{'qmmm_sp_status':
                              {'$in':
                               ["job_unrun"]}},
                          {'qmmm_sp_ts_status':
                              {'$in':
-                              ["job_unrun"]}},
+                              ["job_unrun"]}}]},
                          {'qmmm_sp_reactant_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}},
@@ -1040,13 +1033,24 @@ def update_network_status():
                          {'qmmm_sp_ts_status':
                              {'$in':
                               ["job_launched", "job_running", "job_queueing"]}}
-                     ]}
-    not_finished_number = len(list(qm_collection.find({'$or':
-                                            [energy_query, ssm_query, low_opt_query, opt_query, ts_query, insert_reaction_query, ts_refine_query, 
-                                            irc_query, irc_equal_query, irc_opt_query, ard_query, qmmm_query]
-                                            })))
-                                            
-    if ard_had_add_number - 1 == ard_should_add_number and not_finished_number == 0:
+                     ]
+                     }
+
+    if not use_irc:
+        not_finished_number = len(list(qm_collection.find({'$or':
+                                                [ssm_query, ts_refine_query, ts_query, insert_reaction_query, ard_query]
+                                                })))
+    else:
+        if qmmm:
+            not_finished_number = len(list(qm_collection.find({'$or':
+                                                    [ssm_query, ts_refine_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ard_query, qmmm_query]
+                                                    })))
+        else:
+            not_finished_number = len(list(qm_collection.find({'$or':
+                                                    [ssm_query, ts_refine_query, ts_query, irc_query, irc_opt_query, irc_equal_query, insert_reaction_query, ard_query]
+                                                    })))
+             
+    if ard_had_add_number == ard_should_add_number and not_finished_number == 0:
         print('Network converged')
 
         target = list(status_collection.find({}))
