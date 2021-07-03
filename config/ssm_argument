@@ -1,3 +1,4 @@
 -coordinate_type  TRIC
 -ADD_NODE_TOL 0.005
 -linesearch backtrack
+-xTB_accuracy 0.1

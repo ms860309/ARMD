@@ -198,18 +198,18 @@ class XTB(object):
         new_output_path = path.join(tmpdir, outname)
         if fixed_atoms is None:
             if method == 'gfn2':
-                p = Popen(['xtb', input_path, '--gfn', '2', '--opt', 'tight'])
+                p = Popen(['xtb', input_path, '--gfn', '2', '--opt', 'tight', '--acc', '0.1'])
             elif method == 'gfn1':
-                p = Popen(['xtb', input_path, '--gfn', '1', '--opt', 'tight'])
+                p = Popen(['xtb', input_path, '--gfn', '1', '--opt', 'tight', '--acc', '0.1'])
             else:
                 raise XTBError('Unsupported xtb method')
             p.wait()
             shutil.move(output_path, new_output_path)
         else:
             if method == 'gfn2':
-                p = Popen(['xtb', '--opt', 'tight', '--gfn', '2', '--input', constraint_path, input_path])
+                p = Popen(['xtb', '--opt', 'tight', '--gfn', '2', '--acc', '0.1', '--input', constraint_path, input_path])
             elif method == 'gfn1':
-                p = Popen(['xtb', '--opt', 'tight', '--gfn', '1', '--input', constraint_path, input_path])
+                p = Popen(['xtb', '--opt', 'tight', '--gfn', '1', '--acc', '0.1', '--input', constraint_path, input_path])
             else:
                 raise XTBError('Unsupported xtb method')
             p.wait()

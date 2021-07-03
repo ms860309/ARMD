@@ -6,7 +6,6 @@ NumHess true # Request numerical Hessian (analytical not available)
 MaxStep 0.08  # 0.08 a.u.
 maxiter 100
 Recalc_Hess 10  # Recalculate the Hessian every 10 steps
-Convergence tight  # Same convergence criteria with tightopt
 Constraints # The atom you want to constraint, index from 0.
 	{C 23 C}
 	{C 24 C}
@@ -24,11 +23,6 @@ Constraints # The atom you want to constraint, index from 0.
 end
 
 %maxcore 1000 # memory per core
-
-%scf
-maxiter 300  # SCF interations.
-ConvForced 1 # Make sure the scf is converge during calculation.
-end
 
 %freq
 # partial is frozen atom for mm system, hybrid is calculate the exact atom hessian

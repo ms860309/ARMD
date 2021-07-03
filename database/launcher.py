@@ -199,7 +199,7 @@ def create_ts_refine_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str
                     f'export OMP_NUM_THREADS={ompthreads}\n'
                     f'export OMP_STACKSIZE={mem}G\n')
     initialization = 'source ~/.bashrc\n'
-    calculator = 'module load orca\n'
+    calculator = 'module load orca5\n'
     scratch = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
                 'mkdir -p $QCSCRATCH\n'
                 'cp $PBS_O_WORKDIR/ts_refine.in $QCSCRATCH/\n'
@@ -321,7 +321,7 @@ def create_orca_ts_sub_file(SSM_dir_path:str, TS_dir_path:str, config_path:str, 
                     '#PBS -q workq\n'
                     '#PBS -j oe\n'
                     f"start=$(date +\'%s\')\n")
-    calculator = 'module load orca\n'
+    calculator = 'module load orca5\n'
     initialization = 'source ~/.bashrc\n'
     scratch = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
                 'mkdir -p $QCSCRATCH\n'
@@ -400,7 +400,7 @@ def create_irc_sub_file(TS_dir_path:str, IRC_dir_path:str, config_path:str, ncpu
                     f"start=$(date +\'%s\')\n")
     target_path = f'cd {IRC_dir_path}\n'
     initialization = 'source ~/.bashrc\n'
-    calculator = 'module load orca\n'
+    calculator = 'module load orca5\n'
     env = 'conda activate ard\n'
     scratch = ('export TMPDIR=/tmp/$PBS_JOBID\n'
                 'mkdir -p $TMPDIR\n')
@@ -531,7 +531,7 @@ def create_orca_irc_opt_sub_file(irc_path:str, config_path:str, forward:str, bac
                     '#PBS -j oe\n'
                     f"start=$(date +\'%s\')\n")
     initialization = 'source ~/.bashrc\n'
-    calculator = 'module load orca\n'
+    calculator = 'module load orca5\n'
     scratch_1 = ('export QCSCRATCH=/tmp/$PBS_JOBID\n'
                 'mkdir -p $QCSCRATCH\n'
                 'cp $PBS_O_WORKDIR/irc_forward.in $QCSCRATCH/\n'

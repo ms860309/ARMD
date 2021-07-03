@@ -4,7 +4,7 @@ irc:
  displ_length: 0.15
 calc:
  type: orca
- keywords: PBE0 D3BJ def2-SVP rijcosx def2/J TightSCF GridX4 miniprint nopop
+ keywords: PBE0 D3BJ def2-SVP rijcosx def2/J TightSCF miniprint nopop
  pal: 8
  charge: 0
  mult: 1

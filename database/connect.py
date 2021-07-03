@@ -260,3 +260,16 @@ print('ssm_barrier irc_barrier irc_delta_H qmmm_barrier xTB_delta_H')
 for i,j,k,l,m in zip(ssm_barriers, irc_barriers, irc_delta_Hs, qmmm_barriers, xTB_delta_Hs):
     print(f'{i} {j} {k} {l} {m}')
 """
+
+# qm_collection = db['qm_calculate_center']
+# generations = [1, 2, 3, 4, 5]
+# for gen in generations:
+#     targets = list(qm_collection.find({'generations':gen}))
+#     t = 0
+#     for target in targets:
+#         try:
+#             a = int(target['irc_run_time'])*8
+#         except:
+#             a = 0
+#         t += a
+#     print(t)
