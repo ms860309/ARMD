@@ -192,17 +192,17 @@ reactions_collection = db['reactions']
 reactions = list(reactions_collection.find({}))
 for reaction in reactions:
     try:
-        if reaction['qmmm_sp_reactant_status'] == 'job_success' and reaction['qmmm_sp_product_status'] == 'job_success' and reaction['qmmm_sp_ts_status'] == 'job_success':
+        if reaction['qmmm_sp_reactant_status'] == 'job_success' and reaction['qmmm_sp_product_status'] == 'job_success' and reaction['qmmm_sp_ts_status'] == 'job_success' and reaction['qmmm_unique'] == 'unique':
             data_path = os.path.join(os.getcwd(), 'data')
             qmmm_reactant_dirpath = os.path.join(reaction['path'], 'QMMM_REACTANT')
             qmmm_product_dirpath = os.path.join(reaction['path'], 'QMMM_PRODUCT')
             qmmm_ts_dirpath = os.path.join(reaction['path'], 'QMMM_TS')
             dir_name = os.path.basename(reaction['path'])
-            a = os.path.join(data_path, dir_name)
-            os.mkdir(a)
-            shutil.copytree(qmmm_reactant_dirpath, os.path.join(a, 'QMMM_REACTANT'))
-            shutil.copytree(qmmm_product_dirpath, os.path.join(a, 'QMMM_PRODUCT'))
-            shutil.copytree(qmmm_ts_dirpath, os.path.join(a, 'QMMM_TS'))
+            #a = os.path.join(data_path, dir_name)
+            #os.mkdir(a)
+            #shutil.copytree(qmmm_reactant_dirpath, os.path.join(a, 'QMMM_REACTANT'))
+            #shutil.copytree(qmmm_product_dirpath, os.path.join(a, 'QMMM_PRODUCT'))
+            #shutil.copytree(qmmm_ts_dirpath, os.path.join(a, 'QMMM_TS'))
             print(f"reactant_inchi_key:{reaction['reactant_inchi_key']}")
             print(f"product_inchi_key:{reaction['product_inchi_key']}")
             print(f"reactant_smiles:{reaction['reactant_smiles']}")
@@ -273,3 +273,112 @@ for i,j,k,l,m in zip(ssm_barriers, irc_barriers, irc_delta_Hs, qmmm_barriers, xT
 #             a = 0
 #         t += a
 #     print(t)
+"""
+reactions_collection = db['reactions']
+reactions = list(reactions_collection.find({}))
+parse = []
+count = 0
+for reaction in reactions:
+    try:
+        if reaction['qmmm_sp_reactant_status'] == 'job_success' and reaction['qmmm_sp_product_status'] == 'job_success' and reaction['qmmm_sp_ts_status'] == 'job_success':
+            _reaction = reaction['reaction']
+            new_reaction = [_reaction[1], _reaction[0]]
+            query = {'reaction':new_reaction}
+            targets = list(reactions_collection.find(query))
+            if reaction['path'] not in parse:
+                for target in targets:
+                    try:
+                        if target['qmmm_sp_reactant_status'] == 'job_success' and target['qmmm_sp_product_status'] == 'job_success' and target['qmmm_sp_ts_status'] == 'job_success':
+                            if target['path'] not in parse:
+                                if target['qmmm_barrier'] - abs(reaction['qmmm_delta_H'] - reaction['qmmm_barrier']) > 5.0:
+                                    print(target['qmmm_barrier'])
+                                    print((reaction['qmmm_delta_H'] - reaction['qmmm_barrier']))
+                                    print(target['path'])
+                                else:
+                                    reactions_collection.update_one(target, {"$set": {'qmmm_unique':"duplicate"}}, True)
+                    except:
+                        continue
+            parse.append(reaction['path'])
+    except:
+        continue
+"""
+
+a="""QVGWVKLSHOQQBD-UHFFFAOYSA-N_2
+XXUNXJUVVOLMDV-INDDKUIDSA-N_2
+MRRZPFVYKCXOHV-UHFFFAOYSA-N_3
+XXUNXJUVVOLMDV-INDDKUIDSA-N_1
+OEDKBVBJDCKSOD-NBINMXDDSA-N_8
+OEDKBVBJDCKSOD-WUPBIDMLSA-N_8
+QVGWVKLSHOQQBD-UHFFFAOYSA-N_13
+XXUNXJUVVOLMDV-UWKOMEOWSA-N_3
+OYKSNHGFUKZQIC-UHFFFAOYSA-M_2
+VQGFTDSQVVSIND-UHFFFAOYSA-N_3
+ZRVNRYZCMKRAOZ-WUPBIDMLSA-N_4
+OEDKBVBJDCKSOD-WUPBIDMLSA-N_13
+SXYPHYKCDMDNMD-NBINMXDDSA-N_12
+QUOGADVAICELDI-UHFFFAOYSA-N_14
+SXYPHYKCDMDNMD-WUPBIDMLSA-N_11
+SXYPHYKCDMDNMD-WUPBIDMLSA-N_14
+GXDXQKACIWXXRY-NBINMXDDSA-N_13
+QUOGADVAICELDI-UHFFFAOYSA-N_29
+QVEKDYUISLHVHM-UHFFFAOYSA-N_24
+HCHLEFUYHPKDDW-UWKOMEOWSA-N_1
+ANUGDPPERUOYDH-UHFFFAOYSA-N_4
+QUOGADVAICELDI-UHFFFAOYSA-N_46
+SXYPHYKCDMDNMD-WUPBIDMLSA-N_25
+QZVZJWXRGGCVGZ-WYGWCQTDSA-N_18
+GXDXQKACIWXXRY-NBINMXDDSA-N_25
+XXUNXJUVVOLMDV-PJUHLLTHSA-N_22
+QVEKDYUISLHVHM-UHFFFAOYSA-N_35
+BAYVFPVHQJVOKP-XBOSCTMBSA-N_19
+QVEKDYUISLHVHM-UHFFFAOYSA-N_37
+GXDXQKACIWXXRY-WUPBIDMLSA-N_20
+BAYVFPVHQJVOKP-JGMWHDQESA-N_9
+BAYVFPVHQJVOKP-UHFFFAOYSA-N_6
+QWEZHXPVOWMARL-UHFFFAOYSA-N_4
+SXYPHYKCDMDNMD-WUPBIDMLSA-N_32
+OEDKBVBJDCKSOD-NBINMXDDSA-N_49
+QVEKDYUISLHVHM-UHFFFAOYSA-N_46
+SXYPHYKCDMDNMD-WUPBIDMLSA-N_35
+ANUGDPPERUOYDH-UHFFFAOYSA-N_12
+AWMDTVKXNQMJAY-UHFFFAOYSA-N_13
+PGKPLWKYRUGQFB-NBINMXDDSA-N_23
+OEDKBVBJDCKSOD-NBINMXDDSA-N_54
+IVAQFJDWHKIGCA-UHFFFAOYSA-N_11
+QJVZLJGSAOBMKY-UHFFFAOYSA-N_99
+QVGWVKLSHOQQBD-UHFFFAOYSA-N_97
+OEDKBVBJDCKSOD-WUPBIDMLSA-N_63
+ANUGDPPERUOYDH-UHFFFAOYSA-N_48
+YHHLECDPHPBLAQ-UHFFFAOYSA-N_37
+QJVZLJGSAOBMKY-UHFFFAOYSA-N_115
+IJRSHDCJFOGPCF-UHFFFAOYSA-N_16
+QVEKDYUISLHVHM-UHFFFAOYSA-N_62
+AZOYPMAKCCIFLG-UHFFFAOYSA-N_14
+ANUGDPPERUOYDH-UHFFFAOYSA-N_83
+ZLULKZQZVFEZGH-UHFFFAOYSA-N_41
+FWXBZNPNRVQROJ-WYGWCQTDSA-N_10
+ANUGDPPERUOYDH-UHFFFAOYSA-N_80
+XXUNXJUVVOLMDV-UWKOMEOWSA-N_35
+XXUNXJUVVOLMDV-PJUHLLTHSA-N_37"""
+a = a.split('\n')
+
+# for idx, i in enumerate(a):
+#     dir_name = f'{i}'
+#     _name = os.path.join('/home/jianyi/final/AutomatedReactionMechanismDiscovery/database/data/', dir_name)
+#     os.mkdir(_name)
+#     os.mkdir(os.path.join(_name, 'reactant'))
+#     os.mkdir(os.path.join(_name, 'product'))
+#     os.mkdir(os.path.join(_name, 'ts'))
+#     reaction_path = f'/home/jianyi/final/AutomatedReactionMechanismDiscovery/reactions/{i}'
+#     qmmm_reactant_dirpath = os.path.join(reaction_path, 'QMMM_REACTANT')
+#     qmmm_product_dirpath =os.path.join(reaction_path, 'QMMM_PRODUCT')
+#     qmmm_ts_dirpath = os.path.join(reaction_path, 'QMMM_TS')
+#     shutil.copyfile(os.path.join(qmmm_reactant_dirpath, 'qmmm_freq_opt.out'), os.path.join(_name, 'reactant/qmmm_freq_opt.out'))
+#     shutil.copyfile(os.path.join(qmmm_reactant_dirpath, 'qmmm_sp.out'), os.path.join(_name, 'reactant/qmmm_sp.out'))
+#     shutil.copyfile(os.path.join(qmmm_reactant_dirpath, 'qmmm_final.xyz'), os.path.join(_name, 'reactant/qmmm_final.xyz'))
+#     shutil.copyfile(os.path.join(qmmm_product_dirpath, 'qmmm_freq_opt.out'), os.path.join(_name, 'product/qmmm_freq_opt.out'))
+#     shutil.copyfile(os.path.join(qmmm_product_dirpath, 'qmmm_sp.out'), os.path.join(_name, 'product/qmmm_sp.out'))
+#     shutil.copyfile(os.path.join(qmmm_product_dirpath, 'qmmm_final.xyz'), os.path.join(_name, 'product/qmmm_final.xyz'))
+#     shutil.copyfile(os.path.join(qmmm_ts_dirpath, 'qmmm_freq_ts.out'), os.path.join(_name, 'ts/qmmm_freq_ts.out'))
+#     shutil.copyfile(os.path.join(qmmm_ts_dirpath, 'qmmm_sp.out'), os.path.join(_name, 'ts/qmmm_sp.out'))
+#     shutil.copyfile(os.path.join(qmmm_ts_dirpath, 'qmmm_final.xyz'), os.path.join(_name, 'ts/qmmm_final.xyz'))
