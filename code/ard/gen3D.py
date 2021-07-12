@@ -681,7 +681,7 @@ class Arrange3D(object):
             self.cluster_bond = cluster_bond
         self.initializeVars(mol_1, mol_2)
 
-    def initializeVars(self, mol_1, mol_2, d_intermol=1.0, d_intramol=1.5):
+    def initializeVars(self, mol_1, mol_2, d_intermol=3.0, d_intramol=2.0):
         """
         Set up class variables and determine the bonds and torsions to be
         matched between reactant and product.
@@ -768,8 +768,9 @@ class Arrange3D(object):
         self.nodes_2 = [mol.toNode() for mol in self.mol_2.mols]
         self.nodes_1_copy = self.nodes_1[:]
         self.nodes_2_copy = self.nodes_2[:]
-        # self.setInitialPositions(self.nodes_1)
-        # self.setInitialPositions(self.nodes_2)
+        if not self.fixed_atoms:
+            self.setInitialPositions(self.nodes_1)
+            self.setInitialPositions(self.nodes_2)
 
         if len(self.nodes_1) > 1:
             fd1 = [node.getCentroid() for node in self.nodes_1]

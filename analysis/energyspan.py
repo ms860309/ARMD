@@ -15,7 +15,7 @@ def remove_same_element(_list):
         new_list.append(smiles)
 
     new_list = set(new_list)
-    return list(new_list)
+    return sorted(list(new_list),key = lambda i:len(i))
 
 
 def update_energy():
@@ -170,16 +170,15 @@ repeat = [x for x, y in frequencies if y != '1']
 # shells = [['0'], ['1', '2', '3', '4', '5'], ['6', '7', '8', '9', '10'],
 #           ['11','12','13','14','15','16'],['17','18','19','20','21'],['22','23']]
 
-plt.figure(figsize=(20, 20))
+plt.figure(figsize=(7, 7))
 pos = nx.kamada_kawai_layout(G)
 
 nx.draw(G, pos,
-        with_labels=True,
-        node_color='green')
+        with_labels=True)
 
 plt.draw()
 # plt.show()
-plt.savefig(output_graph_dir, dpi=1000)
+plt.savefig(output_graph_dir, dpi=300)
 
 # for user specified node (or inchi_key ex. str(label_dict['BAYVFPVHQJVOKP-XBOSCTMBSA-N']))
 index = ''.join(label_dict['CC(=O)CO'])
